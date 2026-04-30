@@ -67,6 +67,29 @@ namespace slskd.Tests.Unit.Files
         }
 
         [Fact]
+        public async Task ListContentsAsync_Throws_UnauthorizedException_Given_SiblingPrefix_Directory()
+        {
+            var downloads = Path.Combine(Temp, "downloads");
+            var sibling = Path.Combine(Temp, "downloads2");
+            Directory.CreateDirectory(downloads);
+            Directory.CreateDirectory(sibling);
+
+            OptionsMonitorMock.Setup(o => o.CurrentValue).Returns(new Options
+            {
+                Directories = new Options.DirectoriesOptions
+                {
+                    Downloads = downloads,
+                    Incomplete = Path.Combine(Temp, "incomplete"),
+                }
+            });
+
+            var ex = await Record.ExceptionAsync(() => FileService.ListContentsAsync(directory: sibling));
+
+            Assert.NotNull(ex);
+            Assert.IsType<UnauthorizedException>(ex);
+        }
+
+        [Fact]
         public async Task ListContentsAsync_Throws_NotFoundException_Given_NonExistent_Directory()
         {
             OptionsMonitorMock.Setup(o => o.CurrentValue).Returns(new Options

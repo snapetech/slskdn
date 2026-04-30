@@ -143,8 +143,10 @@ public class TwoNodeMeshFullInstanceTests
 
         using var alphaClient = new HttpClient { BaseAddress = new Uri(alpha.ApiUrl) };
         using var betaClient = new HttpClient { BaseAddress = new Uri(beta.ApiUrl) };
+        alphaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
+        betaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
 
-        var scanResponse = await betaClient.PutAsync("/api/v0/shares?api_key=integration-test", content: null);
+        var scanResponse = await betaClient.PutAsync("/api/v0/shares", content: null);
         scanResponse.EnsureSuccessStatusCode();
 
         var contentId = $"content:test:{probeId}";
@@ -169,7 +171,7 @@ public class TwoNodeMeshFullInstanceTests
             () => "alpha did not keep an outbound overlay connection to beta");
 
         var searchResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/searches?api_key=integration-test",
+            "/api/v0/searches",
             new
             {
                 searchText = Path.GetFileNameWithoutExtension(probeFilename),
@@ -185,7 +187,7 @@ public class TwoNodeMeshFullInstanceTests
         var searchId = searchJson.RootElement.GetProperty("id").GetGuid();
 
         var itemId = await WaitForMeshSearchResultAsync(alphaClient, searchId, probeFilename, contentId);
-        var downloadResponse = await alphaClient.PostAsync($"/api/v0/searches/{searchId}/items/{itemId}/download?api_key=integration-test", content: null);
+        var downloadResponse = await alphaClient.PostAsync($"/api/v0/searches/{searchId}/items/{itemId}/download", content: null);
         Assert.True(
             downloadResponse.IsSuccessStatusCode,
             $"Download request failed: {(int)downloadResponse.StatusCode} {await downloadResponse.Content.ReadAsStringAsync()}");
@@ -236,11 +238,13 @@ public class TwoNodeMeshFullInstanceTests
 
         using var alphaClient = new HttpClient { BaseAddress = new Uri(alpha.ApiUrl) };
         using var betaClient = new HttpClient { BaseAddress = new Uri(beta.ApiUrl) };
+        alphaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
+        betaClient.DefaultRequestHeaders.TryAddWithoutValidation("X-API-Key", "integration-test");
 
         await WaitForSoulseekLoggedInAsync(alphaClient, "alpha");
         await WaitForSoulseekLoggedInAsync(betaClient, "beta");
 
-        var scanResponse = await betaClient.PutAsync("/api/v0/shares?api_key=integration-test", content: null);
+        var scanResponse = await betaClient.PutAsync("/api/v0/shares", content: null);
         Assert.True(
             scanResponse.IsSuccessStatusCode,
             $"Share scan request failed: {(int)scanResponse.StatusCode} {await scanResponse.Content.ReadAsStringAsync()}");
@@ -267,7 +271,7 @@ public class TwoNodeMeshFullInstanceTests
             () => "alpha did not keep an outbound overlay connection to beta using live accounts");
 
         var searchResponse = await alphaClient.PostAsJsonAsync(
-            "/api/v0/searches?api_key=integration-test",
+            "/api/v0/searches",
             new
             {
                 searchText = Path.GetFileNameWithoutExtension(probeFilename),
@@ -283,7 +287,7 @@ public class TwoNodeMeshFullInstanceTests
         var searchId = searchJson.RootElement.GetProperty("id").GetGuid();
 
         var itemId = await WaitForMeshSearchResultAsync(alphaClient, searchId, probeFilename, contentId, accounts.BetaUsername);
-        var downloadResponse = await alphaClient.PostAsync($"/api/v0/searches/{searchId}/items/{itemId}/download?api_key=integration-test", content: null);
+        var downloadResponse = await alphaClient.PostAsync($"/api/v0/searches/{searchId}/items/{itemId}/download", content: null);
         Assert.True(
             downloadResponse.IsSuccessStatusCode,
             $"Download request failed: {(int)downloadResponse.StatusCode} {await downloadResponse.Content.ReadAsStringAsync()}");
@@ -411,7 +415,7 @@ public class TwoNodeMeshFullInstanceTests
         while (DateTimeOffset.UtcNow < deadline)
         {
             using var response = await client.PostAsJsonAsync(
-                "/api/v0/overlay/connect?api_key=integration-test",
+                "/api/v0/overlay/connect",
                 new ConnectOverlayPeerRequest
                 {
                     Address = "127.0.0.1",

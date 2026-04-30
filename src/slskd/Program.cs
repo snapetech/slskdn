@@ -104,6 +104,7 @@ namespace slskd
     using slskd.Integrations.VPN;
     using slskd.Integrations.Webhooks;
     using slskd.LibraryHealth;
+    using slskd.ListeningParty;
     using slskd.Mesh;
     using slskd.Messaging;
     using slskd.Relay;
@@ -1209,6 +1210,7 @@ namespace slskd
             services.AddSingleton<ScriptService>();
             services.AddSingleton<WebhookService>();
             services.AddSingleton<NowPlaying.NowPlayingService>();
+            services.AddSingleton<IListeningPartyService, ListeningPartyService>();
 
             services.AddSingleton<IBrowseTracker, BrowseTracker>();
             services.AddSingleton<IRoomTracker, RoomTracker>(_ => new RoomTracker(messageLimit: 250));
@@ -2773,7 +2775,7 @@ namespace slskd
                                         try
                                         {
                                             // check to see if the provided value is a valid API key
-                                            var service = services.BuildServiceProvider().GetRequiredService<ISecurityService>();
+                                            var service = context.HttpContext.RequestServices.GetRequiredService<ISecurityService>();
                                             var remoteIpAddress = context.HttpContext.Connection.RemoteIpAddress;
                                             if (string.IsNullOrWhiteSpace(token) || remoteIpAddress == null)
                                             {
@@ -3300,10 +3302,12 @@ namespace slskd
                 endpoints.MapHub<Transfers.API.TransfersHub>("/hub/transfers");
                 var searchHub = endpoints.MapHub<SearchHub>("/hub/search");
                 var songIdHub = endpoints.MapHub<slskd.SongID.API.SongIdHub>("/hub/songid");
+                var listeningPartyHub = endpoints.MapHub<ListeningPartyHub>("/hub/listening-party");
                 if (OptionsAtStartup.Web.EnforceSecurity)
                 {
                     searchHub.RequireAuthorization(AuthPolicy.Any);
                     songIdHub.RequireAuthorization(AuthPolicy.Any);
+                    listeningPartyHub.RequireAuthorization(AuthPolicy.Any);
                 }
 
                 var relayHub = endpoints.MapHub<RelayHub>("/hub/relay");

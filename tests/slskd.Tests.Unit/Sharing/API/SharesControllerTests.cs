@@ -5,6 +5,7 @@ namespace slskd.Tests.Unit.Sharing.API;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -418,5 +419,72 @@ public class SharesControllerTests
         Assert.Single(response.Errors!);
         Assert.DoesNotContain("sensitive detail", response.Errors[0]);
         Assert.Contains("Error resolving", response.Errors[0]);
+    }
+
+    [Fact]
+    public async Task Backfill_WithPrivateHttpEndpoint_BlocksBeforeDownloadAndHidesToken()
+    {
+        var grantId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        var temp = Path.Combine(Path.GetTempPath(), $"slskdn-backfill-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(temp);
+
+        try
+        {
+            _options = new TestOptionsMonitor(new slskd.Options
+            {
+                Feature = new slskd.Options.FeatureOptions { CollectionsSharing = true, Streaming = true },
+                Soulseek = new slskd.Options.SoulseekOptions { Username = "alice" },
+                Directories = new slskd.Options.DirectoriesOptions { Downloads = temp }
+            });
+
+            _sharingMock
+                .Setup(x => x.GetShareGrantsAccessibleByUserAsync("alice", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<ShareGrant>
+                {
+                    new()
+                    {
+                        Id = grantId,
+                        CollectionId = collectionId,
+                        AllowDownload = true,
+                        ShareToken = "secret-token",
+                        OwnerEndpoint = "http://127.0.0.1:1"
+                    }
+                });
+            _sharingMock
+                .Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "remote" });
+            _sharingMock
+                .Setup(x => x.GetManifestAsync(grantId, "secret-token", "alice", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ShareManifestDto
+                {
+                    Items = new List<ShareManifestItemDto>
+                    {
+                        new()
+                        {
+                            ContentId = "sha256:test",
+                            MediaKind = "audio",
+                            StreamUrl = "http://127.0.0.1:1/api/v0/streams/sha256:test?token=secret-token"
+                        }
+                    }
+                });
+
+            var controller = CreateController();
+            var result = await controller.Backfill(grantId, CancellationToken.None);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var response = Assert.IsType<BackfillResponse>(ok.Value);
+            Assert.Equal(0, response.Enqueued);
+            Assert.Equal(1, response.Failed);
+            Assert.Single(response.Errors!);
+            Assert.Contains("Blocked unsafe download URL", response.Errors[0]);
+            Assert.DoesNotContain("secret-token", response.Errors[0]);
+            Assert.DoesNotContain("127.0.0.1", response.Errors[0]);
+            Assert.Empty(Directory.GetFiles(temp));
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
     }
 }

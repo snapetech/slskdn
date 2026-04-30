@@ -54,6 +54,26 @@ namespace slskd.Files
         private ILogger Log { get; } = Serilog.Log.ForContext<FileService>();
         private IOptionsMonitor<Options> OptionsMonitor { get; }
 
+        private bool IsAllowedPath(string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+
+            return AllowedDirectories.Any(allowed =>
+            {
+                var fullAllowed = Path.GetFullPath(allowed);
+                if (fullPath.Equals(fullAllowed, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                var allowedPrefix = fullAllowed.EndsWith(Path.DirectorySeparatorChar)
+                    ? fullAllowed
+                    : fullAllowed + Path.DirectorySeparatorChar;
+
+                return fullPath.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
         /// <summary>
         ///     Computes the SHA256 hash of a file.
         /// </summary>
@@ -166,28 +186,8 @@ namespace slskd.Files
                 throw new ArgumentException("Deletion of application-controlled directory roots is not supported");
             }
 
-            // important! we must fully expand the given paths with GetFullPath() to resolve a given relative directory, like '..'
-            bool IsAllowed(string path)
-            {
-                return AllowedDirectories.Any(allowed =>
-                {
-                    // Exact match is allowed
-                    if (path.Equals(allowed, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
-                    // Must be a child directory (prevent prefix bypass like /downloads-secret)
-                    var allowedPrefix = allowed.EndsWith(Path.DirectorySeparatorChar)
-                        ? allowed
-                        : allowed + Path.DirectorySeparatorChar;
-
-                    return path.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase);
-                });
-            }
-
             // if any of the resolved directory paths aren't rooted in one of the allowed directories, forbid the entire request
-            if (!directories.All(directory => IsAllowed(directory)))
+            if (!directories.All(directory => IsAllowedPath(directory)))
             {
                 throw new UnauthorizedException("Only application-controlled directories can be deleted");
             }
@@ -241,28 +241,8 @@ namespace slskd.Files
                 throw new ArgumentException("Only absolute paths may be specified", nameof(files));
             }
 
-            // important! we must fully expand the given paths with GetFullPath() to resolve a given relative directory, like '..'
-            bool IsAllowed(string path)
-            {
-                return AllowedDirectories.Any(allowed =>
-                {
-                    // Exact match is allowed
-                    if (path.Equals(allowed, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
-                    // Must be a child directory (prevent prefix bypass like /downloads-secret)
-                    var allowedPrefix = allowed.EndsWith(Path.DirectorySeparatorChar)
-                        ? allowed
-                        : allowed + Path.DirectorySeparatorChar;
-
-                    return path.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase);
-                });
-            }
-
             // if any of the resolved file paths aren't rooted in one of the allowed directories, forbid the entire request
-            if (!files.All(file => IsAllowed(file)))
+            if (!files.All(file => IsAllowedPath(file)))
             {
                 throw new UnauthorizedException("Only files in application-controlled directories can be deleted");
             }
@@ -311,10 +291,9 @@ namespace slskd.Files
                 throw new ArgumentException("Only absolute paths may be specified", nameof(directory));
             }
 
-            // important! we must fully expand the path with GetFullPath() to resolve a given relative directory, like '..'
-            if (!AllowedDirectories.Any(allowed => directory.StartsWith(allowed)))
+            if (!IsAllowedPath(directory))
             {
-                throw new UnauthorizedException($"Only application-controlled directories can be deleted");
+                throw new UnauthorizedException($"Only application-controlled directories can be listed");
             }
 
             if (!Directory.Exists(directory))

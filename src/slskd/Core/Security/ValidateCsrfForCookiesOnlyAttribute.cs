@@ -86,14 +86,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             return; // API key auth - no CSRF needed
         }
 
-        // 5. Exempt requests with API key in query string (for compatibility)
-        if (request.Query.ContainsKey("api_key") || request.Query.ContainsKey("apikey"))
-        {
-            Log.Verbose("[CSRF] Skipping validation for API key in query string");
-            return; // API key auth - no CSRF needed
-        }
-
-        // 6. Check if request has any authentication cookies
+        // 5. Check if request has any authentication cookies
         var hasCookies = request.Cookies.Any();
         if (!hasCookies)
         {
@@ -101,7 +94,7 @@ public class ValidateCsrfForCookiesOnlyAttribute : Attribute, IAsyncAuthorizatio
             return; // No cookies - pure API client, no CSRF needed
         }
 
-        // 7. This is a cookie-based request (web UI) - validate CSRF token
+        // 6. This is a cookie-based request (web UI) - validate CSRF token
         Log.Verbose("[CSRF] Validating CSRF token for cookie-based request: {Method} {Path}",
             request.Method, request.Path);
 

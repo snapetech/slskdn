@@ -408,7 +408,6 @@ namespace slskd.SocialFederation.API
         ///     Creates and distributes outgoing ActivityPub activities.
         /// </remarks>
         [HttpPost("{actorName}/outbox")]
-        [AllowAnonymous]
         [Consumes("application/activity+json")]
         public async Task<IActionResult> PostToOutbox(
             string actorName,

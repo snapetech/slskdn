@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +20,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using slskd.Common.Security;
 using slskd.Core.Security;
 using slskd.Identity;
 using slskd.Sharing;
@@ -33,6 +36,8 @@ using Soulseek;
 [Consumes("application/json")]
 public class SharesController : ControllerBase
 {
+    private const long MaxBackfillHttpDownloadBytes = 512L * 1024L * 1024L;
+
     private readonly ISharingService _sharing;
     private readonly IShareTokenService _tokens;
     private readonly ILogger<SharesController> _log;
@@ -462,13 +467,8 @@ public class SharesController : ControllerBase
                 return StatusCode(500, "Downloads directory not configured or does not exist");
             }
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-
-            // Add authorization header with share token if available
-            if (!string.IsNullOrWhiteSpace(grant.ShareToken))
-            {
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", grant.ShareToken);
-            }
+            using var httpHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var httpClient = new HttpClient(httpHandler) { Timeout = TimeSpan.FromMinutes(30) };
 
             foreach (var item in manifest.Items)
             {
@@ -481,19 +481,42 @@ public class SharesController : ControllerBase
 
                 try
                 {
-                    // Use streamUrl from manifest (already includes owner endpoint and token)
-                    var streamUrl = item.StreamUrl;
-                    if (!streamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(ownerEndpoint))
+                    if (!TryBuildBackfillUri(item.StreamUrl, ownerEndpoint, out var streamUri))
                     {
-                        // Relative URL - prepend owner endpoint
-                        streamUrl = $"{ownerEndpoint.TrimEnd('/')}{streamUrl}";
+                        failed++;
+                        errors.Add($"Invalid download URL for {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...");
+                        continue;
                     }
 
-                    _log.LogDebug("[Backfill] Downloading {ContentId} from {Url}", item.ContentId, streamUrl);
+                    var (safe, reason) = await OutboundUriGuard.CheckAsync(streamUri, ct).ConfigureAwait(false);
+                    if (!safe)
+                    {
+                        _log.LogWarning("[Backfill] Blocked unsafe stream URL for {ContentId} from {Host}: {Reason}", item.ContentId, streamUri.Host, reason);
+                        failed++;
+                        errors.Add($"Blocked unsafe download URL for {item.ContentId.Substring(0, Math.Min(16, item.ContentId.Length))}...");
+                        continue;
+                    }
+
+                    _log.LogDebug("[Backfill] Downloading {ContentId} from {Endpoint}", item.ContentId, DescribeBackfillUri(streamUri));
 
                     // Download file
-                    using var response = await httpClient.GetAsync(streamUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, streamUri);
+                    if (!string.IsNullOrWhiteSpace(grant.ShareToken))
+                    {
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", grant.ShareToken);
+                    }
+
+                    using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                    if (IsRedirect(response.StatusCode))
+                    {
+                        throw new InvalidOperationException("Redirects are not allowed for share backfill downloads.");
+                    }
+
                     response.EnsureSuccessStatusCode();
+                    if (response.Content.Headers.ContentLength > MaxBackfillHttpDownloadBytes)
+                    {
+                        throw new InvalidOperationException("Share backfill download exceeds the maximum allowed size.");
+                    }
 
                     // Generate safe filename from ContentId
                     var safeFilename = item.ContentId.Replace(":", "_").Replace("/", "_").Replace("\\", "_");
@@ -518,8 +541,16 @@ public class SharesController : ControllerBase
 
                     // Save file
                     System.IO.Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-                    using var fileStream = new System.IO.FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                    await response.Content.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+                    try
+                    {
+                        using var fileStream = new System.IO.FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                        await CopyContentToFileWithLimitAsync(response.Content, fileStream, MaxBackfillHttpDownloadBytes, ct).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        TryDeletePartialBackfillFile(filePath);
+                        throw;
+                    }
 
                     enqueued++;
                     _log.LogInformation("[Backfill] Downloaded {ContentId} to {Path}", item.ContentId, filePath);
@@ -619,6 +650,78 @@ public class SharesController : ControllerBase
                 : $"Downloaded {enqueued}, failed {failed}",
             Errors = errors.Count > 0 ? errors : null,
         });
+    }
+
+    private static async Task CopyContentToFileWithLimitAsync(HttpContent content, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[81920];
+        var total = 0L;
+
+        await using var source = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                return;
+            }
+
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidOperationException("Share backfill download exceeds the maximum allowed size.");
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static string DescribeBackfillUri(Uri uri)
+    {
+        return $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}";
+    }
+
+    private static bool IsRedirect(HttpStatusCode statusCode)
+    {
+        var code = (int)statusCode;
+        return code >= 300 && code < 400;
+    }
+
+    private static bool TryBuildBackfillUri(string streamUrl, string? ownerEndpoint, out Uri uri)
+    {
+        if (Uri.TryCreate(streamUrl, UriKind.Absolute, out uri!))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(ownerEndpoint))
+        {
+            uri = null!;
+            return false;
+        }
+
+        if (!Uri.TryCreate(ownerEndpoint, UriKind.Absolute, out var ownerUri))
+        {
+            uri = null!;
+            return false;
+        }
+
+        return Uri.TryCreate(ownerUri, streamUrl, out uri!);
+    }
+
+    private static void TryDeletePartialBackfillFile(string filePath)
+    {
+        try
+        {
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
+        }
+        catch
+        {
+            // Best effort cleanup after a failed download.
+        }
     }
 }
 

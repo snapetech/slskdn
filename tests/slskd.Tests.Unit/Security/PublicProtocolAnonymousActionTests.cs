@@ -51,8 +51,7 @@ public class PublicProtocolAnonymousActionTests
             nameof(ActivityPubController.GetFollowing),
             nameof(ActivityPubController.GetInbox),
             nameof(ActivityPubController.PostToInbox),
-            nameof(ActivityPubController.GetOutbox),
-            nameof(ActivityPubController.PostToOutbox));
+            nameof(ActivityPubController.GetOutbox));
 
         AssertControllerRequiresAuthenticationByDefault(typeof(WebFingerController));
         AssertAnonymousActions(

@@ -1,3 +1,13 @@
+## 2026-04-30 00:58Z - Hardened security audit findings
+
+- Required authenticated access for local ActivityPub outbox publishing while keeping public protocol discovery and inbox delivery anonymous.
+- Added SSRF, redirect, token-log, and 512 MiB size controls around HTTP share backfill downloads before any remote stream is fetched.
+- Replaced file listing's raw prefix authorization with the separator-aware allowed-path helper already needed by delete paths.
+- Removed the query-string API-key CSRF shortcut because API auth accepts headers, not `api_key` query values.
+- Changed SignalR API-key promotion to resolve `ISecurityService` from the current request scope instead of building a second service provider.
+- Added focused regression coverage for anonymous protocol allow-lists, sibling-prefix file listing, unsafe share backfill URLs, and cookie requests with query-only API keys.
+- Documented the boundary-testing gotcha in ADR-0001 and committed that documentation immediately as `8bb0e0abe`.
+
 ## 2026-04-30 00:33Z - Fixed AUR upgrade service refresh
 
 - Confirmed AUR only ran `systemd-sysusers` and `systemctl daemon-reload` on install/upgrade, while RPM already has a systemd restart macro and Debian likely gets debhelper-generated service handling.

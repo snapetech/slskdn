@@ -1,3 +1,17 @@
+## Update 2026-04-30 00:58:00Z
+
+- Current task: None. Security audit hardening is implemented and validated locally.
+- Last activity:
+  - required auth for ActivityPub outbox publishing
+  - guarded HTTP share backfill against unsafe URLs, redirects, token-bearing logs, and oversized bodies
+  - fixed file listing sibling-prefix authorization
+  - removed unsupported query-string API-key CSRF exemptions
+  - resolved SignalR API-key promotion through the request service provider
+  - documented the security boundary gotcha and committed it separately
+- Next steps:
+  1. Push the security hardening commits if requested.
+  2. Keep the pre-existing Winget/listening-party/UI dirty work separate unless explicitly batching it.
+
 ## Update 2026-04-30 00:44:00Z
 
 - Current task: Fix fake-green stable Winget publishing.

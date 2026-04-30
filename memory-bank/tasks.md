@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **security**: Harden audited app security boundaries.
+ - Status: completed (2026-04-30)
+ - Priority: P1
+ - Notes: Required auth for ActivityPub outbox publishing, guarded HTTP share backfill URLs with SSRF checks plus redirect/size controls, fixed sibling-prefix path authorization for file listing, removed unsupported query-string API-key CSRF bypasses, and stopped SignalR API-key promotion from building a secondary service provider.
+
 - [x] **bug**: Restart already-running `slskd.service` after AUR upgrades.
  - Status: completed (2026-04-30)
  - Priority: P1

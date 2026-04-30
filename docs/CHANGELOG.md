@@ -22,6 +22,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Hardened security boundaries by requiring authentication for ActivityPub
+  outbox publishing, adding SSRF and size guards to HTTP share backfill,
+  fixing file-list path prefix authorization, removing query-string API-key
+  CSRF exemptions, and avoiding a secondary service-provider build during
+  SignalR API-key promotion.
 - Fixed AUR upgrade hooks so an already-running `slskd.service` is restarted
   after package upgrades, while fresh installs and stopped services remain
   untouched until the operator starts them.
