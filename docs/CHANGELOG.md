@@ -28,7 +28,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed stable Winget publishing so main release workflows fail loudly when
   `WINGETCREATE_GITHUB_TOKEN` is missing instead of reporting a fake-green
   skipped submission, and added a manual Winget publish workflow for retrying
-  an existing release tag after credentials are configured.
+  an existing release tag after credentials are configured. The stable Winget
+  jobs now submit generated manifests directly so the first `snapetech.slskdn`
+  PR can be opened before the package exists in `microsoft/winget-pkgs`.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 

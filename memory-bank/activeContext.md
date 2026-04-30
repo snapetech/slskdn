@@ -5,10 +5,11 @@
   - confirmed the `.202` Winget job skipped real submission because `WINGETCREATE_GITHUB_TOKEN` was empty
   - changed the main Winget release job to fail loudly when the token is missing
   - added a manual `Publish Winget` workflow for retrying an existing stable release tag after credentials are configured
+  - confirmed `wingetcreate update` also fails for the first package submission because `snapetech.slskdn` is not yet present in `microsoft/winget-pkgs`
+  - changed the stable Winget paths to submit generated manifests directly for the initial PR
 - Next steps:
-  1. Commit and push the Winget workflow fix.
-  2. Configure `WINGETCREATE_GITHUB_TOKEN` with a GitHub token that can submit to `microsoft/winget-pkgs`.
-  3. Run the manual `Publish Winget` workflow for `2026042900-slskdn.202`.
+  1. Validate, commit, and push the first-submission Winget workflow fix.
+  2. Re-run the manual `Publish Winget` workflow for `2026042900-slskdn.202`.
 
 ## Update 2026-04-30 00:33:57Z
 

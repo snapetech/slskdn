@@ -7222,3 +7222,9 @@ Code quality improvements were completed as part of Option A:
 - Investigated the `.202` stable Winget job and confirmed it reported success only because `WINGETCREATE_GITHUB_TOKEN` was empty and the workflow ran a successful "skip" step.
 - Changed the main Winget release job to fail when the token is missing, removed the token-gated skip behavior from the real `wingetcreate` steps, and added a manual `Publish Winget` workflow that can submit an existing stable release tag to `microsoft/winget-pkgs` after credentials are configured.
 - Validation: parsed `.github/workflows/build-on-tag.yml` and `.github/workflows/publish-winget.yml` as YAML and ran `git diff --check`.
+
+## 2026-04-30 00:58:00Z
+
+- Configured the repository `WINGETCREATE_GITHUB_TOKEN` secret with the authenticated `gh` token so WingetCreate has credentials for `microsoft/winget-pkgs` submission.
+- Retried the manual `Publish Winget` workflow for `2026042900-slskdn.202` and confirmed the second blocker: `wingetcreate update snapetech.slskdn` fails because the package does not exist in `microsoft/winget-pkgs` yet.
+- Changed both stable Winget submission paths to download the published Windows artifact, compute the SHA-256, regenerate the stable manifests, and submit those local manifests directly so the initial Winget PR can be opened.

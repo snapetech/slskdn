@@ -20,6 +20,9 @@ jobs:
     name: Submit Winget PR
     runs-on: windows-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Require Winget token
         if: ${{ env.WINGETCREATE_GITHUB_TOKEN == '' }}
         shell: pwsh
@@ -34,7 +37,35 @@ jobs:
           Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
           Get-Item .\wingetcreate.exe | Format-List Name,Length,LastWriteTime
 
-      - name: Submit manifest update to winget-pkgs
+      - name: Download release artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          gh release download "${{ inputs.version }}" `
+            --repo ${{ github.repository }} `
+            --pattern "slskdn-main-win-x64.zip"
+
+      - name: Prepare stable manifests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ReleaseVersion = "${{ inputs.version }}"
+          $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
+          $InstallerSha = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          bash packaging/scripts/update-winget-manifests.sh `
+            stable `
+            $ReleaseVersion `
+            $InstallerUrl `
+            $InstallerSha `
+            $ReleaseVersion
+
+          New-Item -ItemType Directory -Force winget-submit | Out-Null
+          Copy-Item packaging/winget/snapetech.slskdn*.yaml winget-submit/
+
+      - name: Submit manifests to winget-pkgs
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -52,8 +83,5 @@ jobs:
           Write-Host "Winget version:  $WingetVersion"
           Write-Host "Installer URL:   $InstallerUrl"
 
-          .\wingetcreate.exe update snapetech.slskdn `
-            -u $InstallerUrl `
-            -v $WingetVersion `
-            -t $env:WINGETCREATE_GITHUB_TOKEN `
-            --submit
+          .\wingetcreate.exe submit .\winget-submit `
+            -t $env:WINGETCREATE_GITHUB_TOKEN
