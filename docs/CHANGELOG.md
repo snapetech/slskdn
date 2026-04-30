@@ -58,7 +58,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   stable locale description now emits valid YAML block indentation, and the
   zip portable metadata now follows accepted winget-pkgs layout. Stable Winget
   workflow staging now uses the same numeric dotted package version emitted in
-  the manifests.
+  the manifests, and the initial submission path now generates a temporary
+  singleton manifest to avoid WingetCreate's multi-file directory validator.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 
