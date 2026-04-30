@@ -279,7 +279,7 @@ Then: docs/phase2-canonical-scoring-design.md (T-400)
 
 **Start here**:
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd <repo-root>
 git checkout experimental/brainz
 
 # Read the plan

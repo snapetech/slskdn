@@ -1,6 +1,6 @@
 # Hardening — 2026-04-20
 
-Output of the red-team / bug-hunt pass against the repo and `kspls0`. This document tracks each finding, the chosen remediation, and the status. Host / network items the maintainer chose to handle out-of-band (qBittorrent on kspls0, LAN plaintext HTTP, filesystem config permissions) are not tracked here.
+Output of the red-team / bug-hunt pass against the repo and `local test host`. This document tracks each finding, the chosen remediation, and the status. Host / network items the maintainer chose to handle out-of-band (qBittorrent on local test host, LAN plaintext HTTP, filesystem config permissions) are not tracked here.
 
 Each finding references the source location it affects. Follow-ups that are out of scope for this pass call out what further design work is needed.
 
@@ -22,7 +22,7 @@ Each finding references the source location it affects. Follow-ups that are out 
 | H12 | DHT publishes residential IPs | Medium | ✅ `LanOnly` toggle + periodic warn + UI first-run disclosure shipped |
 | H13 | NowPlaying webhook vs Plex Bearer auth | Medium | ✅ scope-restricted API keys shipped; webhook requires `nowplaying` scope |
 | H14 | MusicBrainz / AcoustID phone-home | Medium | ✅ README privacy callout added |
-| H15 | Federation enabled on kspls0 exposes actors if port-forwarded | Medium | ✅ already safe — defaults are `Enabled=false` + `Mode="Hermit"` |
+| H15 | Federation enabled on local test host exposes actors if port-forwarded | Medium | ✅ already safe — defaults are `Enabled=false` + `Mode="Hermit"` |
 | H16 | Plaintext token fragments in `SECURITY-AUDIT-*.md` / validation JSON | Medium | ✅ scrubbed (paths and LAN IP redacted) |
 
 ---
@@ -35,10 +35,10 @@ Each finding references the source location it affects. Follow-ups that are out 
 
 **Fix in repo:** the two files are now deleted from the working tree. `.gitignore` already catches them so they won't come back by accident.
 
-**On `kspls0` (test host):** the overlay key is resolved via `ResolveAppRelativePath(...)` off `SLSKD_APP_DIR`. Move the live key under the app-data directory, not the repo checkout:
+**On `local test host` (test host):** the overlay key is resolved via `ResolveAppRelativePath(...)` off `SLSKD_APP_DIR`. Move the live key under the app-data directory, not the repo checkout:
 
 ```bash
-# on kspls0
+# on local test host
 sudo install -d -m 0700 -o slskd -g slskd /var/lib/slskdn/keys
 sudo mv /path/to/repo/mesh-overlay.key      /var/lib/slskdn/keys/mesh-overlay.key
 sudo mv /path/to/repo/mesh-overlay.key.prev /var/lib/slskdn/keys/mesh-overlay.key.prev 2>/dev/null || true
@@ -54,15 +54,15 @@ sudo systemctl restart slskd
 
 ### H2 — `/solid/clientid.jsonld` no longer falls back to the request host
 
-**What:** `SolidClientIdDocumentService.WriteClientIdDocumentAsync` previously derived `client_id` and `redirect_uri` from the incoming request's `Host` header when `solid.clientIdUrl` was unset. On kspls0 that meant the document published `http://192.168.50.85:5030/solid/clientid.jsonld` to any Solid IdP the host handed the URL to — LAN-IP disclosure by design.
+**What:** `SolidClientIdDocumentService.WriteClientIdDocumentAsync` previously derived `client_id` and `redirect_uri` from the incoming request's `Host` header when `solid.clientIdUrl` was unset. On local test host that meant the document published `http://192.168.50.85:5030/solid/clientid.jsonld` to any Solid IdP the host handed the URL to — LAN-IP disclosure by design.
 
 **Fix:** if `solid.clientIdUrl` is not configured, the endpoint returns `404` and logs once. When it *is* set, both `client_id` and `redirect_uri` are derived from that public URL, not the request. This matches Solid-OIDC's requirement that the client-id document be dereferenceable by the IdP and closes the LAN-IP leak.
 
-**Operator action:** if you want Solid on kspls0, set `solid.clientIdUrl` to your public HTTPS URL. Until then the endpoint is effectively off.
+**Operator action:** if you want Solid on local test host, set `solid.clientIdUrl` to your public HTTPS URL. Until then the endpoint is effectively off.
 
 ### H3 — `DescriptorRetrieverController` gated
 
-**What:** `GET api/v{ver}/…/descriptor/{id}`, `GET …/query/domain/{domain}`, and `POST …/verify` were `[AllowAnonymous]`. Not routed on the current kspls0 build (the `MediaCore` feature flag gates the whole controller), but flipping the flag on would have exposed a public content-inventory enumeration primitive.
+**What:** `GET api/v{ver}/…/descriptor/{id}`, `GET …/query/domain/{domain}`, and `POST …/verify` were `[AllowAnonymous]`. Not routed on the current local test host build (the `MediaCore` feature flag gates the whole controller), but flipping the flag on would have exposed a public content-inventory enumeration primitive.
 
 **Fix:** removed `[AllowAnonymous]` on the three endpoints and added `[Authorize(Policy = AuthPolicy.Any)]` matching the rest of the authenticated API. `POST /batch` and `GET /stats` were already class-default authorized; no change there.
 
@@ -151,7 +151,7 @@ Added a privacy tradeoff callout to the README immediately after the MusicBrainz
 ### H16 — Audit docs scrubbed
 
 The three audit artefacts tracked in the repo had hard-coded paths and one LAN IP fragment replaced with placeholders:
-- `SECURITY-AUDIT-2026-03-15.md`: `/home/keith/Documents/code/slskdn` → `<repo-root>`.
+- `SECURITY-AUDIT-2026-03-15.md`: `<repo-root>` → `<repo-root>`.
 - `SLSKDN-security-audit.feb26.md`: `/home/phantasm/git/slskdn` → `<slskdn-repo>`, `/home/phantasm/git/zdfinder/` → `<zdfinder-tool>/`, `192.168.1.151` → `[REDACTED-LAN-IP]`.
 - `task_validation_results.json`: reviewed, clean as-is.
 
@@ -173,8 +173,8 @@ Implemented in `System/Network` as a first-run modal when DHT is public and mesh
 
 After this pass:
 
-- `curl -s -o /dev/null -w '%{http_code}\n' http://kspls0:5030/solid/clientid.jsonld` → `404` unless `solid.clientIdUrl` is configured.
-- `curl -s -o /dev/null -w '%{http_code}\n' http://kspls0:5030/api/v0/mediacore/.../descriptor/foo` → `401` anonymously.
+- `curl -s -o /dev/null -w '%{http_code}\n' http://local test host:5030/solid/clientid.jsonld` → `404` unless `solid.clientIdUrl` is configured.
+- `curl -s -o /dev/null -w '%{http_code}\n' http://local test host:5030/api/v0/mediacore/.../descriptor/foo` → `401` anonymously.
 - `POST /api/v0/federation/{actor}/inbox` without a valid HTTP signature → `401`, regardless of `federation.verify_signatures`.
 - On fresh restart of an unpopulated node, `pod:gold-star-club` has zero new members unless `SLSKDN_POD_GOLD_STAR_CLUB_AUTOJOIN=true` is exported.
 - `mesh-overlay.key*` not present in `git ls-files` or the repo working tree.

@@ -5,6 +5,9 @@
 API="http://localhost:54321"
 POOL_FILE="/tmp/flat.json"
 SEARCHES_FILE="/tmp/searches.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+POOL_BACKUP_FILE="$REPO_ROOT/test-data/pool-backup.json"
 
 # Popular albums with high share counts (skip Pink Floyd - always times out)
 SEARCHES=(
@@ -187,9 +190,10 @@ case "$1" in
     build) build_pool ;;
     add) add_search "$2" ;;
     summary) show_pool_summary ;;
-    restore) restore_pool "${2:-/home/keith/Documents/Code/slskdn/test-data/pool-backup.json}" ;;
+    restore) restore_pool "${2:-$POOL_BACKUP_FILE}" ;;
     save) 
-        cp "$POOL_FILE" "/home/keith/Documents/Code/slskdn/test-data/pool-backup.json"
+        mkdir -p "$(dirname "$POOL_BACKUP_FILE")"
+        cp "$POOL_FILE" "$POOL_BACKUP_FILE"
         echo "Saved pool to test-data/pool-backup.json"
         ;;
     *)
@@ -210,4 +214,3 @@ case "$1" in
         echo "  $0 restore"
         ;;
 esac
-

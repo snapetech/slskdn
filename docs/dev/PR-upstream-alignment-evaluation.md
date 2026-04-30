@@ -39,7 +39,7 @@
 | **76** | uuid 8.3.2 → **13.0.0** | **Yes** – major; upstream ^8.3.0. | **Reject** for upstream alignment. |
 | **75** | axios 0.30.2 → **1.13.4** | **Yes** – major; upstream ^0.30.2. | **Reject** for upstream alignment. |
 | **74** | react-router-dom 5.3.4 → **7.13.0** | **Yes** – major; upstream ^5.0.0. | **Reject** for upstream alignment. |
-| **73** | react 16.14.0 → **19.2.4** | **Yes** – major; upstream ^16.8.6. Conventions (slskdn-conventions.mdc) state “React 16.8.6”. | **Reject** for upstream alignment and project policy. |
+| **73** | react 16.14.0 → **19.2.4** | **Yes** – major; upstream ^16.8.6. Conventions (slskdn-conventions.mdc) state “current React version declared in src/web/package.json”. | **Reject** for upstream alignment and project policy. |
 | **71** | (Merged) AUR repo master branch fix | N/A | Already merged. |
 | **65** | (Closed) PKGBUILD aarch64 | N/A | N/A. |
 | **64** | (Closed) Repository status | N/A | N/A. |
@@ -72,7 +72,7 @@
 | **76** | uuid 13.x vs upstream 8.x. |
 | **75** | axios 1.x vs upstream 0.30.x. |
 | **74** | react-router-dom 7.x vs upstream 5.x. |
-| **73** | react 19.x vs upstream 16.x; also conflicts with “React 16.8.6” in conventions. |
+| **73** | react 19.x vs upstream 16.x; also conflicts with “current React version declared in src/web/package.json” in conventions. |
 
 ---
 

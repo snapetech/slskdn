@@ -90,7 +90,7 @@
 
 ### 1. Project Overview
 ```bash
-cd ~/Documents/Code/slskdn/docs
+cd <repo-root>/docs
 cat FINAL_PLANNING_SUMMARY.md  # Big picture (10 min)
 ```
 
@@ -197,7 +197,7 @@ src/slskd/
 
 5. **Verify**
    ```bash
-   cd ~/Documents/Code/slskdn
+   cd <repo-root>
    dotnet build
    dotnet test
    ```
@@ -266,7 +266,7 @@ node --version    # For frontend
 ### Quick Commands
 ```bash
 # Navigate to project
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 
 # Build
 dotnet build src/slskd/slskd.csproj
@@ -351,8 +351,8 @@ git commit -m "fix(mesh): correct quarantine sliding window logic"
 ### From `.cursorrules`
 
 1. **NEVER include local file paths**
-   - ❌ `/home/keith/Documents/Code/slskdn`
-   - ✅ `~/Documents/Code/slskdn` or relative paths
+   - ❌ `<repo-root>`
+   - ✅ `<repo-root>` or relative paths
    - ✅ `src/slskd/Mesh/MeshSyncService.cs`
 
 2. **NEVER dummy down tests**
@@ -540,7 +540,7 @@ Phase 12:    slskdn + Privacy → Secure P2P
 
 ### For Security Work (Phase 12S)
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 cat docs/security/SECURITY_IMPLEMENTATION_STATUS_2025-12-11.md
 cat docs/security/database-poisoning-tasks.md
 # Start with T-1438 or T-1439
@@ -548,7 +548,7 @@ cat docs/security/database-poisoning-tasks.md
 
 ### For Infrastructure Work (Phase 8)
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 cat docs/PHASE_8_COMPREHENSIVE_STUB_AUDIT.md
 cat docs/phase8-meshcore-research.md
 # Start with T-1300 (NAT detection)
@@ -556,7 +556,7 @@ cat docs/phase8-meshcore-research.md
 
 ### For Continued Implementation (Phases 2-5)
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 cat docs/FINAL_PLANNING_SUMMARY.md
 # Follow phase guides as specified
 ```

@@ -49,7 +49,7 @@ Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 6X (optional)
 
 ### Step 1: Read the Overview
 ```bash
-cd ~/Documents/Code/slskdn/docs
+cd <repo-root>/docs
 cat FINAL_PLANNING_SUMMARY.md  # Big picture (10 min read)
 ```
 
@@ -265,7 +265,7 @@ If truly stuck (should be rare - everything is specified).
 
 ```bash
 # Navigate to project
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 
 # Checkout correct branch
 git checkout experimental/brainz
@@ -402,7 +402,7 @@ Follow existing patterns in the codebase:
 
 **Your first command**:
 ```bash
-cd ~/Documents/Code/slskdn/docs && cat FINAL_PLANNING_SUMMARY.md
+cd <repo-root>/docs && cat FINAL_PLANNING_SUMMARY.md
 ```
 
 **Then**:

@@ -332,4 +332,57 @@ public class GoldStarClubServiceTests
             s => s.GetMembersAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task StartAsync_ShouldAutoJoinWhenSoulseekUsernameArrivesLate()
+    {
+        using var _ = new EnvScope("true");
+
+        var username = string.Empty;
+        mockSoulseekClient.Setup(c => c.Username).Returns(() => username);
+        mockPodService.Setup(s => s.GetPodAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Pod { PodId = GoldStarClubService.GoldStarClubPodId });
+        mockPodService.Setup(s => s.GetMembersAsync(GoldStarClubService.GoldStarClubPodId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PodMember>());
+        mockPodService.Setup(s => s.JoinAsync(
+                GoldStarClubService.GoldStarClubPodId,
+                It.Is<PodMember>(m => m.PeerId == "late-user"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await goldStarClubService.StartAsync(cts.Token);
+        username = "late-user";
+
+        try
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(4);
+            while (DateTime.UtcNow < deadline)
+            {
+                try
+                {
+                    mockPodService.Verify(s => s.JoinAsync(
+                            GoldStarClubService.GoldStarClubPodId,
+                            It.Is<PodMember>(m => m.PeerId == "late-user"),
+                            It.IsAny<CancellationToken>()),
+                        Times.Once);
+                    return;
+                }
+                catch (MockException)
+                {
+                    await Task.Delay(100, cts.Token);
+                }
+            }
+
+            mockPodService.Verify(s => s.JoinAsync(
+                    GoldStarClubService.GoldStarClubPodId,
+                    It.Is<PodMember>(m => m.PeerId == "late-user"),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            await goldStarClubService.StopAsync(CancellationToken.None);
+        }
+    }
 }

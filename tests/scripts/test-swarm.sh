@@ -8,6 +8,8 @@ ARTIST_QUEUE="/tmp/slskd-artist-queue.txt"
 DISCOVERY_START="/tmp/slskd-discovery-start.txt"
 BG_JOBS="/tmp/slskd-bg-jobs.txt"
 CYCLE_SECONDS=270
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
@@ -68,7 +70,7 @@ start_server() {
     local SLSK=$((30000 + RANDOM % 25000))
     echo -e "  Attempt $attempt: HTTP=$HTTP SLSK=$SLSK"
     
-    cd /home/keith/Documents/Code/slskdn/src/slskd
+    cd "$REPO_ROOT/src/slskd"
     SLSKD_SLSK_USERNAME="$SLSK_USER" SLSKD_SLSK_PASSWORD="$SLSK_PASS" \
     SLSKD_HTTP_PORT=$HTTP SLSKD_SLSK_LISTEN_PORT=$SLSK SLSKD_NO_HTTPS=true \
     nohup dotnet run --configuration Release &> "$LOG" &

@@ -1,5 +1,10 @@
 import './Users.css';
 import { activeUserInfoKey } from '../../config';
+import {
+  getLocalStorageItem,
+  removeLocalStorageItem,
+  setLocalStorageItem,
+} from '../../lib/storage';
 import * as users from '../../lib/users';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import User from './User';
@@ -28,7 +33,7 @@ const Users = () => {
   };
 
   const clear = () => {
-    localStorage.removeItem(activeUserInfoKey);
+    removeLocalStorageItem(activeUserInfoKey);
     setSelectedUsername(undefined);
     setUser(undefined);
     setInputText('');
@@ -45,7 +50,7 @@ const Users = () => {
     document.addEventListener('keyup', keyUp, false);
 
     const storedUsername =
-      location.state?.user || localStorage.getItem(activeUserInfoKey);
+      location.state?.user || getLocalStorageItem(activeUserInfoKey);
 
     if (storedUsername !== undefined) {
       setSelectedUsername(storedUsername);
@@ -68,7 +73,7 @@ const Users = () => {
           users.getEndpoint({ username: selectedUsername }),
         ]);
 
-        localStorage.setItem(activeUserInfoKey, selectedUsername);
+        setLocalStorageItem(activeUserInfoKey, selectedUsername);
         setUser({ ...info.data, ...status.data, ...endpoint.data });
         setStatus({ error: undefined, fetching: false });
       } catch (fetchError) {

@@ -8,8 +8,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-UPSTREAM="/home/keith/Documents/Code/slskd-upstream-pr"
-SLSKDN="/home/keith/Documents/Code/slskdn"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SLSKDN="$(cd "$SCRIPT_DIR/.." && pwd)"
+UPSTREAM="${SLSKD_UPSTREAM:-$(cd "$SLSKDN/../slskd-upstream-pr" 2>/dev/null && pwd)}"
+
+if [ -z "$UPSTREAM" ] || [ ! -d "$UPSTREAM" ]; then
+    echo "Set SLSKD_UPSTREAM to an upstream slskd checkout before running this comparison."
+    exit 1
+fi
 
 echo "============================================================"
 echo "CODE COMPARISON: Upstream slskd vs slskdn"
@@ -61,7 +67,6 @@ diff -u "$UPSTREAM/src/slskd/Messaging/RoomService.cs" "$SLSKDN/src/slskd/Messag
 
 echo
 echo -e "${GREEN}✓ Code comparison complete${NC}"
-
 
 
 

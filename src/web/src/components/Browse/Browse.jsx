@@ -1,4 +1,5 @@
 import BrowseSession from './BrowseSession';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Icon, Menu, Tab } from 'semantic-ui-react';
@@ -8,7 +9,7 @@ let tabCounter = 0;
 // Load tabs from localStorage
 const loadTabsFromStorage = () => {
   try {
-    const saved = localStorage.getItem('slskd-browse-tabs');
+    const saved = getLocalStorageItem('slskd-browse-tabs');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -25,14 +26,10 @@ const loadTabsFromStorage = () => {
 
 // Save tabs to localStorage
 const saveTabsToStorage = (tabsToSave) => {
-  try {
-    localStorage.setItem(
-      'slskd-browse-tabs',
-      JSON.stringify({ tabCounter, tabs: tabsToSave }),
-    );
-  } catch {
-    // ignore
-  }
+  setLocalStorageItem(
+    'slskd-browse-tabs',
+    JSON.stringify({ tabCounter, tabs: tabsToSave }),
+  );
 };
 
 const Browse = () => {

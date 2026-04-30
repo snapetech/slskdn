@@ -1,6 +1,6 @@
 # Full-App Security Audit — 2026-04-18
 
-**Scope**: whole-tree bughunt / redteam of `/home/keith/Documents/code/slskdn/src/slskd/`. Not limited to DHT/mesh (see `dht-mesh-audit-2026-04.md` for that). About 1,000 C# files across ~45 top-level subsystems.
+**Scope**: whole-tree bughunt / redteam of `<repo-root>/src/slskd/`. Not limited to DHT/mesh (see `dht-mesh-audit-2026-04.md` for that). About 1,000 C# files across ~45 top-level subsystems.
 
 **Method**: six parallel sweeps — HTTP API, secrets+crypto, filesystem, injection+deserialization, SSRF, native/DoS — each hunting for specific exploitable patterns. All high-severity claims verified by re-reading the code before inclusion here.
 

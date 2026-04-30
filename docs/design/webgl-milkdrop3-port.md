@@ -165,9 +165,12 @@ Current parser/VM scope:
 - Oversized, unreadable, or unsupported files selected during native preset import are reported in the visualizer overlay instead of being ignored silently. Texture assets are capped at 1 MB while this browser-local path matures.
 - First-pass `spriteNN_` primitives parse base values plus init/frame equations, compatibility-check sprite equations, and render enabled sprites as textured quads. Sprites use imported texture assets by image/texture filename aliases and fall back to the procedural checker when an image is missing.
 - The first curated fixture pack covers a classic primitive/textured-shape/sprite preset, a supported shader subset preset, a simple `.milk2` double-preset file, and an unsupported shader-control-flow preset. Tests lock golden parser summaries and compatibility outcomes, and the browser smoke renders the textured classic fixture, shader fixture, and `.milk2` double fixture with per-fixture pixel statistics.
+- `npm run test:native-milkdrop-compatibility` builds a compatibility matrix over the curated fixtures by default, or over supplied `.milk` / `.milk2` files and folders, reporting supported counts, scanned preset bodies, max shape/wave/sprite counts, unsupported functions, and unsupported shader sections. This gives Phase 2 real-preset-pack work a repeatable measurement path before each renderer gap is closed.
 
 ### Phase 2: MilkDrop3 Feature Deltas
 
+- [x] Add native compatibility matrix reporting for curated fixtures and local preset files/folders.
+- [x] Add first high-count wave/shape compatibility metric coverage for real-pack pressure.
 - Add deeper q1-q64 compatibility coverage against real MilkDrop3 presets.
 - Add increased wave/shape count validation against real MilkDrop3 preset packs.
 - Add richer `.shape` and `.wave` library management beyond the first import/export affordances.

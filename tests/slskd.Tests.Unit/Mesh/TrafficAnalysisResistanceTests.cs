@@ -7,37 +7,23 @@ namespace slskd.Tests.Unit.Mesh;
 
 public class TrafficAnalysisResistanceTests
 {
-    [Fact]
+    [Fact(Skip = "Traffic analysis resistance implementation is not present yet; keep explicit instead of a fake green placeholder.")]
     public void PaddingObfuscation_HidesMessageLengths()
     {
-        Assert.True(true, "Placeholder test - TrafficAnalysisResistanceTests.PaddingObfuscation not yet implemented");
     }
 
-    [Fact]
+    [Fact(Skip = "Traffic analysis resistance implementation is not present yet; keep explicit instead of a fake green placeholder.")]
     public void TimingJitter_PreventsTimingAttacks()
     {
-        Assert.True(true, "Placeholder test - TrafficAnalysisResistanceTests.TimingJitter not yet implemented");
     }
 
-    [Fact]
+    [Fact(Skip = "Traffic analysis resistance implementation is not present yet; keep explicit instead of a fake green placeholder.")]
     public void TrafficMorphing_ChangesPacketCharacteristics()
     {
-        Assert.True(true, "Placeholder test - TrafficAnalysisResistanceTests.TrafficMorphing not yet implemented");
     }
 
-    [Fact]
+    [Fact(Skip = "Traffic analysis resistance implementation is not present yet; keep explicit instead of a fake green placeholder.")]
     public void StatisticalAnalysis_ResistsFingerprinting()
     {
-        Assert.True(true, "Placeholder test - TrafficAnalysisResistanceTests.StatisticalAnalysis not yet implemented");
-    }
-
-    public static bool ValidatePaddingObfuscation(byte[] originalData, byte[] paddedData)
-    {
-        throw new NotImplementedException("TrafficAnalysisResistanceTests not yet implemented");
-    }
-
-    public static bool TestTimingResistance(TimeSpan[] intervals)
-    {
-        throw new NotImplementedException("TrafficAnalysisResistanceTests not yet implemented");
     }
 }

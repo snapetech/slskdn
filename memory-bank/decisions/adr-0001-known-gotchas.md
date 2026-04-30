@@ -2124,7 +2124,7 @@ publish:
 
 ### 0z137. Remote Peer Timeouts Must Be Handled At API Boundaries
 
-**The Bug**: Live `0.25.1-slskdn.183` logs on `kspls0` showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when `ISoulseekClient.GetDirectoryContentsAsync()` timed out waiting for a remote peer. The timeout was expected peer/network behavior, but it bubbled through MVC, security middleware, and the exception handler, producing repeated error stack traces.
+**The Bug**: Live `0.25.1-slskdn.183` logs on `local test host` showed `POST /api/v0/users/{username}/directory` returning unhandled 500s when `ISoulseekClient.GetDirectoryContentsAsync()` timed out waiting for a remote peer. The timeout was expected peer/network behavior, but it bubbled through MVC, security middleware, and the exception handler, producing repeated error stack traces.
 
 **Files Affected**:
 - `src/slskd/Users/API/Controllers/UsersController.cs`
@@ -2152,7 +2152,7 @@ catch (TimeoutException)
 
 ### 0z138. Shutdown Download Cancellation Can Be Wrapped By Retry Helpers
 
-**The Bug**: Manual `kspls0` deploy stops while downloads are in flight can still emit error-level `Download ... failed` and `Task for download ... did not complete successfully` stack traces. The download path catches direct `OperationCanceledException` during `Application.IsShuttingDown`, but `Retry.Do(...)` can wrap the same shutdown cancellation in `AggregateException`, so it misses the shutdown filter and falls into generic error cleanup.
+**The Bug**: Manual `local test host` deploy stops while downloads are in flight can still emit error-level `Download ... failed` and `Task for download ... did not complete successfully` stack traces. The download path catches direct `OperationCanceledException` during `Application.IsShuttingDown`, but `Retry.Do(...)` can wrap the same shutdown cancellation in `AggregateException`, so it misses the shutdown filter and falls into generic error cleanup.
 
 **Files Affected**:
 - `src/slskd/Transfers/Downloads/DownloadService.cs`
@@ -2309,7 +2309,7 @@ chmod 755 "${release_root}/slskd"
 
 ### 0z129. Public Search Timeout Units Must Match Soulseek SearchOptions Units
 
-**The Bug**: Issue `#209` live retesting on `kspls0` used the documented `/api/v0/searches` contract and sent `searchTimeout: 10` for a 10-second search. `SearchRequest` documented the field as seconds and validated values down to `5`, but `ToSearchOptions()` passed the raw `10` into `Soulseek.SearchOptions`, which expects milliseconds. The search completed in 10-44 ms with zero responses, creating a false app/network failure signal.
+**The Bug**: Issue `#209` live retesting on `local test host` used the documented `/api/v0/searches` contract and sent `searchTimeout: 10` for a 10-second search. `SearchRequest` documented the field as seconds and validated values down to `5`, but `ToSearchOptions()` passed the raw `10` into `Soulseek.SearchOptions`, which expects milliseconds. The search completed in 10-44 ms with zero responses, creating a false app/network failure signal.
 
 **Files Affected**:
 - `src/slskd/Search/API/DTO/SearchRequest.cs`
@@ -2330,7 +2330,7 @@ searchTimeout: SearchTimeout.HasValue
 
 ### 0z128. Background Search Producers Must Not Spend The User Search Safety Bucket
 
-**The Bug**: Live `kspls0` issue `#209` troubleshooting showed auto-replace running every few minutes, consuming ten Soulseek searches, then logging `[SAFETY] Search rate limit exceeded for source=user`. Manual/API searches were also charged to `source=user`, so background replacement work could starve real user searches and make normal searches appear to return zero results or fail unpredictably.
+**The Bug**: Live `local test host` issue `#209` troubleshooting showed auto-replace running every few minutes, consuming ten Soulseek searches, then logging `[SAFETY] Search rate limit exceeded for source=user`. Manual/API searches were also charged to `source=user`, so background replacement work could starve real user searches and make normal searches appear to return zero results or fail unpredictably.
 
 **Files Affected**:
 - `src/slskd/Search/SearchService.cs`
@@ -2381,7 +2381,7 @@ if (circuitStats.ActiveCircuits == 0 && peerStats.OnionRoutingPeers >= 3)
 
 ### 0z126. Soulseek Transfer Rejection Reasons Must Match The Expected Network Classifier
 
-**The Bug**: Live `kspls0` logs for `0.24.5-slskdn.174` emitted repeated fake `[FATAL] Unobserved task exception` entries for normal Soulseek transfer rejections with message `Too many megabytes`. The classifier recognized `Soulseek.TransferRejectedException` as an expected network/peer class, but the final message allow-list only covered `Enqueue failed due to internal error`.
+**The Bug**: Live `local test host` logs for `0.24.5-slskdn.174` emitted repeated fake `[FATAL] Unobserved task exception` entries for normal Soulseek transfer rejections with message `Too many megabytes`. The classifier recognized `Soulseek.TransferRejectedException` as an expected network/peer class, but the final message allow-list only covered `Enqueue failed due to internal error`.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2432,7 +2432,7 @@ await maintenanceAttempted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
 ### 0z124. Entropy Health Logs Must Account For Finite Sample Bias
 
-**The Bug**: Live `kspls0` logs for `0.24.5-slskdn.172` emitted `Warning: Entropy below optimal level` every five minutes even though the process was using `RandomNumberGenerator.GetBytes(...)`. The monitor used a 256-byte Shannon entropy sample with a 7.5 bits/byte warning threshold; that small sample is biased below the true entropy often enough to create false operator noise on healthy systems.
+**The Bug**: Live `local test host` logs for `0.24.5-slskdn.172` emitted `Warning: Entropy below optimal level` every five minutes even though the process was using `RandomNumberGenerator.GetBytes(...)`. The monitor used a 256-byte Shannon entropy sample with a 7.5 bits/byte warning threshold; that small sample is biased below the true entropy often enough to create false operator noise on healthy systems.
 
 **Files Affected**:
 - `src/slskd/Common/Security/EntropyMonitor.cs`
@@ -2453,7 +2453,7 @@ public const double WarningEntropy = 7.75;
 
 ### 0z123. LAN Discovery Must Never Advertise A Blank Display Name
 
-**The Bug**: Live `kspls0` startup logs for `0.24.5-slskdn.172` showed `[LanDiscovery] Started advertising as  (...)` because the persisted peer profile can contain a blank `DisplayName`. LAN discovery then publishes and logs the blank value instead of a useful operator-visible fallback.
+**The Bug**: Live `local test host` startup logs for `0.24.5-slskdn.172` showed `[LanDiscovery] Started advertising as  (...)` because the persisted peer profile can contain a blank `DisplayName`. LAN discovery then publishes and logs the blank value instead of a useful operator-visible fallback.
 
 **Files Affected**:
 - `src/slskd/Identity/LanDiscoveryService.cs`
@@ -2476,7 +2476,7 @@ await _advertiser.StartAsync(displayName, ServiceType, port, properties, ct);
 
 ### 0z122. Temporary Config Probes Must Not Stay At Information
 
-**The Bug**: Live `kspls0` startup logs for `0.24.5-slskdn.172` still printed raw security binding probes such as `After binding OptionsAtStartup.Security.Enabled...` and `Raw config sections...` at `Information`. These were temporary diagnostics for config hardening but became permanent startup noise.
+**The Bug**: Live `local test host` startup logs for `0.24.5-slskdn.172` still printed raw security binding probes such as `After binding OptionsAtStartup.Security.Enabled...` and `Raw config sections...` at `Information`. These were temporary diagnostics for config hardening but became permanent startup noise.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2495,7 +2495,7 @@ Log.Debug("[Config] Raw config sections - security.Exists={SecurityExists}, slsk
 
 ### 0z121. Soulseek Read Timeout Inner Exceptions Must Match The Expected Network Classifier
 
-**The Bug**: Live `kspls0` logs on the installed `0.24.5-slskdn.170` process emitted fake `[FATAL] Unobserved task exception` entries for routine Soulseek read-loop timeout churn. The flattened exception chain included `Soulseek.ConnectionReadException: Failed to read 4 bytes...`, an inner `IOException: Unable to read data from the transport connection: Connection timed out`, and an inner `SocketException (110): Connection timed out` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`.
+**The Bug**: Live `local test host` logs on the installed `0.24.5-slskdn.170` process emitted fake `[FATAL] Unobserved task exception` entries for routine Soulseek read-loop timeout churn. The flattened exception chain included `Soulseek.ConnectionReadException: Failed to read 4 bytes...`, an inner `IOException: Unable to read data from the transport connection: Connection timed out`, and an inner `SocketException (110): Connection timed out` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2519,7 +2519,7 @@ details.Contains("Unable to read data from the transport connection", StringComp
 
 ### 0z120. Overlay Endpoint Cooldowns Should Be Aggregated At Information
 
-**The Bug**: Live `0.24.5-slskdn.170` logs on `kspls0` emitted one `Information` line per degraded DHT-discovered overlay endpoint once each endpoint hit a failure streak of three, even though the periodic DHT/overlay summary and `/api/v0/overlay/stats` already expose the same failure mix and top-problem endpoint data.
+**The Bug**: Live `0.24.5-slskdn.170` logs on `local test host` emitted one `Information` line per degraded DHT-discovered overlay endpoint once each endpoint hit a failure streak of three, even though the periodic DHT/overlay summary and `/api/v0/overlay/stats` already expose the same failure mix and top-problem endpoint data.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
@@ -2548,7 +2548,7 @@ _logger.LogDebug(
 
 ### 0z119. Peer Descriptor Refresh Must Not Duplicate The Bootstrap Publish At Startup
 
-**The Bug**: The packaged `0.24.5-slskdn.170` startup on `kspls0` logged duplicate `[MeshDHT] No configured endpoints...` and `[MeshDHT] Published self descriptor...` lines because `MeshBootstrapService` published the initial descriptor while `PeerDescriptorRefreshService` immediately treated `DateTime.MinValue` as a due periodic refresh.
+**The Bug**: The packaged `0.24.5-slskdn.170` startup on `local test host` logged duplicate `[MeshDHT] No configured endpoints...` and `[MeshDHT] Published self descriptor...` lines because `MeshBootstrapService` published the initial descriptor while `PeerDescriptorRefreshService` immediately treated `DateTime.MinValue` as a due periodic refresh.
 
 **Files Affected**:
 - `src/slskd/Mesh/Dht/PeerDescriptorRefreshService.cs`
@@ -2567,7 +2567,7 @@ var lastRefresh = DateTime.UtcNow;
 
 ### 0z118. Soulseek Timer Reset Classifiers Must Match Real Stack Signatures
 
-**The Bug**: The `0.24.5-slskdn.169` `kspls0` package logged a current-process fatal unobserved task for `NullReferenceException` in `Soulseek.Extensions.Reset(Timer timer)` during an overlay/DHT write path. The existing expected-network classifier had a unit test for `Soulseek.Extensions.Reset(Timer)`, but the live stack included the parameter name (`Timer timer`), so the string match missed the same known Soulseek.NET timer reset race.
+**The Bug**: The `0.24.5-slskdn.169` `local test host` package logged a current-process fatal unobserved task for `NullReferenceException` in `Soulseek.Extensions.Reset(Timer timer)` during an overlay/DHT write path. The existing expected-network classifier had a unit test for `Soulseek.Extensions.Reset(Timer)`, but the live stack included the parameter name (`Timer timer`), so the string match missed the same known Soulseek.NET timer reset race.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2587,7 +2587,7 @@ details.Contains("Soulseek.Extensions.Reset(", StringComparison.Ordinal)
 
 ### 0z117. Normal Host Shutdown Must Not Claim App Run Returning Is Abnormal
 
-**The Bug**: The `0.24.5-slskdn.169` package restart on `kspls0` completed cleanly, but the journal still printed `[Program] app.Run() returned (this should not happen normally)` and a duplicate stderr `ProcessExit event fired during expected shutdown`. `WebApplication.Run()` returns during normal host shutdown, so this made a healthy systemd restart look suspicious.
+**The Bug**: The `0.24.5-slskdn.169` package restart on `local test host` completed cleanly, but the journal still printed `[Program] app.Run() returned (this should not happen normally)` and a duplicate stderr `ProcessExit event fired during expected shutdown`. `WebApplication.Run()` returns during normal host shutdown, so this made a healthy systemd restart look suspicious.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2635,7 +2635,7 @@ fi
 
 ### 0z115. Mesh Overlay Startup Must Retry Transient Port Reuse
 
-**The Bug**: The packaged `kspls0` `0.24.5-slskdn.168` install started while TCP `50305` was still transiently unavailable. `MeshOverlayServer.StartAsync()` logged `Address already in use`, `DhtRendezvousService` gave up on the overlay listener, and the node stayed online without beacon-capable TCP overlay until a manual restart.
+**The Bug**: The packaged `local test host` `0.24.5-slskdn.168` install started while TCP `50305` was still transiently unavailable. `MeshOverlayServer.StartAsync()` logged `Address already in use`, `DhtRendezvousService` gave up on the overlay listener, and the node stayed online without beacon-capable TCP overlay until a manual restart.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -2713,7 +2713,7 @@ return path.join(repoRoot, 'src', 'slskd', 'bin', 'Release', targetFramework);
 
 ### 0z112. Shutdown-Cancelled Background Searches Must Not Log As Errors
 
-**The Bug**: A manual `kspls0` deploy restarted the service while a background search was still in flight. The search task observed `OperationCanceledException: The operation was canceled.` during host shutdown and logged `Failed to execute search ...` at `Error`, making normal deploy cancellation look like a runtime failure.
+**The Bug**: A manual `local test host` deploy restarted the service while a background search was still in flight. The search task observed `OperationCanceledException: The operation was canceled.` during host shutdown and logged `Failed to execute search ...` at `Error`, making normal deploy cancellation look like a runtime failure.
 
 **Files Affected**:
 - `src/slskd/Search/SearchService.cs`
@@ -2761,7 +2761,7 @@ return NotFound("User is offline");
 
 ### 0z110. QUIC Must Be Explicitly Opted In On Long-Running Linux Hosts
 
-**The Bug**: Live `kspls0` monitoring caught another native `SIGSEGV`/systemd restart in the manual build while QUIC control and QUIC data listeners were enabled by default. The coredump was unsymbolized inside the native runtime, but previous and current crash history correlated with active `libmsquic`/QUIC listener activity, while managed logs did not show an app exception before the dump.
+**The Bug**: Live `local test host` monitoring caught another native `SIGSEGV`/systemd restart in the manual build while QUIC control and QUIC data listeners were enabled by default. The coredump was unsymbolized inside the native runtime, but previous and current crash history correlated with active `libmsquic`/QUIC listener activity, while managed logs did not show an app exception before the dump.
 
 **Files Affected**:
 - `src/slskd/Mesh/Overlay/OverlayOptions.cs`
@@ -2786,7 +2786,7 @@ public bool EnableQuic { get; set; } = false;
 
 ### 0z109. Soulseek Listener Socket Disposal Is Expected Teardown, Not A Fatal Unobserved Task
 
-**The Bug**: Live `kspls0` monitoring caught `[FATAL] Unobserved task exception` for `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Net.Sockets.Socket'.` The stack was inside `TcpListener.AcceptTcpClientAsync()` through `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync()`. The process kept running, but the global unobserved-task handler classified a disposed listener accept loop as fatal.
+**The Bug**: Live `local test host` monitoring caught `[FATAL] Unobserved task exception` for `ObjectDisposedException: Cannot access a disposed object. Object name: 'System.Net.Sockets.Socket'.` The stack was inside `TcpListener.AcceptTcpClientAsync()` through `Soulseek.Network.Tcp.Listener.ListenContinuouslyAsync()`. The process kept running, but the global unobserved-task handler classified a disposed listener accept loop as fatal.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2809,7 +2809,7 @@ var isSoulseekListenerSocketDisposed =
 
 ### 0z108. Manual Deploys Must Verify Systemd Reaches The `current` Release Payload
 
-**The Bug**: A manual `kspls0` deploy copied the new release under `/usr/lib/slskd/releases/manual-5bd0e0b88` and repointed `/usr/lib/slskd/current`, but `systemd` still executed a stale apphost at `/usr/lib/slskd/slskd`. The binary `--version` check against `current/slskd` passed, while `/api/v0/application` still reported the previous build because the service never reached the `current` payload.
+**The Bug**: A manual `local test host` deploy copied the new release under `/usr/lib/slskd/releases/manual-5bd0e0b88` and repointed `/usr/lib/slskd/current`, but `systemd` still executed a stale apphost at `/usr/lib/slskd/slskd`. The binary `--version` check against `current/slskd` passed, while `/api/v0/application` still reported the previous build because the service never reached the `current` payload.
 
 **Files Affected**:
 - `packaging/aur/PKGBUILD`
@@ -2886,7 +2886,7 @@ in the configuration
 
 ### 0z105. Soulseek TCP Double-Disconnect Races Are Expected Network Churn, Not Fatal Unobserved Tasks
 
-**The Bug**: Live `kspls0` monitoring caught a current-process `[FATAL] Unobserved task exception` from `Soulseek.Network.Tcp.Connection.Disconnect` with `InvalidOperationException: An attempt was made to transition a task to a final state when it had already completed.` The process survived because the global handler marks it observed, but the log classified a Soulseek.NET read-loop disconnect race as fatal.
+**The Bug**: Live `local test host` monitoring caught a current-process `[FATAL] Unobserved task exception` from `Soulseek.Network.Tcp.Connection.Disconnect` with `InvalidOperationException: An attempt was made to transition a task to a final state when it had already completed.` The process survived because the global handler marks it observed, but the log classified a Soulseek.NET read-loop disconnect race as fatal.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -2936,7 +2936,7 @@ catch (InvalidOperationException ex) when (ShuttingDown && IsDisconnectRace(ex))
 
 ### 0z103. Background Search Batches Must Not Emit Per-Search Success/Fallback Logs At Information
 
-**The Bug**: After auto-replace search pacing was fixed, a 142-item `kspls0` cycle still filled the journal with routine `Information` logs from shared search infrastructure: mesh fallback with no peers, search completion counts, and passive HashDb discovery counts. The cycle was healthy, but normal per-search progress hid actionable runtime signals.
+**The Bug**: After auto-replace search pacing was fixed, a 142-item `local test host` cycle still filled the journal with routine `Information` logs from shared search infrastructure: mesh fallback with no peers, search completion counts, and passive HashDb discovery counts. The cycle was healthy, but normal per-search progress hid actionable runtime signals.
 
 **Files Affected**:
 - `src/slskd/Search/SearchService.cs`
@@ -2987,7 +2987,7 @@ catch (OperationCanceledException) when (cancellationToken.IsCancellationRequest
 
 ### 0z101. Remote Offline Download Failures Are Expected Peer Outcomes, Not Error Stack Noise
 
-**The Bug**: Live `kspls0` restart validation re-enqueued downloads from an offline remote user and logged repeated `Soulseek.UserOfflineException` / `Soulseek.TransferException` stack traces from `DownloadService`. The transfer failure was expected peer state, but the journal looked like a local runtime error.
+**The Bug**: Live `local test host` restart validation re-enqueued downloads from an offline remote user and logged repeated `Soulseek.UserOfflineException` / `Soulseek.TransferException` stack traces from `DownloadService`. The transfer failure was expected peer state, but the journal looked like a local runtime error.
 
 **Files Affected**:
 - `src/slskd/Transfers/Downloads/DownloadService.cs`
@@ -3012,7 +3012,7 @@ catch (Exception ex) when (IsExpectedRemoteDownloadFailure(ex))
 
 ### 0z100. Auto-Replace Large Batches Must Not Log Routine Per-Track No-Result Searches At Information
 
-**The Bug**: After pacing auto-replace searches correctly, live `kspls0` monitoring showed the same 128-item stuck batch logging routine `Searching for alternatives` and `Found 0 alternative candidates` messages at `Information` for every track. The behavior was no longer unsafe, but the journal still filled with expected no-result progress noise.
+**The Bug**: After pacing auto-replace searches correctly, live `local test host` monitoring showed the same 128-item stuck batch logging routine `Searching for alternatives` and `Found 0 alternative candidates` messages at `Information` for every track. The behavior was no longer unsafe, but the journal still filled with expected no-result progress noise.
 
 **Files Affected**:
 - `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
@@ -3226,7 +3226,7 @@ await using var registryConnection = connection;
 
 ### 0z93. Auto-Replace Must Pace Searches Instead Of Treating Safety Rejections As Per-Track Errors
 
-**The Bug**: Live `kspls0` logs showed a single auto-replace cycle issuing many alternative searches in rapid succession until the Soulseek safety limiter hit `Limit=10/min, Current=10`. Every remaining stuck download then logged `Error searching for alternatives: Search rate limit exceeded` with a stack trace and the cycle reported a large failed count. The safety limiter was working, but auto-replace was using it as a noisy brake instead of pacing its own work.
+**The Bug**: Live `local test host` logs showed a single auto-replace cycle issuing many alternative searches in rapid succession until the Soulseek safety limiter hit `Limit=10/min, Current=10`. Every remaining stuck download then logged `Error searching for alternatives: Search rate limit exceeded` with a stack trace and the cycle reported a large failed count. The safety limiter was working, but auto-replace was using it as a noisy brake instead of pacing its own work.
 
 **Files Affected**:
 - `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
@@ -3255,7 +3255,7 @@ foreach (var stuckDownload in stuckDownloads)
 
 ### 0z92. Soulseek Timer-Reset Write Loop Races Must Be Classified Too, Not Just Read Loops
 
-**The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `kspls0` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.
+**The Bug**: After classifying the `Soulseek.Extensions.Reset(Timer)` teardown race for `ReadInternalAsync`/`MessageConnection.ReadContinuouslyAsync`, live `local test host` logs still emitted fake `[FATAL] Unobserved task exception` entries from the same third-party timer-reset `NullReferenceException` occurring in `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`. The process kept running, but the logs still looked like a fatal crash.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -3286,7 +3286,7 @@ var isSoulseekTimerResetWriteRace =
 
 ### 0z91. Manual Publish Must Match The Tagged Release Publish Shape
 
-**The Bug**: `bin/publish` was producing a materially different Linux artifact than the tagged release workflows: self-contained, single-file, `ReadyToRun=true`, and `IncludeNativeLibrariesForSelfExtract=true`. Live manual deploys on `kspls0` then exercised a different native runtime/extraction path than the official release builds, and the resulting crashes showed up as kernel `general protection fault` events in `.NET Server GC` inside the apphost image. That made manual soak results untrustworthy because they were not validating the same publish shape that CI ships.
+**The Bug**: `bin/publish` was producing a materially different Linux artifact than the tagged release workflows: self-contained, single-file, `ReadyToRun=true`, and `IncludeNativeLibrariesForSelfExtract=true`. Live manual deploys on `local test host` then exercised a different native runtime/extraction path than the official release builds, and the resulting crashes showed up as kernel `general protection fault` events in `.NET Server GC` inside the apphost image. That made manual soak results untrustworthy because they were not validating the same publish shape that CI ships.
 
 **Files Affected**:
 - `bin/publish`
@@ -3378,7 +3378,7 @@ if (connections.TryRemove(endpoint, out var removed))
 
 ### 0z88. Soulseek Timer-Reset Read Loop NullReferenceExceptions Must Be Classified As Expected Network Teardown
 
-**The Bug**: Live `kspls0` logs still emitted `[FATAL] Unobserved task exception` entries during normal peer/read-loop churn with `System.NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `Soulseek.Network.Tcp.Connection.ReadInternalAsync` and `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`. The process kept running, but the log looked like a real fatal crash/disconnect.
+**The Bug**: Live `local test host` logs still emitted `[FATAL] Unobserved task exception` entries during normal peer/read-loop churn with `System.NullReferenceException` from `Soulseek.Extensions.Reset(Timer)` inside `Soulseek.Network.Tcp.Connection.ReadInternalAsync` and `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`. The process kept running, but the log looked like a real fatal crash/disconnect.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -3602,7 +3602,7 @@ internal sealed class StubDownloadService : IDownloadService
 
 ### 0z80. Shutdown Must Tolerate SoulseekClient Disconnect Races
 
-**The Bug**: Live `kspls0` restart validation on `manual.37a745af5` showed `Application.StopAsync()` hitting `SoulseekClient.Disconnect("Shutting down", ...)`, then logging `Application terminated unexpectedly` with `InvalidOperationException: Sequence contains no elements` from `Soulseek.Extensions.RemoveAndDisposeAll`. The service still stopped and restarted, but the shutdown path emitted a false fatal because the third-party client raced its internal connection dictionaries during disconnect.
+**The Bug**: Live `local test host` restart validation on `manual.37a745af5` showed `Application.StopAsync()` hitting `SoulseekClient.Disconnect("Shutting down", ...)`, then logging `Application terminated unexpectedly` with `InvalidOperationException: Sequence contains no elements` from `Soulseek.Extensions.RemoveAndDisposeAll`. The service still stopped and restarted, but the shutdown path emitted a false fatal because the third-party client raced its internal connection dictionaries during disconnect.
 
 **Files Affected**:
 - `src/slskd/Application.cs`
@@ -3631,7 +3631,7 @@ Client.Dispose();
 
 ### 0z79. Shutdown Cancellation Must Not Use Disposed Transfer Services
 
-**The Bug**: Live `kspls0` validation of a clean `systemctl restart` showed active downloads cancelling during shutdown, then logging global semaphore release warnings and `ObjectDisposedException` while trying to fail/update transfers after the DI provider was already disposing. Shutdown cancellation is expected, but the download observers treated it like a normal transfer failure and kept touching database/services.
+**The Bug**: Live `local test host` validation of a clean `systemctl restart` showed active downloads cancelling during shutdown, then logging global semaphore release warnings and `ObjectDisposedException` while trying to fail/update transfers after the DI provider was already disposing. Shutdown cancellation is expected, but the download observers treated it like a normal transfer failure and kept touching database/services.
 
 **Files Affected**:
 - `src/slskd/Transfers/Downloads/DownloadService.cs`
@@ -3663,7 +3663,7 @@ catch (OperationCanceledException ex) when (Application.IsShuttingDown)
 
 ### 0z78. Service SIGTERM Must Stop The Host, Not Exit 1
 
-**The Bug**: Live `kspls0` manual deployments showed `systemctl restart slskd` logging `Received SIGTERM`, `[FATAL] ProcessExit event fired`, and `Main process exited, code=exited, status=1/FAILURE`. `Application` registered POSIX signal handlers that treated normal service stop/restart signals as fatal and called `Environment.Exit(1)`.
+**The Bug**: Live `local test host` manual deployments showed `systemctl restart slskd` logging `Received SIGTERM`, `[FATAL] ProcessExit event fired`, and `Main process exited, code=exited, status=1/FAILURE`. `Application` registered POSIX signal handlers that treated normal service stop/restart signals as fatal and called `Environment.Exit(1)`.
 
 **Files Affected**:
 - `src/slskd/Application.cs`
@@ -3695,7 +3695,7 @@ PosixSignalRegistration.Create(signal, context =>
 
 ### 0z77. Expected Peer Browse Failures Must Not Escape API Controllers
 
-**The Bug**: Live `kspls0` logs showed `POST /api/v0/users/{username}/directory` producing repeated middleware/error-handler stack traces when a remote Soulseek peer could not establish a direct or indirect message connection. `UsersController.Directory` only handled `UserOfflineException`, so ordinary peer reachability failures bubbled as unhandled request exceptions.
+**The Bug**: Live `local test host` logs showed `POST /api/v0/users/{username}/directory` producing repeated middleware/error-handler stack traces when a remote Soulseek peer could not establish a direct or indirect message connection. `UsersController.Directory` only handled `UserOfflineException`, so ordinary peer reachability failures bubbled as unhandled request exceptions.
 
 **Files Affected**:
 - `src/slskd/Users/API/Controllers/UsersController.cs`
@@ -3735,7 +3735,7 @@ catch (SoulseekClientException ex) when (ex.InnerException is ConnectionExceptio
 
 ### 0z76. DHT Rendezvous Must Not Count Connector Capacity Skips As Peer Attempts
 
-**The Bug**: Live `kspls0` testing after manual build `d41ef6335` showed DHT healthy with four discovered peers but no mesh, while status reported `totalConnectionsAttempted=8` and overlay stats reported only six connector failures. `DhtRendezvousService` scheduled one background task per discovered peer and marked each peer attempted before calling the connector; `MeshOverlayConnector` then silently skipped calls when its three-attempt concurrency guard was already full.
+**The Bug**: Live `local test host` testing after manual build `d41ef6335` showed DHT healthy with four discovered peers but no mesh, while status reported `totalConnectionsAttempted=8` and overlay stats reported only six connector failures. `DhtRendezvousService` scheduled one background task per discovered peer and marked each peer attempted before calling the connector; `MeshOverlayConnector` then silently skipped calls when its three-attempt concurrency guard was already full.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -3762,7 +3762,7 @@ _ = TryConnectToPeerAsync(peerId, endpoint);
 
 ### 0z75. Overlay Readers Must Handle Unframed JSON Compatibility Frames
 
-**The Bug**: Live `kspls0` testing on manual build `90257b10d` connected to mesh peer `m***7`, then dropped the peer exactly at the two-minute keepalive mark with `Protocol violation ... Invalid message length: 2065855609`. That "length" is `0x7b227479`, the ASCII bytes `{"ty`, so the reader saw raw JSON at the frame boundary where it expected a four-byte big-endian length prefix.
+**The Bug**: Live `local test host` testing on manual build `90257b10d` connected to mesh peer `m***7`, then dropped the peer exactly at the two-minute keepalive mark with `Protocol violation ... Invalid message length: 2065855609`. That "length" is `0x7b227479`, the ASCII bytes `{"ty`, so the reader saw raw JSON at the frame boundary where it expected a four-byte big-endian length prefix.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/Security/SecureMessageFramer.cs`
@@ -3791,7 +3791,7 @@ var length = BinaryPrimitives.ReadInt32BigEndian(headerBuffer);
 
 ### 0z73. PATH-Based Tool Names Are Not Filesystem Paths
 
-**The Bug**: Live `kspls0` logs emitted `[AudioSketch] ffmpeg not configured or missing: ffmpeg` dozens of times even though `ffmpeg` was installed at `/usr/bin/ffmpeg`. `AudioSketchService` treated the default configured command name `ffmpeg` as a literal relative file path and called `File.Exists("ffmpeg")`, which fails for PATH-resolved executables.
+**The Bug**: Live `local test host` logs emitted `[AudioSketch] ffmpeg not configured or missing: ffmpeg` dozens of times even though `ffmpeg` was installed at `/usr/bin/ffmpeg`. `AudioSketchService` treated the default configured command name `ffmpeg` as a literal relative file path and called `File.Exists("ffmpeg")`, which fails for PATH-resolved executables.
 
 **Files Affected**:
 - `src/slskd/Audio/AudioSketchService.cs`
@@ -3820,7 +3820,7 @@ if (resolvedFfmpegPath is null)
 
 ### 0z74. QUIC Support Is A Runtime Capability, Not An OS Check
 
-**The Bug**: Live `kspls0` testing on build `15ac295cc` showed `slskd` starting QUIC overlay listeners with the host's AUR `msquic 2.4.11`, then crashing with a native `libmsquic.so.2` segfault. The app registered QUIC hosted services because the OS was Linux, even though QUIC viability depends on the installed native `libmsquic` and its compatibility with the running .NET runtime.
+**The Bug**: Live `local test host` testing on build `15ac295cc` showed `slskd` starting QUIC overlay listeners with the host's AUR `msquic 2.4.11`, then crashing with a native `libmsquic.so.2` segfault. The app registered QUIC hosted services because the OS was Linux, even though QUIC viability depends on the installed native `libmsquic` and its compatibility with the running .NET runtime.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -3854,7 +3854,7 @@ private static bool IsQuicAvailable()
 
 ### 0z72. Soulseek MessageConnection Teardown Must Not Log As Fatal
 
-**The Bug**: Live `kspls0` manual build testing emitted `[FATAL] Unobserved task exception ... (The underlying Tcp connection is closed)` while a remote transfer had already been classified as peer-side failure. The flattened exception was `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`, which did not match the existing expected Soulseek network classifier even though it is normal peer connection teardown.
+**The Bug**: Live `local test host` manual build testing emitted `[FATAL] Unobserved task exception ... (The underlying Tcp connection is closed)` while a remote transfer had already been classified as peer-side failure. The flattened exception was `InvalidOperationException: The underlying Tcp connection is closed` from `Soulseek.Network.MessageConnection.ReadContinuouslyAsync`, which did not match the existing expected Soulseek network classifier even though it is normal peer connection teardown.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -3879,7 +3879,7 @@ var isSoulseekMessageConnectionClosed =
 
 ### 0z71. DHT Beacon Capability Must Be Based On The Real Overlay Listener
 
-**The Bug**: Live `kspls0` manual build testing showed DHT ready, outbound mesh connected, but `/api/v0/overlay/stats` reported `server.isListening=false` and no TCP listener on `50305`. Startup had logged `This client is not beacon-capable (behind NAT)` even though the same host had listened on `50305` minutes earlier. `DhtRendezvousService.DetectBeaconCapabilityAsync(...)` performed a temporary bind probe before starting `MeshOverlayServer`; if that probe failed transiently during a fast restart, the real overlay listener was never started or retried.
+**The Bug**: Live `local test host` manual build testing showed DHT ready, outbound mesh connected, but `/api/v0/overlay/stats` reported `server.isListening=false` and no TCP listener on `50305`. Startup had logged `This client is not beacon-capable (behind NAT)` even though the same host had listened on `50305` minutes earlier. `DhtRendezvousService.DetectBeaconCapabilityAsync(...)` performed a temporary bind probe before starting `MeshOverlayServer`; if that probe failed transiently during a fast restart, the real overlay listener was never started or retried.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -3902,7 +3902,7 @@ IsBeaconCapable = await StartOverlayServerIfPossibleAsync(cancellationToken);
 
 ### 0z70. Overlay Keepalive Must Not Read Outside The Message Loop
 
-**The Bug**: Live `kspls0` manual build testing still dropped a mesh neighbor around the two-minute keepalive window with `Protocol violation ... Invalid message length: 2065855609` after a mesh search had been sent. `MeshOverlayServer.HandleMessagesAsync(...)` called `connection.PingAsync(...)`, and `PingAsync` wrote a ping then performed its own direct read for a `PongMessage`. That creates a second read path outside the normal dispatcher and can consume or race unrelated overlay frames on the same TLS stream.
+**The Bug**: Live `local test host` manual build testing still dropped a mesh neighbor around the two-minute keepalive window with `Protocol violation ... Invalid message length: 2065855609` after a mesh search had been sent. `MeshOverlayServer.HandleMessagesAsync(...)` called `connection.PingAsync(...)`, and `PingAsync` wrote a ping then performed its own direct read for a `PongMessage`. That creates a second read path outside the normal dispatcher and can consume or race unrelated overlay frames on the same TLS stream.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/MeshOverlayConnection.cs`
@@ -3955,7 +3955,7 @@ Mock.Of<IOptionsMonitor<SlskdOptions>>();
 
 ### 0z68. DHT Rendezvous Must Not Dial Its Own DHT UDP Port As A TCP Overlay Endpoint
 
-**The Bug**: Live `kspls0` manual build testing showed DHT discovery returning many candidates on port `50306`, which is the slskdn DHT UDP port, while the TCP overlay listener was on `50305`. `DhtRendezvousService.OnPeersFound(...)` treated every `PeerInfo.ConnectionUri` as a TCP overlay endpoint and scheduled outbound TLS overlay dials immediately. The node then spent connection attempts/backoff on DHT-port candidates, producing timeouts/refusals/TLS EOFs and leaving mesh search with no usable outbound peers.
+**The Bug**: Live `local test host` manual build testing showed DHT discovery returning many candidates on port `50306`, which is the slskdn DHT UDP port, while the TCP overlay listener was on `50305`. `DhtRendezvousService.OnPeersFound(...)` treated every `PeerInfo.ConnectionUri` as a TCP overlay endpoint and scheduled outbound TLS overlay dials immediately. The node then spent connection attempts/backoff on DHT-port candidates, producing timeouts/refusals/TLS EOFs and leaving mesh search with no usable outbound peers.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -3985,7 +3985,7 @@ SchedulePeerConnection(endpointKey, endpoint);
 
 ### 0z67. Auto-Replace Must Wait For SearchService Background Finalization
 
-**The Bug**: Live `kspls0` build `159` logs showed `AutoReplaceService` warning `No search responses found` for a track, then `SearchService` logging the same search completed with 14-17 responses one second later. Auto-replace started a search with `SearchService.StartAsync()`, but that method returns after creating the search record while a background task later persists the final responses. The fixed 30-second poll could expire just before finalization, causing auto-replace to skip valid alternatives.
+**The Bug**: Live `local test host` build `159` logs showed `AutoReplaceService` warning `No search responses found` for a track, then `SearchService` logging the same search completed with 14-17 responses one second later. Auto-replace started a search with `SearchService.StartAsync()`, but that method returns after creating the search record while a background task later persists the final responses. The fixed 30-second poll could expire just before finalization, causing auto-replace to skip valid alternatives.
 
 **Files Affected**:
 - `src/slskd/Transfers/AutoReplace/AutoReplaceService.cs`
@@ -4034,7 +4034,7 @@ if (searchWithResponses?.Responses == null || !searchWithResponses.Responses.Any
 
 ### 0z66. User Directory Browse Must Gate The Soulseek Logged-In State
 
-**The Bug**: Live `kspls0` startup logs showed `POST /api/v0/users/{username}/directory` throwing through the ASP.NET pipeline when the frontend/browser requested a directory while the Soulseek client was `Connected, LoggingIn`. The endpoint only handled offline users, so a normal startup race became a noisy 500 with repeated security middleware and exception-handler errors.
+**The Bug**: Live `local test host` startup logs showed `POST /api/v0/users/{username}/directory` throwing through the ASP.NET pipeline when the frontend/browser requested a directory while the Soulseek client was `Connected, LoggingIn`. The endpoint only handled offline users, so a normal startup race became a noisy 500 with repeated security middleware and exception-handler errors.
 
 **Files Affected**:
 - `src/slskd/Users/API/Controllers/UsersController.cs`
@@ -4152,7 +4152,7 @@ services.AddSingleton<IMeshOverlayConnector, MeshOverlayConnector>();
 
 ### 0z64. Soulseek TransferRejectedException Remote Enqueue Failures Are Expected Network Churn
 
-**The Bug**: Live `kspls0` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
+**The Bug**: Live `local test host` validation still emitted `[FATAL] Unobserved task exception ... (Enqueue failed due to internal error)` after downloads were already recorded as `Completed, Rejected`. The unobserved exception was `Soulseek.TransferRejectedException`, which the expected-network classifier did not recognize even though the app had already handled it as a remote transfer rejection.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -4175,7 +4175,7 @@ typeName.Contains("Soulseek.TransferReportedFailedException", StringComparison.O
 
 ### 0z63. Download History Counters Need Atomic Upserts Under Transfer Concurrency
 
-**The Bug**: Live `kspls0` transfer activity hit `SQLite Error 19: 'UNIQUE constraint failed: DownloadHistory.Username'` while recording source-ranking history. Multiple transfer-completion handlers can see no row for the same username, race to insert it, and make EF log database errors or lose counter updates if the retry path exhausts.
+**The Bug**: Live `local test host` transfer activity hit `SQLite Error 19: 'UNIQUE constraint failed: DownloadHistory.Username'` while recording source-ranking history. Multiple transfer-completion handlers can see no row for the same username, race to insert it, and make EF log database errors or lose counter updates if the retry path exhausts.
 
 **Files Affected**:
 - `src/slskd/Transfers/Ranking/SourceRankingService.cs`
@@ -4210,7 +4210,7 @@ await context.Database.ExecuteSqlInterpolatedAsync($@"
 
 ### 0z62. DHT Diagnostic Controllers Must Use AuthPolicy.Any, Not Bare Authorize
 
-**The Bug**: Live `kspls0` diagnostics accepted the configured API key for `/api/v0/session` and `/api/v0/searches`, but `/api/v0/dht/status` and `/api/v0/overlay/stats` returned `401` with `WWW-Authenticate: Bearer`. `DhtRendezvousController` used bare `[Authorize]`, which followed the default JWT bearer scheme instead of the repo's API-key-or-JWT policy.
+**The Bug**: Live `local test host` diagnostics accepted the configured API key for `/api/v0/session` and `/api/v0/searches`, but `/api/v0/dht/status` and `/api/v0/overlay/stats` returned `401` with `WWW-Authenticate: Bearer`. `DhtRendezvousController` used bare `[Authorize]`, which followed the default JWT bearer scheme instead of the repo's API-key-or-JWT policy.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
@@ -4308,7 +4308,7 @@ Track inbound and outbound overlay connections separately for the same peer. Run
 
 ### 0z58. AUR Binary Sources Need Versioned Local Filenames Or Makepkg Can Repackage An Older Zip
 
-**The Bug**: `slskdn-bin` used a constant local source filename, `slskdn-main-linux-glibc-x64.zip`, with `sha256sums=('SKIP' ...)`. On `kspls0`, yay built packages labeled `0.24.5.slskdn.147`, `.149`, and `.152`, but makepkg reused the cached `.145` zip because the local filename never changed and checksum validation was skipped. Pacman showed the new package version while `/usr/bin/slskd --version` still reported `0.24.5-slskdn.145`.
+**The Bug**: `slskdn-bin` used a constant local source filename, `slskdn-main-linux-glibc-x64.zip`, with `sha256sums=('SKIP' ...)`. On `local test host`, yay built packages labeled `0.24.5.slskdn.147`, `.149`, and `.152`, but makepkg reused the cached `.145` zip because the local filename never changed and checksum validation was skipped. Pacman showed the new package version while `/usr/bin/slskd --version` still reported `0.24.5-slskdn.145`.
 
 **Files Affected**:
 - `packaging/aur/PKGBUILD-bin`
@@ -4460,7 +4460,7 @@ Set the JWT `aud` value to the collection id and require validation to prove tha
 
 ### 0z42. Overlay Connector Stats That Only Count Success/Failure Hide The Actual Failing Layer
 
-**The Bug**: While validating issue `#209` on `kspls0`, `/api/v0/overlay/stats` only exposed aggregate `successfulConnections` and `failedConnections`. That made the live system look like “overlay is broken” even after our inbound TLS/HELLO path was proven healthy, because the stats could not distinguish `connect timeout`, `no route`, `TCP refused`, `TLS EOF`, or protocol-handshake failures. We kept reaching for broad fixes because the product diagnostics were too coarse to tell whether the current failure was ours or the remote candidate's.
+**The Bug**: While validating issue `#209` on `local test host`, `/api/v0/overlay/stats` only exposed aggregate `successfulConnections` and `failedConnections`. That made the live system look like “overlay is broken” even after our inbound TLS/HELLO path was proven healthy, because the stats could not distinguish `connect timeout`, `no route`, `TCP refused`, `TLS EOF`, or protocol-handshake failures. We kept reaching for broad fixes because the product diagnostics were too coarse to tell whether the current failure was ours or the remote candidate's.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/MeshOverlayConnector.cs`
@@ -4527,7 +4527,7 @@ Write the serialized pins to a sibling temp file, flush it to disk, and atomical
 
 ### 0z40. DHT-Discovered Endpoints Cannot Be Counted As Onion-Capable Peers Before An Overlay Handshake Proves Them
 
-**The Bug**: While validating issue `#209` on `kspls0`, `Circuit maintenance` reported `11 total peers, 11 onion-capable` even though live overlay stats still showed `successfulConnections = 1` and `activeMeshConnections = 0`. The cause was `DhtRendezvousService.PublishDiscoveredPeer(...)`: it inserted every DHT-discovered endpoint into `IMeshPeerManager` with `supportsOnionRouting: true` immediately, before any overlay handshake succeeded.
+**The Bug**: While validating issue `#209` on `local test host`, `Circuit maintenance` reported `11 total peers, 11 onion-capable` even though live overlay stats still showed `successfulConnections = 1` and `activeMeshConnections = 0`. The cause was `DhtRendezvousService.PublishDiscoveredPeer(...)`: it inserted every DHT-discovered endpoint into `IMeshPeerManager` with `supportsOnionRouting: true` immediately, before any overlay handshake succeeded.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -4548,7 +4548,7 @@ Track DHT-discovered endpoints as unverified candidates first. Only mark a peer 
 
 ### 0z39. Auto-Banning Peers On Overlay Certificate Pin Mismatch Can Partition The Mesh After Normal Cert Rotation
 
-**The Bug**: While live-testing issue `#209` on `kspls0`, DHT discovery found real peers and at least one real slskdn overlay endpoint, but the node still never formed a neighbor because `CertificatePinStore` had a stale pin for `minimus7`. The connector treated the mismatch as a possible MITM, blocked that username for an hour, and stopped trying. Clearing the stale pin immediately produced the first successful overlay neighbor.
+**The Bug**: While live-testing issue `#209` on `local test host`, DHT discovery found real peers and at least one real slskdn overlay endpoint, but the node still never formed a neighbor because `CertificatePinStore` had a stale pin for `minimus7`. The connector treated the mismatch as a possible MITM, blocked that username for an hour, and stopped trying. Clearing the stale pin immediately produced the first successful overlay neighbor.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/Security/CertificateManager.cs`
@@ -4572,7 +4572,7 @@ partition the mesh until an operator manually clears `cert_pins.json` or the blo
 
 ### 0z38. DHT Status APIs Cannot Report `IsEnabled` From `IsDhtRunning` Or The UI Lies During Bootstrap
 
-**The Bug**: While rechecking issue `#209` on `kspls0`, the live `/api/v0/dht/status` response reported `isEnabled: false` and `isDhtRunning: false` even though the configured DHT service was running, had a node count, and was actively transitioning through bootstrap states. `DhtRendezvousController.GetDhtStatus()` incorrectly mapped `IsEnabled` from `stats.IsDhtRunning` instead of the actual configured enabled flag.
+**The Bug**: While rechecking issue `#209` on `local test host`, the live `/api/v0/dht/status` response reported `isEnabled: false` and `isDhtRunning: false` even though the configured DHT service was running, had a node count, and was actively transitioning through bootstrap states. `DhtRendezvousController.GetDhtStatus()` incorrectly mapped `IsEnabled` from `stats.IsDhtRunning` instead of the actual configured enabled flag.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/API/DhtRendezvousController.cs`
@@ -4854,7 +4854,7 @@ trap "rm -rf '$work_dir'" EXIT
 
 ### 0z25. DHT Bootstrap Can Take Longer Than 30 Seconds Even When The Network Path Is Healthy
 
-**The Bug**: On `kspls0`, once router forwarding and host firewall rules were both correct, the MonoTorrent DHT still took about 90 seconds to move from `Initialising` to `Ready`. Our startup path treated 30 seconds as the failure threshold, logged a warning that implied misconfiguration, and started spamming `Cannot announce` / `Cannot discover peers` even though the same process later became healthy without any further changes.
+**The Bug**: On `local test host`, once router forwarding and host firewall rules were both correct, the MonoTorrent DHT still took about 90 seconds to move from `Initialising` to `Ready`. Our startup path treated 30 seconds as the failure threshold, logged a warning that implied misconfiguration, and started spamming `Cannot announce` / `Cannot discover peers` even though the same process later became healthy without any further changes.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
@@ -4875,7 +4875,7 @@ misconfiguration warnings until the grace period has actually elapsed.
 **Why This Keeps Happening**: Once DHT has zero or only a few nodes at startup, the public bootstrap routers can seed slowly even on a healthy network path. A short static timeout turns that normal warm-up into a misleading product error and sends debugging in the wrong direction.
 
 
-**The Bug**: On `kspls0`, downloads were succeeding end to end, but the process still emitted `[FATAL] Unobserved task exception` with `Soulseek.ConnectionException: Transfer failed: Transfer complete` immediately after the successful transfer state transition. The transfer was already done; only the trailing connection teardown surfaced as an exception name/message we were not classifying as expected Soulseek transport churn.
+**The Bug**: On `local test host`, downloads were succeeding end to end, but the process still emitted `[FATAL] Unobserved task exception` with `Soulseek.ConnectionException: Transfer failed: Transfer complete` immediately after the successful transfer state transition. The transfer was already done; only the trailing connection teardown surfaced as an exception name/message we were not classifying as expected Soulseek transport churn.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -4899,7 +4899,7 @@ completed downloads do not emit fake fatal crash noise.
 
 ### 0z23. Remote Peer Transfer Rejections Are Expected Soulseek Churn, Not Fatal Host Errors
 
-**The Bug**: After the local queue and DHT fixes, `kspls0` showed both successful downloads and normal remote-peer failures on the same build. One remaining bad behavior was that `Soulseek.TransferReportedFailedException` (`Download reported as failed by remote client`) could still fall through the unobserved-task classifier and show up as fake `[FATAL] Unobserved task exception` noise, even though the remote peer simply declined or aborted that one transfer.
+**The Bug**: After the local queue and DHT fixes, `local test host` showed both successful downloads and normal remote-peer failures on the same build. One remaining bad behavior was that `Soulseek.TransferReportedFailedException` (`Download reported as failed by remote client`) could still fall through the unobserved-task classifier and show up as fake `[FATAL] Unobserved task exception` noise, even though the remote peer simply declined or aborted that one transfer.
 
 **Files Affected**:
 - `src/slskd/Program.cs`
@@ -8879,18 +8879,16 @@ const [signatureVerificationResult, setSignatureVerificationResult] = useState(n
 
 ---
 
-### 6. React 16 Compatibility
+### 6. React Version Compatibility
 
-**The Issue**: This project uses React 16.8.6. Don't use features from React 17+.
+**The Issue**: Older repo guidance claimed a React 16.8.6 floor after the web app had moved on. That makes agents reject valid current patterns or pin incompatible dependency versions.
 
-**Avoid**:
-- `useId()` (React 18)
-- `useDeferredValue()` (React 18)
-- `useTransition()` (React 18)
-- Automatic JSX transform (React 17)
+**Rule**: Treat `src/web/package.json` and `src/web/package-lock.json` as the source of truth for the active React major. Do not copy old archive/memory references into new guidance without checking the current package versions first.
 
-**Safe to use**:
-- `useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`, `useRef`
+**Safe Baseline**:
+- Use hooks and router APIs supported by the currently declared React and React Router majors.
+- Keep Semantic UI React integration patterns consistent with existing components.
+- When dependency compatibility is uncertain, check peer dependency ranges before bumping.
 
 ---
 
@@ -11077,7 +11075,7 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 ### 0z47. Mesh Self-Descriptors Must Not Advertise Impossible Direct Transports Or Wrong Default Ports
 
-**What went wrong:** Live auditing on `kspls0` showed `PeerDescriptorPublisher` still auto-detected clearnet endpoints as bare `ip:2234` / `ip:2235` and also emitted `DirectQuic` transport endpoints even when `QuicListener.IsSupported` was false on the host. That poisoned our own published descriptor with ports we were not actually listening on and advertised a direct QUIC transport that the node could not accept. Operators then saw DHT peers and circuit-maintenance churn without any realistic path to a working direct mesh connection.
+**What went wrong:** Live auditing on `local test host` showed `PeerDescriptorPublisher` still auto-detected clearnet endpoints as bare `ip:2234` / `ip:2235` and also emitted `DirectQuic` transport endpoints even when `QuicListener.IsSupported` was false on the host. That poisoned our own published descriptor with ports we were not actually listening on and advertised a direct QUIC transport that the node could not accept. Operators then saw DHT peers and circuit-maintenance churn without any realistic path to a working direct mesh connection.
 
 **Why it happened:** The descriptor publisher mixed old Soulseek default ports with the newer mesh transport model, and it never cross-checked advertised transports against the runtime transport capability on the current host. Because DHT discovery and peer stats already looked busy, the impossible advertisement path hid behind noisy remote-candidate failures.
 
@@ -11085,7 +11083,7 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 ### 0z48. QUIC-Unsupported Hosts Need A Real Direct Mesh Dialer Fallback, Not Just Honest Descriptor Publication
 
-**What went wrong:** Live validation on `kspls0` showed that fixing the mesh self-descriptor only made the node honest; it did not make mesh circuits work. The host correctly stopped advertising impossible `DirectQuic` transports once `QuicListener.IsSupported` was false, but `TransportSelector` still only had `DirectQuicDialer` for clearnet mesh transport. That left QUIC-unsupported hosts with no direct dialer at all, so circuit formation could never succeed even though DHT rendezvous and the TCP overlay listener were healthy.
+**What went wrong:** Live validation on `local test host` showed that fixing the mesh self-descriptor only made the node honest; it did not make mesh circuits work. The host correctly stopped advertising impossible `DirectQuic` transports once `QuicListener.IsSupported` was false, but `TransportSelector` still only had `DirectQuicDialer` for clearnet mesh transport. That left QUIC-unsupported hosts with no direct dialer at all, so circuit formation could never succeed even though DHT rendezvous and the TCP overlay listener were healthy.
 
 **Why it happened:** The codebase grew two separate direct-connection stacks: the mesh transport selector assumed direct clearnet means QUIC, while the anonymity layer already had a working direct TLS transport to the TCP overlay listener. We fixed the advertisement lie first, but the dialer layer still had no fallback to the transport the host could actually accept.
 
@@ -11187,7 +11185,7 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 ### 0z59. Public Mesh Descriptors Must Not Publish Every Local Interface
 
-**What went wrong:** Live issue-209 diagnostics on `kspls0` showed the node publishing five self-descriptor endpoints/transports from automatic interface detection while public DHT discovery still had zero active mesh connections. Those auto-detected addresses can include private, link-local, container, VPN, or otherwise non-public interface addresses that remote peers cannot reach. They make the mesh look populated while poisoning peer descriptors with bad direct candidates.
+**What went wrong:** Live issue-209 diagnostics on `local test host` showed the node publishing five self-descriptor endpoints/transports from automatic interface detection while public DHT discovery still had zero active mesh connections. Those auto-detected addresses can include private, link-local, container, VPN, or otherwise non-public interface addresses that remote peers cannot reach. They make the mesh look populated while poisoning peer descriptors with bad direct candidates.
 
 **Why it happened:** `PeerDescriptorPublisher` treated every non-loopback interface as "routable" and also supplemented explicitly configured `SelfEndpoints` with detected interfaces. `PeerDescriptorRefreshService` used a similar broad interface scan for IP-change detection, so private-interface churn could also trigger needless descriptor refreshes.
 
@@ -11227,7 +11225,7 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 ### 0z66. Dense Footers Need Live-Width Stress Tests, Not Just Mocked Happy-Path Screenshots
 
-**What went wrong:** The Web UI footer redesign looked acceptable in mocked screenshots, but live rendering on `kspls0` exposed awkward spacing and content pushing against pill edges. The rigid three-column grid also left odd empty space in light theme and made the operational cluster brittle when real counters, icon metrics, or theme font rendering differed from the mock data.
+**What went wrong:** The Web UI footer redesign looked acceptable in mocked screenshots, but live rendering on `local test host` exposed awkward spacing and content pushing against pill edges. The rigid three-column grid also left odd empty space in light theme and made the operational cluster brittle when real counters, icon metrics, or theme font rendering differed from the mock data.
 
 **Why it happened:** The first validation used representative but still too-small data and treated hidden elements with zero-size boxes as overflow noise. It did not stress long speed values, larger hash/sequence counters, active swarm/backfill labels, and the live light-theme rendering together.
 

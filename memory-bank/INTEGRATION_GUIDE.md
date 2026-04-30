@@ -25,7 +25,7 @@ This document explains how to integrate the new ADR-0007 (Senior Engineer Coding
 
 ```bash
 # On main branch
-cd /home/keith/Documents/Code/slskdn
+cd <repo-root>
 
 # Copy ADR to memory-bank
 cp /tmp/tmp.f8mfTQSRH7/adr-0007-senior-engineer-coding-standards.md \
@@ -247,7 +247,7 @@ When starting a new AI session, provide:
 
 ```
 Project: slskdn (Soulseek web client fork)
-Tech: .NET 8 (C#), React 16.8.6 (JavaScript), SQLite
+Tech: .NET 8 (C#), current React version declared in src/web/package.json (JavaScript), SQLite
 
 Read these first:
 1. memory-bank/projectbrief.md - Project overview

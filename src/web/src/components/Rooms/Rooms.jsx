@@ -1,4 +1,5 @@
 import './Rooms.css';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import * as rooms from '../../lib/rooms';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import RoomCreateModal from './RoomCreateModal';
@@ -20,7 +21,7 @@ let tabCounter = 0;
 // Load tabs from localStorage
 const loadTabsFromStorage = () => {
   try {
-    const saved = localStorage.getItem('slskd-room-tabs');
+    const saved = getLocalStorageItem('slskd-room-tabs');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -37,14 +38,10 @@ const loadTabsFromStorage = () => {
 
 // Save tabs to localStorage
 const saveTabsToStorage = (tabsToSave) => {
-  try {
-    localStorage.setItem(
-      'slskd-room-tabs',
-      JSON.stringify({ tabCounter, tabs: tabsToSave }),
-    );
-  } catch {
-    // ignore
-  }
+  setLocalStorageItem(
+    'slskd-room-tabs',
+    JSON.stringify({ tabCounter, tabs: tabsToSave }),
+  );
 };
 
 const Rooms = () => {

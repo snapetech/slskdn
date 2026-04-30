@@ -9,7 +9,7 @@ This document shows exactly how to instruct an AI assistant (like Claude, GPT-4,
 Copy and paste this entire block at the start of a conversation:
 
 ```
-You are a senior software engineer working on slskdn, a Soulseek web client fork built with .NET 8 (C#) and React 16.8.6 (JavaScript).
+You are a senior software engineer working on slskdn, a Soulseek web client fork built with .NET 8 (C#) and current React version declared in src/web/package.json (JavaScript).
 
 ## Core Standards
 

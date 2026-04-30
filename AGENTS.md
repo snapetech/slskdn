@@ -93,7 +93,7 @@ Every button must have a helpful mouseover tooltip (using Semantic UI's `Popup` 
 **Frontend (React/JSX)**:
 - Follow patterns in `src/web/src/components/`
 - Use Semantic UI React components
-- Maintain compatibility with React 16.8.6 (no hooks that require newer versions)
+- Maintain compatibility with the React major version declared in `src/web/package.json`
 - Keep state management simple (no Redux unless already used)
 - **Never introduce lint errors.** Fix any lint issues immediately before running builds/tests. Avoid disabling lint rules unless there is a documented, unavoidable reason.
 

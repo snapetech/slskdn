@@ -1,3 +1,15 @@
+## Update 2026-04-30 18:42:00Z
+
+- Current task: Native MilkDrop Phase 2 compatibility matrix is implemented locally.
+- Last activity:
+  - added a compatibility matrix module over parsed preset bodies with supported counts, unsupported functions/shaders, and max shape/wave/sprite metrics
+  - added a `npm run test:native-milkdrop-compatibility` CLI that scans curated fixtures by default or supplied `.milk` / `.milk2` files and folders
+  - added first high-count shape/wave metric coverage to measure real-preset-pack pressure before closing renderer gaps
+  - validated focused compatibility/native tests, compatibility CLI, frontend lint, frontend production build, native browser smoke, focused GoldStar and transfer backend tests, shell syntax checks, and whitespace checks
+- Next steps:
+  1. Commit and push the compatibility-matrix phase.
+  2. Continue the next Phase 2 MilkDrop pass from measured real-pack gaps.
+
 ## Update 2026-04-30 18:38:00Z
 
 - Current task: Browser storage hardening is implemented locally and documented.
@@ -1097,7 +1109,7 @@
 
 ## Update 2026-04-29 23:58:00Z
 
-- Current task: None. Header and footer chrome alignment has been fixed and deployed to `kspls0`.
+- Current task: None. Header and footer chrome alignment has been fixed and deployed to `local test host`.
 - Last activity:
   - split the header into primary navigation and utility rails
   - reordered utilities to Connected, Theme, System, Log Out
@@ -1118,7 +1130,7 @@
   - rebuilt result-card identity/action layout and file-list spacing
   - tightened Discovery Graph controls and added sparse graph messaging
   - defaulted secondary Search page panels closed and persisted their state
-  - deployed the rebuilt frontend to `kspls0` and recaptured the README gallery
+  - deployed the rebuilt frontend to `local test host` and recaptured the README gallery
   - documented and committed the fixed-chrome screenshot validation gotcha separately
 - Next steps:
   1. Commit and push the UI pass plus README screenshot changes when ready.
@@ -1131,7 +1143,7 @@
   - pulled the remote README edits with rebase/autostash
   - inspected the README showcase screenshots and identified light-theme leaks in SongID, Discovery Graph, and Network
   - added explicit dark-theme styling for the affected Semantic UI variants and nested text
-  - rebuilt and deployed the web bundle to `kspls0` for screenshot verification
+  - rebuilt and deployed the web bundle to `local test host` for screenshot verification
   - recaptured `songid-cc-youtube-result.png`, `songid-discovery-graph.png`, and `network-health-dashboard.png`
   - documented and committed the dark-theme Semantic UI variant gotcha separately
 - Next steps:
@@ -1172,7 +1184,7 @@
 
 - Current task: None. The Network dashboard public-DHT notice and false no-peer diagnostics are fixed locally.
 - Last activity:
-  - inspected `kspls0` DHT logs and confirmed the live node is not at zero peers (`nodes=155`, `discovered=37`, `activeMesh=1`)
+  - inspected `local test host` DHT logs and confirmed the live node is not at zero peers (`nodes=155`, `discovered=37`, `activeMesh=1`)
   - made the public-DHT exposure notice a dismissable info message instead of a persistent warning/modal
   - made connectivity diagnostics consider DHT status peer counters as well as list endpoints
   - documented the warning-counter gotcha in ADR-0001 and committed that docs entry separately
@@ -1597,7 +1609,7 @@
 
 ## Update 2026-04-22 17:25:51Z
 
-- Current task: Issue `#209` troubleshooting has a live answer from `kspls0`: normal Soulseek search works after removing auto-replace budget contention; mesh search still has no active peers because discovered overlay endpoints are unreachable.
+- Current task: Issue `#209` troubleshooting has a live answer from `local test host`: normal Soulseek search works after removing auto-replace budget contention; mesh search still has no active peers because discovered overlay endpoints are unreachable.
 - Last activity:
   - deployed `0.24.5-slskdn.174+manual.0214ccc8b` to `/usr/lib/slskd/releases/manual-0214ccc8b`; API reports the matching executable/version and systemd is active with `NRestarts=0`
   - verified source-separated logs: auto-replace spends `source=auto-replace`, user/API searches spend `source=user`
@@ -1612,7 +1624,7 @@
 
 - Current task: Issue `#209` troubleshooting found and fixed a second local app issue: background auto-replace was sharing the user/API search safety limiter bucket. Implementation is validated locally and ready to commit/push.
 - Last activity:
-  - confirmed the earlier `kspls0` zero-result manual searches were not a clean population test because auto-replace was repeatedly charging `SafetyLimiter.TryConsumeSearch("user")`
+  - confirmed the earlier `local test host` zero-result manual searches were not a clean population test because auto-replace was repeatedly charging `SafetyLimiter.TryConsumeSearch("user")`
   - documented the background-search budget gotcha in ADR-0001 and committed it as `1a9cb7dc2`
   - added an explicit search safety source overload, preserving `user` for UI/API callers and charging auto-replace to `auto-replace`
   - added source-aware search rejection logs and completion summaries with Soulseek/mesh/merged response counts, file count, and duration
@@ -1620,13 +1632,13 @@
 - Next steps:
   1. Run lint and diff checks.
   2. Commit the implementation/docs update.
-  3. Install or otherwise deploy the fixed build on `kspls0`, then rerun clean manual searches while watching the new source-aware logs.
+  3. Install or otherwise deploy the fixed build on `local test host`, then rerun clean manual searches while watching the new source-aware logs.
 
 ## Update 2026-04-22 16:55:00Z
 
-- Current task: Issue `#209` triage on `kspls0` is complete locally; two app-side fixes are implemented and validated, but the code changes still need commit/push if they should ship.
+- Current task: Issue `#209` triage on `local test host` is complete locally; two app-side fixes are implemented and validated, but the code changes still need commit/push if they should ship.
 - Last activity:
-  - confirmed `kspls0` is already running `slskdn-bin 0.24.5.slskdn.174-1`, systemd `active/running`, `NRestarts=0`, Soulseek logged in, shares ready, DHT ready with `250` nodes, and overlay TCP listening on `50305`
+  - confirmed `local test host` is already running `slskdn-bin 0.24.5.slskdn.174-1`, systemd `active/running`, `NRestarts=0`, Soulseek logged in, shares ready, DHT ready with `250` nodes, and overlay TCP listening on `50305`
   - sampled DHT/overlay diagnostics showing a thin verified overlay (`activeMesh=1`, `successes=1`) with most public candidates failing by timeout/no-route/TLS EOF; this supports remote endpoint quality/population as the mesh-connectivity limit, not a local DHT bootstrap failure
   - reproduced zero-result normal API searches for `radiohead` and `beatles`, but auto-replace was repeatedly exhausting the search safety budget, so persistent Soulseek zero-result behavior needs a separate focused pass
   - fixed fake fatal unobserved task noise for normal remote transfer rejections (`Too many megabytes`, `Too many files`)
@@ -1641,7 +1653,7 @@
 
 - Current task: SongID UX cleanup and the prior `173` release-gate unit failure are fixed and validated; next step is committing, pushing, and tagging the requested release.
 - Last activity:
-  - audited the SongID page headlessly against the `kspls0` backend with a YouTube URL
+  - audited the SongID page headlessly against the `local test host` backend with a YouTube URL
   - fixed duplicate result actions/candidates, noisy diagnostic exposure, and the duplicate graph/atlas action in `SongIDPanel`
   - isolated static event subscriber-count tests in a non-parallel xUnit collection after the `173` release-gate failure
   - validated with frontend lint, focused Search UI tests, production web build, headless render pass with no HTTP 4xx/5xx responses, full Release unit suite, repo-wide `dotnet test`, and `bash ./bin/lint`
@@ -1651,7 +1663,7 @@
 
 ## Update 2026-04-21 06:45:00Z
 
-- Current task: Validating the `0.24.5-slskdn.171` yay install on `kspls0` and fixing actionable live noise.
+- Current task: Validating the `0.24.5-slskdn.171` yay install on `local test host` and fixing actionable live noise.
 - Last activity:
   - confirmed `slskdn-bin 0.24.5.slskdn.171-1` was installed, but the service was still running old PID `2151618` from `/usr/lib/slskd/releases/0.24.5.slskdn.170`
   - restarted `slskd`; the service is now running PID `2269037` from `/usr/lib/slskd/releases/0.24.5.slskdn.171`, `active/running`, `NRestarts=0`, with API `/api/v0/application` reporting `0.24.5-slskdn.171`
@@ -1662,13 +1674,13 @@
   - patched `Program.IsExpectedSoulseekNetworkException(...)` so `Connection timed out` and `Unable to read data from the transport connection` inner exceptions match expected Soulseek network churn
   - validation passed so far: focused `ProgramPathNormalizationTests` (`29` tests), Release build, `bash ./bin/lint`, and `git diff --check`
 - Next steps:
-  1. Re-sample `kspls0` after DHT bootstrap completes and watch for fresh current-PID fatal/error/coredump/overlay cooldown noise.
+  1. Re-sample `local test host` after DHT bootstrap completes and watch for fresh current-PID fatal/error/coredump/overlay cooldown noise.
   2. Commit and push the read-timeout classifier fix after changelog/memory updates.
   3. Do not create another build tag unless explicitly requested.
 
 ## Update 2026-04-21 06:22:00Z
 
-- Current task: None. The `kspls0` log-polish findings are fixed in `main` and pushed; installed `0.24.5-slskdn.170` is still running until the next requested release/package update.
+- Current task: None. The `local test host` log-polish findings are fixed in `main` and pushed; installed `0.24.5-slskdn.170` is still running until the next requested release/package update.
 - Last activity:
   - confirmed the live yay package and API still report `0.24.5-slskdn.170`, systemd is `active/running`, `NRestarts=0`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and overlay TCP is listening on `50305`
   - sampled current-process logs and coredumps; no fresh fatal/error/exception/502/coredump/bind/protocol noise appeared
@@ -1680,14 +1692,14 @@
   - final API check against the real web listener on `5030` returned quickly for `/api/v0/application`, `/api/v0/dht/status`, and `/api/v0/overlay/stats`; earlier timeouts were from probing the Soulseek listener on `50300`
   - installed `170` still logs the duplicate descriptor publish and per-endpoint cooldown detail because those fixes landed after the package was built
 - Next steps:
-  1. Keep `kspls0` on installed build `170`; do not create another build tag unless explicitly requested.
+  1. Keep `local test host` on installed build `170`; do not create another build tag unless explicitly requested.
   2. Validate the duplicate descriptor and cooldown log cleanup after the next release/package install.
 
 ## Update 2026-04-21 05:59:00Z
 
 - Current task: Removing Snap publishing from release workflows after `0.24.5-slskdn.170` got stuck waiting on Snap Store publication.
 - Last activity:
-  - confirmed `kspls0` is still running `slskdn-bin 0.24.5.slskdn.170-1` from systemd PID `2151618`, `active/running`, `NRestarts=0`, `ExecMainStatus=0`
+  - confirmed `local test host` is still running `slskdn-bin 0.24.5.slskdn.170-1` from systemd PID `2151618`, `active/running`, `NRestarts=0`, `ExecMainStatus=0`
   - verified authenticated API state: `/api/v0/application` reports `0.24.5-slskdn.170`, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and the TCP overlay listener is active on `50305`
   - monitored current-process journal after the auto-replace cycle started; no fresh fatal/error/exception/502/coredump/rate-limit/search-budget noise appeared, and no new `slskd` coredumps were present
   - found one fixable startup polish issue: `MeshBootstrapService` and `PeerDescriptorRefreshService` both published the same self descriptor at startup, producing duplicate `[MeshDHT] No configured endpoints...` and `[MeshDHT] Published self descriptor...` lines
@@ -1704,11 +1716,11 @@
 
 ## Update 2026-04-21 05:06:00Z
 
-- Current task: Validating the `0.24.5-slskdn.169` yay install on `kspls0` and fixing actionable live noise.
+- Current task: Validating the `0.24.5-slskdn.169` yay install on `local test host` and fixing actionable live noise.
 - Last activity:
-  - confirmed `kspls0` is running `slskdn-bin 0.24.5.slskdn.169-1` from systemd PID `2045334`, `active/running`, `NRestarts=0`, with `ExecMainStatus=0`
+  - confirmed `local test host` is running `slskdn-bin 0.24.5.slskdn.169-1` from systemd PID `2045334`, `active/running`, `NRestarts=0`, with `ExecMainStatus=0`
   - verified the installed binary reports `0.24.5-slskdn.169`; current-process startup bound the expected web, Soulseek, DHT, and TCP overlay listeners
-  - ran the bounded Playwright route/tab sweep: `/tmp/kspls0-route-tab-sweep-2026-04-21T04-55-23-627Z.md`, `307` visits, `1691` same-origin responses, status summary `{"200":1687,"204":4}`, `0` issues, and no 4xx/5xx/502 responses
+  - ran the bounded Playwright route/tab sweep: `/tmp/local test host-route-tab-sweep-2026-04-21T04-55-23-627Z.md`, `307` visits, `1691` same-origin responses, status summary `{"200":1687,"204":4}`, `0` issues, and no 4xx/5xx/502 responses
   - triaged the sweep warnings: most are scanner false positives from `/system/options` literal `false`/disabled config text, but `/system/logs` exposed a real current-process fatal unobserved `NullReferenceException` from `Soulseek.Extensions.Reset(Timer timer)` in a Soulseek.NET write path
   - documented and patched the live stack-signature miss so expected Soulseek timer-reset read/write races match `Reset(` instead of the synthetic exact `Reset(Timer)` string
   - also quieted clean shutdown telemetry so normal SIGTERM/systemd restart paths no longer print warning/abnormal `app.Run()`/duplicate stderr lines
@@ -1720,7 +1732,7 @@
 
 ## Update 2026-04-21 04:24:00Z
 
-- Current task: Validated the `0.24.5-slskdn.168` yay install on `kspls0` and fixed the actionable issues found locally.
+- Current task: Validated the `0.24.5-slskdn.168` yay install on `local test host` and fixed the actionable issues found locally.
 - Last activity:
   - confirmed `pacman`, `/usr/bin/slskd --version`, the active release symlink, and the authenticated API all report `0.24.5-slskdn.168`
   - verified the service is active, Soulseek is `Connected, LoggedIn`, shares are ready, DHT is running, and the expected TCP/UDP listeners are present after a clean restart
@@ -1729,7 +1741,7 @@
   - investigated the red `build-main-0.24.5-slskdn.168` Actions run and found the release artifacts were published; only the final Matrix announcement failed with HTTP 504, so the announcement webhooks now retry and degrade to warnings
   - validation passed: YAML parse, focused DHT rendezvous tests, full unit suite, Release build, `./bin/lint`, and `git diff --check`
 - Next steps:
-  1. Commit and push the current fix set after the final `kspls0` log sample.
+  1. Commit and push the current fix set after the final `local test host` log sample.
   2. Do not create another release/build tag unless explicitly requested.
 
 ## Update 2026-04-21 04:08:00Z
@@ -1746,14 +1758,14 @@
 
 ## Update 2026-04-21 03:58:00Z
 
-- Current task: Completed the requested release, push, manual `kspls0` redeploy, monitoring pass, and fixable-noise cleanup.
+- Current task: Completed the requested release, push, manual `local test host` redeploy, monitoring pass, and fixable-noise cleanup.
 - Last activity:
   - created and pushed `build-main-0.24.5-slskdn.167`; release run `24702224025` produced the main release artifacts and updated stable metadata
   - fixed scheduled E2E/test target-framework drift by discovering the app target framework from `src/slskd/slskd.csproj`; gotcha documented as `a50e34bf6`, fix pushed as `2e4cc934c`
-  - deployed `0.24.5-slskdn.167+manual.2e4cc934c` to `kspls0`, then used the route/tab sweep to isolate the remaining fixable browser-visible noise to optional user-info badge 404s for offline historical downloads
+  - deployed `0.24.5-slskdn.167+manual.2e4cc934c` to `local test host`, then used the route/tab sweep to isolate the remaining fixable browser-visible noise to optional user-info badge 404s for offline historical downloads
   - added quiet optional user-info lookups so badge misses return `204 No Content` without changing default API semantics; gotcha documented as `2f52e3bed`, fix pushed as `9c1d3f14d`
   - deployed `0.24.5-slskdn.167+manual.9c1d3f14d` to `/usr/lib/slskd/releases/manual-9c1d3f14d`; service is `active/running`, PID `1887195`, `NRestarts=0`, Soulseek `Connected, LoggedIn`, shares ready
-  - final Playwright route/tab sweep report `/tmp/kspls0-route-tab-sweep-2026-04-21T03-44-45-634Z.md`: `307` visits, `1683` same-origin responses, `{"200":1680,"204":3}`, `0` issues, `0` 4xx/5xx/502 responses
+  - final Playwright route/tab sweep report `/tmp/local test host-route-tab-sweep-2026-04-21T03-44-45-634Z.md`: `307` visits, `1683` same-origin responses, `{"200":1680,"204":3}`, `0` issues, `0` 4xx/5xx/502 responses
   - fresh logs/coredumps after the final sweep show no new `slskd` coredumps and no actionable current-process fatal/error/exception/502/bind/protocol noise; remaining warnings are `/system/options` scanner false positives and expected DHT churn summaries
 - Next steps:
   1. Continue passive monitoring if requested.
@@ -1762,13 +1774,13 @@
 
 ## Update 2026-04-21 03:12:00Z
 
-- Current task: Completed `kspls0` manual-build testing/fixing pass.
+- Current task: Completed `local test host` manual-build testing/fixing pass.
 - Last activity:
   - pushed final commits through `15ba2a423` to `snapetech/slskdn`
-  - deployed `0.24.5-slskdn.165+manual.15ba2a423` to `kspls0`
+  - deployed `0.24.5-slskdn.165+manual.15ba2a423` to `local test host`
   - verified service health: `active/running`, `NRestarts=0`, no new `slskd` coredumps, correct version from `/api/v0/application`
   - verified QUIC remains opt-in by default: `slskd` listens on UDP `50306/50400` and TCP `5030/5031/50300/50305`, with no `slskd` listener on `50401/50402`
-  - ran the full bounded Playwright route/tab sweep: `/tmp/kspls0-route-tab-sweep-2026-04-21T03-02-32-124Z.md`, `307` visits, `1680` responses, `0` issues, `0` HTTP 5xx/502s, three expected offline user-info `404`s
+  - ran the full bounded Playwright route/tab sweep: `/tmp/local test host-route-tab-sweep-2026-04-21T03-02-32-124Z.md`, `307` visits, `1680` responses, `0` issues, `0` HTTP 5xx/502s, three expected offline user-info `404`s
   - fresh logs show only known operational warnings and normal DHT/overlay churn; no `[DI]`, SPA fallback, CSRF, QUIC, user-info stack, fatal, coredump, or fresh search-cancellation error noise from the final build
 - Next steps:
   1. Continue passive monitoring if requested.
@@ -1776,24 +1788,24 @@
 
 ## Update 2026-04-21 02:20:00Z
 
-- Current task: None. The `kspls0` user-info 500 fix is committed, pushed, deployed, and retested; the route/tab Playwright pass is clean for current 5xx/502/page-error signals.
+- Current task: None. The `local test host` user-info 500 fix is committed, pushed, deployed, and retested; the route/tab Playwright pass is clean for current 5xx/502/page-error signals.
 - Last activity:
-  - controlled Playwright crawling against `kspls0` found no real HTTP 502 responses, but did find `/api/v0/users/{username}/info` returning HTTP 500 for expected Soulseek peer connection failures and timeouts
+  - controlled Playwright crawling against `local test host` found no real HTTP 502 responses, but did find `/api/v0/users/{username}/info` returning HTTP 500 for expected Soulseek peer connection failures and timeouts
   - documented the peer-info gotcha in ADR-0001 and committed the docs-only entry as `1699cf7b5`
   - updated `UsersController.Info` so explicit offline users remain 404, while peer connection failures and info timeouts return generic 503 responses without exception-object stack noise
   - added focused controller coverage for connection failure, direct timeout, and wrapped timeout cases; `UsersControllerTests`, Release build, lint, diff check, and GitHub target verification passed
   - committed and pushed the fix as `5bd0e0b88`
-  - published and deployed `0.24.5-slskdn.165+manual.5bd0e0b88` to `kspls0`; corrected live launcher drift so `/usr/lib/slskd/slskd` execs `/usr/lib/slskd/current/slskd`, documented as ADR-0001 gotcha `deafb040b`
+  - published and deployed `0.24.5-slskdn.165+manual.5bd0e0b88` to `local test host`; corrected live launcher drift so `/usr/lib/slskd/slskd` execs `/usr/lib/slskd/current/slskd`, documented as ADR-0001 gotcha `deafb040b`
   - verified `/api/v0/application` reports the new payload, user-info peer failures now return controlled `503`, and the current process has no 500/502/fatal/protocol/bind/coredump noise
-  - ran Playwright route/tab sweep report `/tmp/kspls0-route-tab-sweep-2026-04-21T02-09-22-685Z.md`: all top-level routes and System tabs were exercised, with only one expected user-info 404 and no 5xx responses
+  - ran Playwright route/tab sweep report `/tmp/local test host-route-tab-sweep-2026-04-21T02-09-22-685Z.md`: all top-level routes and System tabs were exercised, with only one expected user-info 404 and no 5xx responses
 - Next steps:
-  1. Keep `kspls0` soaking on PID `1642135` and resample later for long-run mesh/download noise.
+  1. Keep `local test host` soaking on PID `1642135` and resample later for long-run mesh/download noise.
   2. Treat the remaining broad dynamic `/searches/{id}` link corpus separately if exhaustive historical search-detail crawling is still desired; the bounded product route/tab pass did not show current 5xx or route-miss failures.
   3. Do not create a release/build tag unless explicitly requested.
 
 ## Update 2026-04-21 00:11:00Z
 
-- Current task: Finish, push, deploy, and monitor the auto-replace search-budget fix found during `kspls0` manual-build soak.
+- Current task: Finish, push, deploy, and monitor the auto-replace search-budget fix found during `local test host` manual-build soak.
 - Last activity:
   - live monitoring found auto-replace issuing a large stuck-download batch until `Search rate limit exceeded` triggered, then logging repeated per-track stack traces and marking the cycle as failed
   - documented the gotcha in ADR-0001 and committed that docs-only entry as `138f3a6c0`
@@ -1808,36 +1820,36 @@
   - found a current-process fatal unobserved task from a Soulseek.NET TCP double-disconnect read-loop race, documented the gotcha as `70b26eff5`, and added it to the expected network exception classifier
   - started the requested Playwright UI sweep and found `/system/network` correctly gates public DHT exposure behind a consent modal, but its inline code copy rendered `dht.lan_only=truein`; documented the gotcha as `bff3fa0fd` and fixed the spacing
 - Next steps:
-  1. Validate, commit, push, and redeploy the DHT exposure modal copy fix to `kspls0`.
+  1. Validate, commit, push, and redeploy the DHT exposure modal copy fix to `local test host`.
   2. Continue the controlled Playwright UI pass against the updated manual build and document real endpoint/UI issues separately from route-change request aborts.
 
 ## Update 2026-04-20 23:55:00Z
 
-- Current task: None. The current `kspls0` manual build is stable in the latest sample, and the local formatter/compile cleanup from the validation pass is complete.
+- Current task: None. The current `local test host` manual build is stable in the latest sample, and the local formatter/compile cleanup from the validation pass is complete.
 - Last activity:
-  - resampled the current `kspls0` service process (`PID 1335511`, active since `2026-04-20 17:37:10 CST`) and confirmed it remains active with `NRestarts=0` and `ExecMainStatus=0`
+  - resampled the current `local test host` service process (`PID 1335511`, active since `2026-04-20 17:37:10 CST`) and confirmed it remains active with `NRestarts=0` and `ExecMainStatus=0`
   - found no current-process journal matches for fatal unobserved exceptions, the Soulseek timer-reset classifier, native crash strings, disposed-object shutdown noise, listener bind failures, protocol violations, or invalid-frame logs
   - confirmed no new `slskd` coredumps since the current process start; the noisy timer-reset/fake-fatal entries were from older PIDs
   - fixed the local lint/formatter verification loop and cleaned compile/nullability issues in OpenAPI response mutation, QUIC task cleanup, relay pin validation, and cookie header stripping
   - documented the OpenAPI `IOpenApiResponse.Content` interface gotcha in ADR-0001 and committed that docs-only entry as `04d071597`
   - revalidated locally with Release build, focused unit slice (`31` tests), `bash ./bin/lint`, and `git diff --check`
 - Next steps:
-  1. Keep soaking `kspls0` and only redeploy if the current process shows fresh crash/log evidence or the remaining local changes need to be promoted.
+  1. Keep soaking `local test host` and only redeploy if the current process shows fresh crash/log evidence or the remaining local changes need to be promoted.
   2. Treat older pre-current-PID fatal/timer-reset logs as historical unless they recur on the current PID.
   3. Do not create a build tag unless explicitly requested.
 
 ## Update 2026-04-20 15:55:00Z
 
-- Current task: None. The live `kspls0` redeploy validated the timer-reset log-noise fix and exposed native crash recurrence as the next real host issue.
+- Current task: None. The live `local test host` redeploy validated the timer-reset log-noise fix and exposed native crash recurrence as the next real host issue.
 - Last activity:
-  - confirmed the historical `#201` signatures are still not the current live failure mode: current `main` contains the startup-listener fix, `/system/info` renders locally, and `kspls0` remains reachable/listening after deploy
-  - committed and deployed `ffacda09e`, publishing `0.24.5-slskdn.159+manual.ffacda09e` to `kspls0`
+  - confirmed the historical `#201` signatures are still not the current live failure mode: current `main` contains the startup-listener fix, `/system/info` renders locally, and `local test host` remains reachable/listening after deploy
+  - committed and deployed `ffacda09e`, publishing `0.24.5-slskdn.159+manual.ffacda09e` to `local test host`
   - verified post-deploy health: service active, Soulseek connected/logged in, DHT ready, overlay and QUIC listeners bound, and one active mesh connection after restart recovery
   - sampled the live journal and confirmed the targeted fix held: no new `[FATAL] Unobserved task exception` entries and no `Soulseek.Extensions.Reset(Timer)` teardown noise in the observed window
   - found a different live blocker during soak: the process segfaulted once (`SIGSEGV`) and systemd restarted it automatically; `coredumpctl` shows similar recent native crashes on earlier manual builds too
   - observed the new DHT/overlay summary logging working as intended on the recovered process, with explicit failure mix and degraded endpoint rollups
 - Next steps:
-  1. Investigate the native `SIGSEGV` path on `kspls0`, starting from the recent `coredumpctl` history and any commonality with active `libmsquic` worker threads.
+  1. Investigate the native `SIGSEGV` path on `local test host`, starting from the recent `coredumpctl` history and any commonality with active `libmsquic` worker threads.
   2. Decide whether to add crash-oriented symbolization or host-side runtime diagnostics before another manual/live rollout.
   3. Separately decide whether `AutoReplace` search-cap noise should be tuned, but treat it as secondary to the native crash path.
 
@@ -1853,7 +1865,7 @@
   - ran `./bin/build`; the build path itself succeeded through web/release compilation but the full Release unit-test phase hit a single failure in `slskd.Tests.Unit.Transfers.Downloads.DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain`, which then passed when rerun in isolation
 - Next steps:
   1. Decide whether to treat the Release full-suite `DownloadServiceTests.ShutdownAsync_WaitsForCancelledDownloadsToDrain` failure as an existing flaky race or to debug it before the next release build.
-  2. Deploy the new DHT/overlay diagnostics to `kspls0` and sample whether the summary lines clearly distinguish bad remote endpoints (`no-route`, `tls-eof`, etc.) from local capacity/backoff behavior.
+  2. Deploy the new DHT/overlay diagnostics to `local test host` and sample whether the summary lines clearly distinguish bad remote endpoints (`no-route`, `tls-eof`, etc.) from local capacity/backoff behavior.
   3. If remote candidate churn remains dominant, add endpoint deprioritization on top of the current cooldowns rather than increasing automatic probe volume.
 
 ## Update 2026-04-20 02:30:00Z
@@ -1926,14 +1938,14 @@
 
 ## Update 2026-04-20 01:52:00Z
 
-- Current task: None. The latest `kspls0` live-debug pass is implemented, committed, deployed, and host-validated.
+- Current task: None. The latest `local test host` live-debug pass is implemented, committed, deployed, and host-validated.
 - Last activity:
-  - kept QUIC enabled and healthy on `kspls0`, with overlay/data listeners active and mesh reconnecting after each deliberate restart
+  - kept QUIC enabled and healthy on `local test host`, with overlay/data listeners active and mesh reconnecting after each deliberate restart
   - fixed `DownloadService` shutdown cleanup ordering by draining in-flight enqueue/download work before the shared Soulseek client is disconnected or disposed
   - fixed the remaining false-fatal shutdown edge by tolerating the third-party `SoulseekClient.Disconnect()` `Sequence contains no elements` race during expected host shutdown
-  - deployed `0.24.5-slskdn.159+manual.1475cd068` to `kspls0` and validated deliberate restarts with active downloads: no global download semaphore warnings, no transfer cleanup `ObjectDisposedException`, no false fatal shutdown log, restart count `0`, DHT healthy, and one mesh peer connected immediately after restart
+  - deployed `0.24.5-slskdn.159+manual.1475cd068` to `local test host` and validated deliberate restarts with active downloads: no global download semaphore warnings, no transfer cleanup `ObjectDisposedException`, no false fatal shutdown log, restart count `0`, DHT healthy, and one mesh peer connected immediately after restart
 - Next steps:
-  1. Keep sampling `kspls0` for longer-run QUIC and mesh stability, especially whether the single live peer stays connected past the keepalive windows on this final manual build.
+  1. Keep sampling `local test host` for longer-run QUIC and mesh stability, especially whether the single live peer stays connected past the keepalive windows on this final manual build.
   2. If more mesh issues surface, focus on remote candidate quality and connector failure mix (`timeout`, `no-route`, `tls-eof`) rather than the now-fixed local shutdown and framing paths.
   3. Push `main` when desired, and only create a build tag if the user explicitly wants a release build.
 
@@ -1959,8 +1971,8 @@
   - clarified hole-punch completion logs so operators can see the reported local port is an ephemeral UDP socket, not a configured listener port
   - added focused versioned-route integration coverage for `/api/v0/users/notes`
 - Next steps:
-  1. Redeploy the latest `Program` classifier fix to `kspls0` and verify that remote-declared transfer failures no longer emit fake `[FATAL] Unobserved task exception` noise on the new process.
-  2. Keep sampling multi-peer downloads on `kspls0` to see whether any remaining post-`InProgress` failures cluster around one transport/peer pattern or are just normal remote-side churn.
+  1. Redeploy the latest `Program` classifier fix to `local test host` and verify that remote-declared transfer failures no longer emit fake `[FATAL] Unobserved task exception` noise on the new process.
+  2. Keep sampling multi-peer downloads on `local test host` to see whether any remaining post-`InProgress` failures cluster around one transport/peer pattern or are just normal remote-side churn.
 
 # Active Context
 
@@ -1969,9 +1981,9 @@
 
 ---
 
-## ⚠️ WORK DIRECTORY (do not use /home/keith/Code/cursor)
+## ⚠️ WORK DIRECTORY (do not use <workspace>/cursor)
 
-**Project root: `/home/keith/Documents/code/slskdn`**
+**Project root: `<repo-root>`**
 
 All `git`, `dotnet`, and file paths in this repo are under this directory. Do not use the `cursor` folder under `~/Code/` for slskdn work — it is a separate project.
 
@@ -1987,38 +1999,38 @@ This is the #1 most important thing to do before ending a session. Future AI age
 
 ## Current Session
 
-- **Current Task**: Investigating the recurring native `SIGSEGV` on `kspls0`; the latest pass narrowed it to the old manual single-file/ReadyToRun publish shape and aligned `bin/publish` with the tagged release profile now running live on the host.
+- **Current Task**: Investigating the recurring native `SIGSEGV` on `local test host`; the latest pass narrowed it to the old manual single-file/ReadyToRun publish shape and aligned `bin/publish` with the tagged release profile now running live on the host.
 - **Branch**: `main`
-- **Environment**: Local dev on `snapetech/slskdn`; live validation on `kspls0` currently running `0.24.5-slskdn.159+manual.ffacda09e`; no release tags were created.
+- **Environment**: Local dev on `snapetech/slskdn`; live validation on `local test host` currently running `0.24.5-slskdn.159+manual.ffacda09e`; no release tags were created.
 - **Last Activity**:
-  - Kept QUIC enabled by installing Microsoft MsQuic `v2.5.7` on `kspls0`; QUIC overlay/data listeners bind on `50402/50401` with no temporary systemd disable override.
-  - Fixed live mesh compatibility with unframed JSON overlay frames; `kspls0` connected to `m***7` and held past the 2-minute keepalive threshold without `Protocol violation`, `Invalid message length`, `Unregistered`, or disconnect logs.
+  - Kept QUIC enabled by installing Microsoft MsQuic `v2.5.7` on `local test host`; QUIC overlay/data listeners bind on `50402/50401` with no temporary systemd disable override.
+  - Fixed live mesh compatibility with unframed JSON overlay frames; `local test host` connected to `m***7` and held past the 2-minute keepalive threshold without `Protocol violation`, `Invalid message length`, `Unregistered`, or disconnect logs.
   - Fixed DHT rendezvous accounting so connector-capacity deferrals are not counted as real attempts or pushed into retry backoff.
   - Fixed user directory browse API handling so expected remote peer connection failures return controlled 503 responses instead of unhandled middleware stack traces.
-  - Fixed service SIGTERM handling so normal `systemctl restart` stops the host cleanly; validated on `kspls0` that a deliberate restart logs expected shutdown, not status 1/failure.
+  - Fixed service SIGTERM handling so normal `systemctl restart` stops the host cleanly; validated on `local test host` that a deliberate restart logs expected shutdown, not status 1/failure.
   - Fixed transfer shutdown cleanup ordering so active downloads drain before Soulseek client disposal, removing restart-time semaphore/disposed-object noise.
   - Fixed the remaining third-party `SoulseekClient.Disconnect()` shutdown race so clean restarts do not emit false fatal `Sequence contains no elements` logs.
-  - Deployed `0.24.5-slskdn.159+manual.ffacda09e` to `kspls0` and confirmed the targeted fake-fatal Soulseek timer-reset teardown noise no longer appeared in the observed journal window.
+  - Deployed `0.24.5-slskdn.159+manual.ffacda09e` to `local test host` and confirmed the targeted fake-fatal Soulseek timer-reset teardown noise no longer appeared in the observed journal window.
   - During soak, observed one native `SIGSEGV` on the deployed process; systemd restarted the service cleanly and the recovered process rejoined the mesh.
-  - `coredumpctl` on `kspls0` shows similar recent native crashes on earlier manual builds, so the crash path predates `ffacda09e` and is now the highest-priority live issue.
+  - `coredumpctl` on `local test host` shows similar recent native crashes on earlier manual builds, so the crash path predates `ffacda09e` and is now the highest-priority live issue.
   - Investigated the crash producer and found concrete QUIC connection-lifecycle gaps: cached/orphaned `QuicConnection` instances were not always disposed, and QUIC hosted servers were not explicitly closing active connections or draining active connection tasks on stop.
   - Documented that QUIC lifecycle gotcha in ADR-0001 (`06ffdca5f`), then hardened `QuicOverlayClient`, `QuicDataClient`, `QuicOverlayServer`, and `QuicDataServer` with explicit connection gates, disposal, close, and stop-drain behavior.
   - During the first manual redeploy of that hardening, found a separate restart-time bug: `MeshOverlayServer` could fail to rebind port `50305` with `Address already in use` even though no live listener remained.
   - Documented that listener-reuse gotcha in ADR-0001 (`7a6eca0dd`), then fixed `MeshOverlayServer` to use `ReuseAddress` and to clear/dispose stop state fully on shutdown.
-  - Published and manually deployed `0.24.5-slskdn.159+manual.quicfix2` to `kspls0`; a deliberate restart on the recovered process now rebinds overlay TCP `50305` cleanly and restores overlay/DHT/QUIC listeners as expected.
+  - Published and manually deployed `0.24.5-slskdn.159+manual.quicfix2` to `local test host`; a deliberate restart on the recovered process now rebinds overlay TCP `50305` cleanly and restores overlay/DHT/QUIC listeners as expected.
   - `coredumpctl` still captured a new startup-time native `SIGSEGV` on PID `572060` during that rollout, but the immediate systemd retry recovered to a healthy process (`572286`) and a later deliberate restart stayed clean.
   - Pulled deeper kernel/coredump evidence and found the startup crashes were native `general protection fault` events in `.NET Server GC`, while `bin/publish` was still producing a self-contained single-file `ReadyToRun` artifact that does not match the tagged release workflows.
   - Documented that manual-publish drift gotcha in ADR-0001 (`975c754d2`), then aligned `bin/publish` with the tagged release profile by removing the single-file/native-self-extract path and explicitly disabling `PublishReadyToRun`.
-  - Built and manually deployed `0.24.5-slskdn.159+manual.nor2r` to `kspls0`; three consecutive startup paths (initial deploy plus two deliberate restarts) came up clean with no new `coredumpctl` entries and no new `/var/lib/slskd/.net/slskd/*` extraction directory.
+  - Built and manually deployed `0.24.5-slskdn.159+manual.nor2r` to `local test host`; three consecutive startup paths (initial deploy plus two deliberate restarts) came up clean with no new `coredumpctl` entries and no new `/var/lib/slskd/.net/slskd/*` extraction directory.
   - Rechecked the earlier live journal and found one remaining app-side noise path: `Soulseek.Extensions.Reset(Timer)` could still surface as a fake fatal unobserved-task exception when it happened from `Soulseek.Network.Tcp.Connection.WriteInternalAsync(...)`, not just the already-classified read loop.
   - Documented that write-path gotcha in ADR-0001 (`b121d5da3`), extended `Program.IsExpectedSoulseekNetworkException(...)` to cover the write-loop stack shape too, and added a focused `ProgramPathNormalizationTests` regression for the exact live stack.
   - The host is still logging repeated `EXT4-fs ... checksum invalid` errors on `dm-0` from `containerd`, so host filesystem health remains a separate operational concern even though the CI-aligned publish shape is currently stable.
-  - Validation passed: `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, focused QUIC/transport/program unit slice (`30` passed), `bash ./bin/lint`, `git diff --check`, manual publish/install to `kspls0`, live journal sampling, listener/socket checks, and coredump inspection.
+  - Validation passed: `dotnet build src/slskd/slskd.csproj --no-restore -v minimal`, focused QUIC/transport/program unit slice (`30` passed), `bash ./bin/lint`, `git diff --check`, manual publish/install to `local test host`, live journal sampling, listener/socket checks, and coredump inspection.
 - **Next Steps**:
   1. Commit and deploy the `Program` write-loop classifier fix on top of `manual-nor2r`, then verify the host still starts cleanly and that no fresh fake fatal timer-reset logs appear.
   2. Keep the host on the CI-shaped publish profile while sampling for longer-run stability.
   3. If native crashes reappear on the CI-aligned publish shape, continue symbolization/runtime triage from the new narrower baseline instead of the old divergent manual artifact.
-  4. Separately flag the repeated `EXT4-fs` checksum errors on `kspls0` as an operational host-health risk outside slskd itself.
+  4. Separately flag the repeated `EXT4-fs` checksum errors on `local test host` as an operational host-health risk outside slskd itself.
 
 ## Recent Context
 
@@ -2155,14 +2167,14 @@ dotnet test
 
 ## Update 2026-04-18 09:05:00Z
 
-- Current task: None. The latest `kspls0` live transfer and DHT follow-up is implemented locally and validated on-host.
+- Current task: None. The latest `local test host` live transfer and DHT follow-up is implemented locally and validated on-host.
 - Last activity:
-  - proved that successful transfers on `kspls0` were still emitting fake fatal `Transfer failed: Transfer complete` unobserved-task noise and fixed the classifier in `Program`
-  - opened `50305/tcp` and `50306/udp` in the `kspls0` host firewall, then verified DHT eventually reaches `Ready` on the live host once both router and host firewall paths are open
+  - proved that successful transfers on `local test host` were still emitting fake fatal `Transfer failed: Transfer complete` unobserved-task noise and fixed the classifier in `Program`
+  - opened `50305/tcp` and `50306/udp` in the `local test host` host firewall, then verified DHT eventually reaches `Ready` on the live host once both router and host firewall paths are open
   - proved the old 30-second DHT bootstrap warning was too aggressive on a healthy host and extended the bootstrap grace period to 120 seconds
 - Next steps:
   1. Commit and push the current `Program` / DHT bootstrap follow-up if the worktree stays clean.
-  2. Watch the next `kspls0` runtime window for a successful transfer on the patched process and confirm the `Transfer complete` fatal log never returns.
+  2. Watch the next `local test host` runtime window for a successful transfer on the patched process and confirm the `Transfer complete` fatal log never returns.
   3. If DHT still shows slow `Initialising` windows on other hosts, consider making the bootstrap diagnostics adaptive instead of static.
 
 
@@ -2193,9 +2205,9 @@ dotnet test
 
 ## Update 2026-04-21 08:00:00Z
 
-- Current task: None. The current `kspls0` 172 log/UI sweep is triaged and the remaining fixable warning noise is patched locally.
+- Current task: None. The current `local test host` 172 log/UI sweep is triaged and the remaining fixable warning noise is patched locally.
 - Last activity:
-  - confirmed `kspls0` is still running `0.24.5-slskdn.172`, systemd is active with zero restarts, Soulseek is logged in, DHT is running, overlay TCP is listening on `50305`, and no fresh fatal/error/exception/502/coredump/protocol noise appeared
+  - confirmed `local test host` is still running `0.24.5-slskdn.172`, systemd is active with zero restarts, Soulseek is logged in, DHT is running, overlay TCP is listening on `50305`, and no fresh fatal/error/exception/502/coredump/protocol noise appeared
   - reran focused Playwright checks with the corrected Web UI credentials; Library Health and Files nested tabs work, and a steady `/searches` hold produced no SongID hub console errors
   - documented and fixed the repeated entropy false-warning gotcha by increasing the RNG sample size to reduce finite-sample bias, and moved expected auto-replace no-result searches down to debug
   - fixed the flaky hosted-service unit test wait exposed by the full unit suite
@@ -2206,9 +2218,9 @@ dotnet test
 
 ## Update 2026-04-22 18:20:00Z
 
-- Current task: None. The latest issue `#209` live follow-up is implemented, committed locally, and deployed to `kspls0` for validation.
+- Current task: None. The latest issue `#209` live follow-up is implemented, committed locally, and deployed to `local test host` for validation.
 - Last activity:
-  - confirmed the current `kspls0` build is `0.24.5-slskdn.174+manual.6fce6575c` from `/usr/lib/slskd/releases/manual-6fce6575c`, with systemd active and `NRestarts=0`
+  - confirmed the current `local test host` build is `0.24.5-slskdn.174+manual.6fce6575c` from `/usr/lib/slskd/releases/manual-6fce6575c`, with systemd active and `NRestarts=0`
   - fixed mesh self-descriptor endpoint publication so automatic detection only advertises public-routable interfaces and configured self endpoints are not silently supplemented with private/container/VPN addresses
   - added info-level mesh-search fanout diagnostics when active overlay peers are queried
   - live validation showed DHT discovery and overlay connectivity are not stuck at zero: the host reconnected to one outbound `mesh_search` peer (`minimus7`), and a live `radiohead` search logged `peers=1 peersWithResults=0 emptyPeers=1 failedPeers=0` while core Soulseek returned `252` responses / `16686` files
@@ -2242,23 +2254,23 @@ dotnet test
 
 ## Update 2026-04-18 17:35:00Z
 
-- Current task: None. The next issue `#209` root fix is implemented locally and validated on `kspls0`.
+- Current task: None. The next issue `#209` root fix is implemented locally and validated on `local test host`.
 - Last activity:
-  - stepped back from the earlier tester reports and revalidated the live overlay path on `kspls0` instead of trusting the synthetic release gates
+  - stepped back from the earlier tester reports and revalidated the live overlay path on `local test host` instead of trusting the synthetic release gates
   - proved the current blocker was stale overlay TOFU pinning rather than version-locking: `minimus7` was a real reachable slskdn overlay peer, but a stale stored thumbprint caused our side to self-partition
-  - changed inbound and outbound overlay handshakes to rotate stored certificate pins on mismatch instead of auto-blocking the peer, added focused `CertificatePinStoreTests`, and validated on `kspls0` that the host now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same DHT cycle
+  - changed inbound and outbound overlay handshakes to rotate stored certificate pins on mismatch instead of auto-blocking the peer, added focused `CertificatePinStoreTests`, and validated on `local test host` that the host now logs the mismatch, rotates the pin, and still registers/connects the neighbor in the same DHT cycle
 - Next steps:
   1. Commit the pin-rotation fix set if the worktree stays clean.
-  2. If another `#209` symptom appears, reproduce it on `kspls0` first and add the missing host-backed smoke before cutting another build.
+  2. If another `#209` symptom appears, reproduce it on `local test host` first and add the missing host-backed smoke before cutting another build.
 
 
 ## Update 2026-04-18 17:55:00Z
 
-- Current task: None. The next issue `#209` cleanup pass is implemented locally and validated on `kspls0`.
+- Current task: None. The next issue `#209` cleanup pass is implemented locally and validated on `local test host`.
 - Last activity:
   - proved the live node was still overstating peer health after DHT discovery by counting raw DHT endpoints as onion-capable peers before overlay verification
   - changed DHT rendezvous publishing so discovered endpoints stay as `dht-discovered` candidates until a real overlay connect succeeds, and updated focused DHT rendezvous tests to cover candidate, failed-connect, and verified-connect states
-  - redeployed the cleanup build to `kspls0` and verified that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while `/api/v0/dht/status` still shows the raw discovered candidate count separately
+  - redeployed the cleanup build to `local test host` and verified that `/api/v0/security/peers/stats` now reports `onionRoutingPeers: 0` while `/api/v0/dht/status` still shows the raw discovered candidate count separately
 - Next steps:
   1. Push this peer-stats cleanup if you want it in the next release.
   2. If `#209` continues, the next investigation should focus on why the discovered candidates are not handshaking, not on inflated peer counters.
@@ -2277,11 +2289,11 @@ dotnet test
 
 ## Update 2026-04-18 19:05:00Z
 
-- Current task: None. The live DHT rendezvous retry/backoff fix is implemented and host-validated on `kspls0`.
+- Current task: None. The live DHT rendezvous retry/backoff fix is implemented and host-validated on `local test host`.
 - Last activity:
   - traced the active mesh issue back to `DhtRendezvousService` using `_discoveredPeers.TryAdd(...)` as a once-ever outbound connect trigger, which meant the host never retried already-seen endpoints after a single timeout/refusal
   - split discovery caching from retry scheduling by adding explicit attempt timestamps and in-flight tracking with a 5-minute backoff for unverified peers
-  - validated the change on `kspls0` by forcing a post-backoff discovery cycle and observing `totalConnectionsAttempted` rise from `26` to `31` while `discoveredPeerCount` stayed at `26`, proving rediscovered candidates now re-enter the connector instead of staying stranded
+  - validated the change on `local test host` by forcing a post-backoff discovery cycle and observing `totalConnectionsAttempted` rise from `26` to `31` while `discoveredPeerCount` stayed at `26`, proving rediscovered candidates now re-enter the connector instead of staying stranded
 - Next steps:
   1. Commit/push the retry/backoff fix if the worktree stays clean.
   2. Continue narrowing the live peer pool by filtering or deprioritizing clearly bad/non-overlay endpoints before they dominate mesh retries.
@@ -2313,12 +2325,12 @@ dotnet test
 
 - Current task: Web UI footer live-rendering correction is implemented locally.
 - Last activity:
-  - inspected the live `kspls0` footer and confirmed the first redesign still had brittle spacing in real light-theme rendering
+  - inspected the live `local test host` footer and confirmed the first redesign still had brittle spacing in real light-theme rendering
   - changed the footer from rigid grid columns to a flex dock with wrapping network/status content and tighter icon alignment
-  - injected the fixed CSS into the live `kspls0` page and rechecked desktop, mid-width, and mobile footer captures with no visible-element overflow
+  - injected the fixed CSS into the live `local test host` page and rechecked desktop, mid-width, and mobile footer captures with no visible-element overflow
 - Next steps:
   1. Commit/push the footer CSS/JSX and memory-bank updates when ready.
-  2. Deploy or release so `kspls0` gets the fixed CSS without local injection.
+  2. Deploy or release so `local test host` gets the fixed CSS without local injection.
 
 ## Update 2026-04-29 23:39:14Z
 
@@ -2329,7 +2341,7 @@ dotnet test
   - added focused Search page tests for default collapsed secondary panels and stored collapsed primary-panel state
 - Next steps:
   1. Commit and push the full workspace.
-  2. Release/deploy when the UI behavior should land on `kspls0`.
+  2. Release/deploy when the UI behavior should land on `local test host`.
 
 ## Update 2026-04-30 01:40:00Z
 

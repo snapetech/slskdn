@@ -946,7 +946,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             try
             {
                 fileStream.Seek(bytesReceived, SeekOrigin.Begin);
-                var counter = new ProgressCountingStream(fileStream, b => Interlocked.Add(ref bytesReceived, b));
+                using var counter = new ProgressCountingStream(fileStream, b => Interlocked.Add(ref bytesReceived, b));
 
                 try
                 {

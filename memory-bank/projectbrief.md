@@ -24,7 +24,7 @@ slskdN is a community fork of slskd that takes the opposite approach to the upst
 - **Location**: `src/slskd/`
 
 ### Frontend (React)
-- **Framework**: React 16.8.6 (legacy, migration planned)
+- **Framework**: current React version declared in src/web/package.json (legacy, migration planned)
 - **Build**: Create React App + CRACO
 - **UI Library**: Semantic UI React
 - **Routing**: react-router-dom v5

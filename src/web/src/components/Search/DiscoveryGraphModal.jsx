@@ -1,4 +1,5 @@
 import * as discoveryGraph from '../../lib/discoveryGraph';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,7 +37,7 @@ const DiscoveryGraphModal = ({
 
   const loadSavedBranches = () => {
     try {
-      const raw = window.localStorage.getItem('slskdn.discoveryGraph.savedBranches');
+      const raw = getLocalStorageItem('slskdn.discoveryGraph.savedBranches');
       const parsed = raw ? JSON.parse(raw) : [];
       setSavedBranches(Array.isArray(parsed) ? parsed : []);
     } catch (error) {
@@ -100,7 +101,7 @@ const DiscoveryGraphModal = ({
       request: graph.request || null,
     };
     const nextSavedBranches = [nextBranch, ...savedBranches].slice(0, 12);
-    window.localStorage.setItem(
+    setLocalStorageItem(
       'slskdn.discoveryGraph.savedBranches',
       JSON.stringify(nextSavedBranches),
     );

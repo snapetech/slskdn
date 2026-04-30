@@ -1,5 +1,6 @@
 import './Chat.css';
 import * as chat from '../../lib/chat';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import ChatSession from './ChatSession';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -19,7 +20,7 @@ let tabCounter = 0;
 // Load tabs from localStorage
 const loadTabsFromStorage = () => {
   try {
-    const saved = localStorage.getItem('slskd-chat-tabs');
+    const saved = getLocalStorageItem('slskd-chat-tabs');
 
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -36,14 +37,10 @@ const loadTabsFromStorage = () => {
 
 // Save tabs to localStorage
 const saveTabsToStorage = (tabsToSave) => {
-  try {
-    localStorage.setItem(
-      'slskd-chat-tabs',
-      JSON.stringify({ tabCounter, tabs: tabsToSave }),
-    );
-  } catch {
-    // ignore
-  }
+  setLocalStorageItem(
+    'slskd-chat-tabs',
+    JSON.stringify({ tabCounter, tabs: tabsToSave }),
+  );
 };
 
 const Chat = ({ state }) => {

@@ -32,7 +32,7 @@ Before writing code, briefly restate the task in 1–3 sentences. This ensures y
 ### 1.2 Identify Key Constraints
 
 Consider:
-- **Language, framework, version**: .NET 8 (C#), React 16.8.6 (JavaScript)
+- **Language, framework, version**: .NET 8 (C#), current React version declared in src/web/package.json (JavaScript)
 - **Environment**: ASP.NET Core backend, Create React App frontend
 - **Database**: SQLite with EF Core (or raw SQL for performance-critical code)
 - **Performance constraints**: Multi-source discovery must rate-limit to protect network health

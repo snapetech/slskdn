@@ -148,7 +148,7 @@ private IServiceA ServiceA =>
 
 ### Server Startup
 ```bash
-cd /home/keith/Documents/Code/slskdn
+cd <repo-root>
 dotnet run --project src/slskd/slskd.csproj --configuration Release
 ```
 

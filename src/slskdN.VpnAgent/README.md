@@ -19,9 +19,11 @@ UID split routing, verification, status, watchdog behavior, and ingress cleanup.
 | `tailscale` | `tailscaled` | Usually static/manual; Tailscale does not provide generic public VPN port forwarding | Private tailnet routing or custom exit-node setups |
 | other | Existing tunnel interface | Static or provider-specific backend | Any Linux tunnel exposing an interface name |
 
-The Linux enforcement backend is not a universal Windows/macOS kill switch. On
-non-Linux platforms, slskdN can still consume the same forwarded-port/status API,
-but process-level fail-closed enforcement needs a platform-specific adapter.
+The current enforcement and installer implementation is Linux-first. On
+Windows and macOS, slskdN can still consume the same forwarded-port/status API,
+but process-level fail-closed enforcement, service installation, and route
+management need platform-specific adapters before they should be advertised as
+turnkey.
 
 ## How Custom This Is
 
@@ -792,13 +794,13 @@ sudo ./install.sh --check
 Check services:
 
 ```bash
-systemctl is-active slskd wg-quick@slskdN-vpn slskdN-vpn-split slskdN-vpn-gluetun-compat slskdN-vpn-ingress-renew.timer
+systemctl is-active slskdN wg-quick@slskdN-vpn slskdN-vpn-split slskdN-vpn-gluetun-compat slskdN-vpn-ingress-renew.timer
 ```
 
 Check egress split:
 
 ```bash
-sudo -u slskd curl -4 -m 10 -s https://ifconfig.me
+sudo -u slskdN curl -4 -m 10 -s https://ifconfig.me
 curl -4 -m 10 -s https://ifconfig.me
 ```
 

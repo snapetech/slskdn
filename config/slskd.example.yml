@@ -389,6 +389,7 @@
 #     enabled: false
 #     url: "http://127.0.0.1:8686"
 #     api_key: ""
+#     timeout_seconds: 20
 #     sync_wanted_to_wishlist: false # when true, Lidarr Wanted/Missing albums become slskdN Wishlist searches
 #     sync_interval_seconds: 3600
 #     max_items_per_sync: 100

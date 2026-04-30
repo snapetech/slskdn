@@ -2,6 +2,7 @@
 //     Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 using Xunit;
+using slskd.PodCore;
 
 namespace slskd.Tests.Unit.PodCore;
 
@@ -10,37 +11,64 @@ public class PodPrivateServicePolicyTests
     [Fact]
     public void EnforceDestinationPolicy_BlocksUnauthorizedAccess()
     {
-        Assert.True(true, "Placeholder test - PodPrivateServicePolicy.EnforceDestinationPolicy not yet implemented");
+        var policy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            GatewayPeerId = "gateway-peer",
+            AllowedDestinations = new List<AllowedDestination>()
+        };
+
+        var result = PodValidation.ValidatePrivateServicePolicy(
+            policy,
+            new List<PodMember> { new PodMember { PeerId = "gateway-peer" } });
+
+        Assert.False(result.IsValid);
+        Assert.Contains("without registered services or allowed destinations", result.Error);
     }
 
     [Fact]
     public void ValidateServicePermissions_AllowsAuthorizedRequests()
     {
-        Assert.True(true, "Placeholder test - PodPrivateServicePolicy.ValidateServicePermissions not yet implemented");
+        var policy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            GatewayPeerId = "gateway-peer",
+            RegisteredServices = new List<RegisteredService>
+            {
+                new RegisteredService
+                {
+                    Name = "lidarr",
+                    Host = "127.0.0.1",
+                    Port = 8686
+                }
+            }
+        };
+
+        var result = PodValidation.ValidatePrivateServicePolicy(
+            policy,
+            new List<PodMember> { new PodMember { PeerId = "gateway-peer" } });
+
+        Assert.True(result.IsValid, result.Error);
     }
 
     [Fact]
     public void AuditPolicyViolations_LogsSecurityEvents()
     {
-        Assert.True(true, "Placeholder test - PodPrivateServicePolicy.AuditPolicyViolations not yet implemented");
-    }
-}
+        var policy = new PodPrivateServicePolicy
+        {
+            Enabled = true,
+            GatewayPeerId = "missing-gateway",
+            AllowedDestinations = new List<AllowedDestination>
+            {
+                new AllowedDestination { HostPattern = "127.0.0.1", Port = 8686 }
+            }
+        };
 
-/// <summary>Stub for future implementation; do not use - slskd.PodCore.PodPrivateServicePolicy is the real type.</summary>
-public class PodPrivateServicePolicyStub
-{
-    public static bool EnforceDestinationPolicy(string destination, string requesterId)
-    {
-        throw new NotImplementedException("PodPrivateServicePolicy not yet implemented");
-    }
+        var result = PodValidation.ValidatePrivateServicePolicy(
+            policy,
+            new List<PodMember> { new PodMember { PeerId = "other-peer" } });
 
-    public static bool ValidateServicePermissions(string serviceId, string requesterId)
-    {
-        throw new NotImplementedException("PodPrivateServicePolicy not yet implemented");
-    }
-
-    public static void AuditPolicyViolation(string violationDetails)
-    {
-        throw new NotImplementedException("PodPrivateServicePolicy not yet implemented");
+        Assert.False(result.IsValid);
+        Assert.Contains("GatewayPeerId must be a pod member", result.Error);
     }
 }

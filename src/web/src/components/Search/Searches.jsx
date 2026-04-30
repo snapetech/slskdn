@@ -1,6 +1,7 @@
 import './Search.css';
 import { createSearchHubConnection } from '../../lib/hubFactory';
 import { getCapabilities } from '../../lib/slskdn';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import * as library from '../../lib/searches';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
@@ -37,11 +38,11 @@ const CollapsibleSection = ({
   title,
 }) => {
   const [open, setOpen] = useState(() => {
-    if (!storageKey || typeof window === 'undefined') {
+    if (!storageKey) {
       return defaultOpen;
     }
 
-    const stored = window.localStorage.getItem(storageKey);
+    const stored = getLocalStorageItem(storageKey);
     if (stored === null) {
       return defaultOpen;
     }
@@ -53,8 +54,8 @@ const CollapsibleSection = ({
     setOpen((current) => {
       const next = !current;
 
-      if (storageKey && typeof window !== 'undefined') {
-        window.localStorage.setItem(storageKey, next ? 'open' : 'closed');
+      if (storageKey) {
+        setLocalStorageItem(storageKey, next ? 'open' : 'closed');
       }
 
       return next;

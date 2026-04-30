@@ -73,7 +73,7 @@ Invalid configuration:
 
 ### Option 1: Use Environment Variables
 ```bash
-cd /home/keith/Documents/whatAmIThinking
+cd <workspace>
 
 # Set minimum required config via environment
 export SLSKD_SOULSEEK_USERNAME="your-username"

@@ -1,4 +1,5 @@
 import api from './api';
+import { getLocalStorageItem, setLocalStorageItem } from './storage';
 import { v4 as uuidv4 } from 'uuid';
 
 export const getAll = async (limit = 500) => {
@@ -27,7 +28,7 @@ const BLOCKED_USERS_KEY = 'slskdn_blocked_users';
 
 export const getBlockedUsers = () => {
   try {
-    const blocked = localStorage.getItem(BLOCKED_USERS_KEY);
+    const blocked = getLocalStorageItem(BLOCKED_USERS_KEY);
     return blocked ? JSON.parse(blocked) : [];
   } catch {
     return [];
@@ -38,7 +39,7 @@ export const blockUser = (username) => {
   const blocked = getBlockedUsers();
   if (!blocked.includes(username)) {
     blocked.push(username);
-    localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
+    setLocalStorageItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
   }
 
   return blocked;
@@ -47,7 +48,7 @@ export const blockUser = (username) => {
 export const unblockUser = (username) => {
   let blocked = getBlockedUsers();
   blocked = blocked.filter((u) => u !== username);
-  localStorage.setItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
+  setLocalStorageItem(BLOCKED_USERS_KEY, JSON.stringify(blocked));
   return blocked;
 };
 

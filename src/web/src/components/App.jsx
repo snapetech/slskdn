@@ -6,6 +6,7 @@ import * as relayAPI from '../lib/relay';
 import * as rooms from '../lib/rooms';
 import { connect, disconnect } from '../lib/server';
 import * as session from '../lib/session';
+import { getLocalStorageItem, setLocalStorageItem } from '../lib/storage';
 import { isPassthroughEnabled } from '../lib/token';
 import AppContext from './AppContext';
 import LoginForm from './LoginForm';
@@ -123,38 +124,23 @@ const getVpnPortSignature = (forwards) =>
     .join('|');
 
 const hasDismissedVpnPortNotice = (signature) => {
-  try {
-    return localStorage.getItem(VPN_PORT_NOTICE_STORAGE_KEY) === signature;
-  } catch {
-    return false;
-  }
+  return getLocalStorageItem(VPN_PORT_NOTICE_STORAGE_KEY) === signature;
 };
 
 const storeDismissedVpnPortNotice = (signature) => {
-  try {
-    localStorage.setItem(VPN_PORT_NOTICE_STORAGE_KEY, signature);
-  } catch {
-    // localStorage can be unavailable in private browsing or locked-down webviews.
-  }
+  setLocalStorageItem(VPN_PORT_NOTICE_STORAGE_KEY, signature);
 };
 
 const getStoredRoomActivity = () => {
   try {
-    return JSON.parse(localStorage.getItem(ROOM_ACTIVITY_SEEN_STORAGE_KEY)) || {};
+    return JSON.parse(getLocalStorageItem(ROOM_ACTIVITY_SEEN_STORAGE_KEY, '{}')) || {};
   } catch {
     return {};
   }
 };
 
 const storeRoomActivity = (activity) => {
-  try {
-    localStorage.setItem(
-      ROOM_ACTIVITY_SEEN_STORAGE_KEY,
-      JSON.stringify(activity),
-    );
-  } catch {
-    // localStorage can be unavailable in private browsing or locked-down webviews.
-  }
+  setLocalStorageItem(ROOM_ACTIVITY_SEEN_STORAGE_KEY, JSON.stringify(activity));
 };
 
 const getMessageTimestamp = (message) => {
@@ -632,13 +618,13 @@ class App extends Component {
   };
 
   getSavedTheme = () => {
-    const savedTheme = localStorage.getItem('slskd-theme');
+    const savedTheme = getLocalStorageItem('slskd-theme');
     return savedTheme == null ? null : normalizeTheme(savedTheme);
   };
 
   setTheme = (theme) => {
     const nextTheme = normalizeTheme(theme);
-    localStorage.setItem('slskd-theme', nextTheme);
+    setLocalStorageItem('slskd-theme', nextTheme);
     this.setState({ theme: nextTheme, themeMenuOpen: false });
   };
 

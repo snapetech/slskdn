@@ -68,6 +68,7 @@
  - Progress (2026-04-30): Added first translated shader named-texture sampler support for up to four `tex`/`tex2D` preset samplers, reusing imported texture aliases with procedural fallback.
  - Progress (2026-04-30): Added first simple ret-only translated shader conditional support for `if (...) ret = ...; else ret = ...;` bodies.
  - Progress (2026-04-30): Added safe declared-temp reassignment support in translated native shader bodies while rejecting undeclared assignment and post-`ret` statements.
+ - Progress (2026-04-30): Added native MilkDrop compatibility matrix reporting for curated fixtures and local preset files/folders, including first high-count wave/shape metric coverage for real-pack pressure.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

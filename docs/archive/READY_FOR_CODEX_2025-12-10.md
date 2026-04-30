@@ -3,7 +3,7 @@
 **Date**: December 10, 2025  
 **Session**: Phase 2C-D Complete (T-406 through T-411)  
 **Current Branch**: `experimental/brainz`  
-**Working Directory**: `~/Documents/Code/slskdn`
+**Working Directory**: `<repo-root>`
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### Repository Location
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 ```
 
 ### Active Branch
@@ -58,7 +58,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Start with**: **T-420** (Extend AudioVariant model with codec-specific fields)
 
-**Design Doc**: `~/Documents/Code/slskdn/docs/phase2-advanced-fingerprinting-design.md`
+**Design Doc**: `<repo-root>/docs/phase2-advanced-fingerprinting-design.md`
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
@@ -85,7 +85,7 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 **Start with**: **T-500** (Build MB artist release graph service)
 
-**Design Doc**: `~/Documents/Code/slskdn/docs/phase3-discovery-reputation-fairness-design.md`
+**Design Doc**: `<repo-root>/docs/phase3-discovery-reputation-fairness-design.md`
 
 **Task Spec** (from `memory-bank/tasks.md`):
 ```
@@ -118,14 +118,14 @@ You can proceed with **either** Phase 2-Extended OR Phase 3 (they can run in par
 
 ### Build and Test
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 dotnet build src/slskd/slskd.csproj
 dotnet test  # When tests exist
 ```
 
 ### Run Application
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 dotnet run --project src/slskd/slskd.csproj
 ```
 
@@ -185,7 +185,7 @@ For each task (e.g., T-420):
 
 **If continuing Phase 2** (codec analyzers):
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 # Start with T-420
 # Read: docs/phase2-advanced-fingerprinting-design.md
 # Edit: src/slskd/Audio/AudioVariant.cs
@@ -193,7 +193,7 @@ cd ~/Documents/Code/slskdn
 
 **If starting Phase 3** (discovery):
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 # Start with T-500
 # Read: docs/phase3-discovery-reputation-fairness-design.md
 # Create: src/slskd/Integrations/MusicBrainz/ReleaseGraphService.cs
@@ -246,8 +246,7 @@ cd ~/Documents/Code/slskdn
 
 **Good luck, Codex! You've got a solid foundation to build on.** 🚀
 
-**Working Directory**: `~/Documents/Code/slskdn`  
+**Working Directory**: `<repo-root>`
 **Branch**: `experimental/brainz`  
 **Next Task Options**: T-420 (Phase 2-Extended) OR T-500 (Phase 3)
-
 

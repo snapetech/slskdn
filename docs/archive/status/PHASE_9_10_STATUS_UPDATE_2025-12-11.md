@@ -246,7 +246,7 @@ if (overlayClient != null) {
 **Build Status**: ✅ SUCCESS
 
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 dotnet build src/slskd/slskd.csproj
 # Result: Build succeeded (0 errors, StyleCop warnings only)
 ```

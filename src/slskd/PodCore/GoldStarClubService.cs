@@ -75,6 +75,7 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
     private readonly SemaphoreSlim initializationLock = new(1, 1);
     private bool podInitialized;
     private bool? isAcceptingMembers; // null = not checked yet, true/false = cached result
+    private DateTime lastConnectionWaitLogUtc = DateTime.MinValue;
 
     private static bool IsAutoJoinEnabled()
     {
@@ -292,7 +293,6 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
             logger.LogInformation(
                 "[GoldStarClub] Auto-join disabled by {EnvVar}=false. Pod will still be ensured.",
                 AutoJoinEnvVar);
-            await WaitForConnectionAsync(stoppingToken);
             await EnsurePodExistsAsync(stoppingToken);
             return;
         }
@@ -300,50 +300,46 @@ public sealed class GoldStarClubService : BackgroundService, IGoldStarClubServic
         if (IsRevokedLocally())
         {
             logger.LogInformation("[GoldStarClub] Auto-join disabled by local revocation marker. Pod will still be ensured.");
-            await WaitForConnectionAsync(stoppingToken);
             await EnsurePodExistsAsync(stoppingToken);
             return;
         }
 
-        // Wait for Soulseek client to be connected
-        await WaitForConnectionAsync(stoppingToken);
-
-        // Ensure pod exists
         await EnsurePodExistsAsync(stoppingToken);
-
-        // Get current user's peer ID (username)
-        var username = soulseekClient.Username;
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            logger.LogWarning("[GoldStarClub] Cannot determine username, skipping auto-join");
-            return;
-        }
-
-        // Try to auto-join
-        await TryAutoJoinAsync(username, stoppingToken);
-    }
-
-    private async Task WaitForConnectionAsync(CancellationToken stoppingToken)
-    {
-        // Wait up to 30 seconds for connection
-        var timeout = TimeSpan.FromSeconds(30);
-        var startTime = DateTime.UtcNow;
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (!string.IsNullOrWhiteSpace(soulseekClient.Username))
+            var username = await WaitForConnectionAsync(stoppingToken);
+            if (string.IsNullOrWhiteSpace(username))
             {
-                logger.LogDebug("[GoldStarClub] Soulseek client connected");
                 return;
             }
 
-            if (DateTime.UtcNow - startTime > timeout)
+            await TryAutoJoinAsync(username, stoppingToken);
+            return;
+        }
+    }
+
+    private async Task<string?> WaitForConnectionAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var username = soulseekClient.Username;
+            if (!string.IsNullOrWhiteSpace(username))
             {
-                logger.LogWarning("[GoldStarClub] Timeout waiting for Soulseek connection");
-                return;
+                logger.LogDebug("[GoldStarClub] Soulseek client connected");
+                return username;
+            }
+
+            var now = DateTime.UtcNow;
+            if (now - lastConnectionWaitLogUtc >= TimeSpan.FromSeconds(30))
+            {
+                logger.LogInformation("[GoldStarClub] Waiting for Soulseek login before auto-join");
+                lastConnectionWaitLogUtc = now;
             }
 
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
         }
+
+        return null;
     }
 }

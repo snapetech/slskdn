@@ -120,12 +120,12 @@ grep "PropTypes\|: string\|: number\|interface\|type " src/web/src/components/Yo
 ```
 If found: Remove them. This is plain JS.
 
-### 12. No React 17+ Features
+### 12. No unsupported future React Features
 ```bash
 # Check for new features
 grep "useId\|useDeferredValue\|useTransition\|startTransition" src/web/src/components/YourComponent/
 ```
-If found: Remove. We're on React 16.8.6.
+If found: Remove. We're on current React version declared in src/web/package.json.
 
 ---
 
@@ -216,7 +216,7 @@ Before every commit:
 9. ✅ Error handling uses toast
 10. ✅ Function components only
 11. ✅ No PropTypes/TypeScript
-12. ✅ No React 17+ features
+12. ✅ No unsupported future React features
 13. ✅ Tests pass
 14. ✅ No flaky tests
 15. ✅ Lint passes

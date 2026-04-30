@@ -177,7 +177,7 @@ public async Task<IReadOnlyList<byte[]>> FindValueAsync(byte[] key, Cancellation
 **Build Status**: ✅ SUCCESS (0 errors, 577 StyleCop warnings)
 
 ```bash
-cd ~/Documents/Code/slskdn
+cd <repo-root>
 dotnet build src/slskd/slskd.csproj
 # Result: Build succeeded with only lint warnings
 ```
