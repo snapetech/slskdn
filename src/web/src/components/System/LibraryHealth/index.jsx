@@ -1,4 +1,5 @@
 import * as libraryHealth from '../../../lib/libraryHealth';
+import { buildLibraryHealthReport } from '../../../lib/libraryHealthReport';
 import { LoaderSegment } from '../../Shared';
 import React, { useEffect, useState } from 'react';
 import {
@@ -10,6 +11,7 @@ import {
   Label,
   Loader,
   Message,
+  Popup,
   Segment,
   Statistic,
   Tab,
@@ -26,6 +28,7 @@ const LibraryHealth = () => {
   const [issues, setIssues] = useState([]);
   const [selectedIssues, setSelectedIssues] = useState(new Set());
   const [fixing, setFixing] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -46,6 +49,7 @@ const LibraryHealth = () => {
       setIssuesByType(byTypeResp.data.groups || []);
       setIssuesByArtist(byArtistResp.data.groups || []);
       setIssues(issuesResp.data.issues || []);
+      setReportMessage('');
     } catch (error_) {
       setError(
         error_.response?.data?.message ||
@@ -202,6 +206,22 @@ const LibraryHealth = () => {
     }
   };
 
+  const handleCopyReport = () => {
+    const report = buildLibraryHealthReport({
+      issues,
+      issuesByArtist,
+      issuesByType,
+      libraryPath,
+      summary,
+    });
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(report).catch(() => {});
+    }
+
+    setReportMessage(`Library health report prepared for ${issues.length} loaded issues.`);
+  };
+
   const OverviewPane = () => (
     <Tab.Pane>
       <Grid>
@@ -284,6 +304,29 @@ const LibraryHealth = () => {
                       <Statistic.Label>Resolved</Statistic.Label>
                     </Statistic>
                   </Statistic.Group>
+                  <Popup
+                    content="Copy a read-only health report for offline review. This does not fix, rescan, quarantine, search, or mutate files."
+                    trigger={
+                      <Button
+                        data-testid="library-health-copy-report"
+                        disabled={!summary}
+                        onClick={handleCopyReport}
+                        type="button"
+                      >
+                        <Icon name="copy" />
+                        Copy Report
+                      </Button>
+                    }
+                  />
+                  {reportMessage ? (
+                    <Message
+                      compact
+                      data-testid="library-health-report-message"
+                      size="mini"
+                    >
+                      {reportMessage}
+                    </Message>
+                  ) : null}
                 </Segment>
               </Grid.Column>
             </Grid.Row>

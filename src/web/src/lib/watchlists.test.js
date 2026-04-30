@@ -1,8 +1,10 @@
 import {
   buildWatchlistDiscoverySeed,
+  buildWatchlistExpansionSummary,
   buildWatchlistSchedulePreview,
   buildWatchlistSummary,
   getWatchlists,
+  recordWatchlistExpansionDecision,
   recordWatchlistManualScan,
   saveWatchlist,
 } from './watchlists';
@@ -16,6 +18,7 @@ describe('watchlists', () => {
     saveWatchlist({
       country: 'US',
       cooldownDays: 90,
+      expansionCandidates: ['Broadcast', 'Broadcast', ''],
       format: 'Vinyl',
       kind: 'Artist',
       releaseTypes: ['Album', 'Bogus'],
@@ -25,6 +28,10 @@ describe('watchlists', () => {
     saveWatchlist({
       country: 'Atlantis',
       cooldownDays: 0,
+      expansionCandidates: [
+        { name: 'Cavern of Anti-Matter', status: 'Approved' },
+        { name: 'Unknown', status: 'Deferred' },
+      ],
       format: 'Wax Cylinder',
       kind: 'Artist',
       releaseTypes: ['EP'],
@@ -36,11 +43,74 @@ describe('watchlists', () => {
     expect(getWatchlists()[0]).toMatchObject({
       country: 'Any',
       cooldownDays: 1,
+      expansionCandidates: [
+        expect.objectContaining({
+          name: 'Cavern of Anti-Matter',
+          status: 'Approved',
+        }),
+        expect.objectContaining({
+          name: 'Unknown',
+          status: 'Pending',
+        }),
+      ],
       format: 'Any',
       kind: 'Artist',
       releaseTypes: ['EP'],
       schedule: 'Daily',
       target: 'stereolab',
+    });
+  });
+
+  it('approves similar-artist expansion into a manual watchlist', () => {
+    saveWatchlist({
+      acquisitionProfile: 'rare-hunt',
+      cooldownDays: 4,
+      expansionCandidates: ['Broadcast', 'The Focus Group'],
+      releaseTypes: ['Album', 'Single'],
+      schedule: 'Weekly',
+      target: 'Stereolab',
+    });
+    const [watch] = getWatchlists();
+
+    recordWatchlistExpansionDecision(watch.id, 'Broadcast', 'Approved', {
+      timestamp: '2026-04-30T21:25:00.000Z',
+    });
+
+    const items = getWatchlists();
+    expect(items[0]).toMatchObject({
+      acquisitionProfile: 'rare-hunt',
+      cooldownDays: 4,
+      expansionSource: 'Stereolab',
+      kind: 'Artist',
+      releaseTypes: ['Album', 'Single'],
+      schedule: 'Manual only',
+      target: 'Broadcast',
+    });
+    expect(
+      items.find((item) => item.target === 'Stereolab').expansionCandidates,
+    ).toContainEqual(
+      expect.objectContaining({
+        decidedAt: '2026-04-30T21:25:00.000Z',
+        name: 'Broadcast',
+        status: 'Approved',
+      }),
+    );
+  });
+
+  it('summarizes similar-artist expansion decisions', () => {
+    expect(
+      buildWatchlistExpansionSummary({
+        expansionCandidates: [
+          { name: 'Broadcast', status: 'Approved' },
+          { name: 'The Focus Group', status: 'Pending' },
+          { name: 'Pram', status: 'Rejected' },
+        ],
+      }),
+    ).toMatchObject({
+      Approved: 1,
+      Pending: 1,
+      Rejected: 1,
+      total: 3,
     });
   });
 

@@ -67,6 +67,33 @@ const normalizeCooldownDays = (cooldownDays) => {
   return Math.min(Math.max(Math.round(parsed), 1), 30);
 };
 
+const normalizeExpansionCandidates = (candidates = []) => {
+  const names = Array.isArray(candidates) ? candidates : [];
+  const seen = new Set();
+
+  return names
+    .map((candidate) =>
+      typeof candidate === 'string' ? { name: candidate } : candidate,
+    )
+    .map((candidate) => ({
+      createdAt: candidate.createdAt || now(),
+      decidedAt: candidate.decidedAt || '',
+      name: (candidate.name || '').trim(),
+      status: ['Approved', 'Rejected'].includes(candidate.status)
+        ? candidate.status
+        : 'Pending',
+    }))
+    .filter((candidate) => {
+      const key = candidate.name.toLowerCase();
+      if (!candidate.name || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+};
+
 const normalizeWatchlist = (item = {}) => {
   const timestamp = now();
 
@@ -77,6 +104,8 @@ const normalizeWatchlist = (item = {}) => {
     country: normalizeCountry(item.country),
     createdAt: item.createdAt || timestamp,
     destination: item.destination || 'Discovery Inbox',
+    expansionCandidates: normalizeExpansionCandidates(item.expansionCandidates),
+    expansionSource: item.expansionSource || '',
     format: normalizeFormat(item.format),
     id: item.id || uuidv4(),
     kind: allowedKinds.includes(item.kind) ? item.kind : 'Artist',
@@ -151,6 +180,64 @@ export const recordWatchlistManualScan = (
   return saveWatchlistsWith(updated, setItem);
 };
 
+export const recordWatchlistExpansionDecision = (
+  id,
+  candidateName,
+  decision,
+  {
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+    timestamp = now(),
+  } = {},
+) => {
+  const normalizedName = candidateName.trim();
+  const status = decision === 'Approved' ? 'Approved' : 'Rejected';
+  const items = getWatchlistsWith(getItem);
+  const parent = items.find((item) => item.id === id);
+
+  const updated = items.map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          expansionCandidates: item.expansionCandidates.map((candidate) =>
+            candidate.name.toLowerCase() === normalizedName.toLowerCase()
+              ? {
+                  ...candidate,
+                  decidedAt: timestamp,
+                  status,
+                }
+              : candidate,
+          ),
+          updatedAt: timestamp,
+        }
+      : item,
+  );
+
+  const candidateExists = updated.some(
+    (item) =>
+      item.kind === 'Artist' &&
+      item.target.toLowerCase() === normalizedName.toLowerCase(),
+  );
+
+  if (status === 'Approved' && parent && normalizedName && !candidateExists) {
+    updated.unshift(
+      normalizeWatchlist({
+        acquisitionProfile: parent.acquisitionProfile,
+        cooldownDays: parent.cooldownDays,
+        country: parent.country,
+        expansionSource: parent.target,
+        format: parent.format,
+        kind: 'Artist',
+        releaseTypes: parent.releaseTypes,
+        schedule: 'Manual only',
+        target: normalizedName,
+      }),
+    );
+  }
+
+  return saveWatchlistsWith(updated, setItem);
+};
+
 export const buildWatchlistSummary = (items = []) =>
   items.reduce(
     (summary, item) => ({
@@ -196,3 +283,18 @@ export const buildWatchlistSchedulePreview = (item) => {
     profileLabel: profile.label,
   };
 };
+
+export const buildWatchlistExpansionSummary = (item) =>
+  (item.expansionCandidates || []).reduce(
+    (summary, candidate) => ({
+      ...summary,
+      [candidate.status]: (summary[candidate.status] || 0) + 1,
+      total: summary.total + 1,
+    }),
+    {
+      Approved: 0,
+      Pending: 0,
+      Rejected: 0,
+      total: 0,
+    },
+  );

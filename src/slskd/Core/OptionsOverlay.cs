@@ -115,6 +115,12 @@ namespace slskd
             public PushoverOptionsPatch? Pushover { get; init; }
 
             /// <summary>
+            ///     Gets FTP integration options.
+            /// </summary>
+            [Validate]
+            public FtpOptionsPatch? Ftp { get; init; }
+
+            /// <summary>
             ///     Spotify source-feed import options.
             /// </summary>
             public record SpotifyOptionsPatch
@@ -216,6 +222,38 @@ namespace slskd
                 public bool? NotifyOnPrivateMessage { get; init; }
 
                 public bool? NotifyOnRoomMention { get; init; }
+            }
+
+            /// <summary>
+            ///     FTP integration options.
+            /// </summary>
+            public record FtpOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                public string? Address { get; init; }
+
+                [Range(1, 65535)]
+                public int? Port { get; init; }
+
+                public string? EncryptionMode { get; init; }
+
+                public bool? IgnoreCertificateErrors { get; init; }
+
+                public string? Username { get; init; }
+
+                [Secret]
+                public string? Password { get; init; }
+
+                public string? RemotePath { get; init; }
+
+                public bool? OverwriteExisting { get; init; }
+
+                [Range(0, int.MaxValue)]
+                public int? ConnectionTimeout { get; init; }
+
+                [Range(0, 5)]
+                public int? RetryAttempts { get; init; }
             }
         }
     }

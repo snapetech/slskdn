@@ -74,6 +74,16 @@ public class BloomFilter
     }
 
     /// <summary>
+    /// Gets the number of bits in the filter.
+    /// </summary>
+    public int Size => _size;
+
+    /// <summary>
+    /// Gets the number of hash functions used by the filter.
+    /// </summary>
+    public int HashFunctionCount => _hashFunctionCount;
+
+    /// <summary>
     /// Adds an item to the Bloom filter.
     /// </summary>
     /// <param name="item">The item to add.</param>
@@ -141,6 +151,45 @@ public class BloomFilter
 
         var fillRatio = FillRatio;
         return Math.Pow(fillRatio, _hashFunctionCount);
+    }
+
+    /// <summary>
+    /// Exports the filter bit array as base64 for transport or persistence.
+    /// </summary>
+    /// <returns>The base64-encoded bit array.</returns>
+    public string ToBase64()
+    {
+        var bytes = new byte[(_bitArray.Length + 7) / 8];
+        _bitArray.CopyTo(bytes, 0);
+        return Convert.ToBase64String(bytes);
+    }
+
+    /// <summary>
+    /// Rehydrates a Bloom filter from a base64 bit array exported by <see cref="ToBase64"/>.
+    /// </summary>
+    /// <param name="expectedItems">Expected number of items used to create the filter.</param>
+    /// <param name="falsePositiveRate">False-positive rate used to create the filter.</param>
+    /// <param name="base64Bits">The exported bit array.</param>
+    /// <param name="itemCount">The item count recorded with the exported filter.</param>
+    /// <returns>The rehydrated Bloom filter.</returns>
+    public static BloomFilter FromBase64(int expectedItems, double falsePositiveRate, string base64Bits, long itemCount)
+    {
+        var filter = new BloomFilter(expectedItems, falsePositiveRate);
+        var bytes = Convert.FromBase64String(base64Bits);
+        var bits = new BitArray(bytes);
+
+        if (bits.Length < filter._size)
+        {
+            throw new ArgumentException("Bloom filter bit payload is too small for the requested parameters.", nameof(base64Bits));
+        }
+
+        for (var i = 0; i < filter._size; i++)
+        {
+            filter._bitArray.Set(i, bits.Get(i));
+        }
+
+        filter._itemCount = Math.Max(0, itemCount);
+        return filter;
     }
 
     /// <summary>

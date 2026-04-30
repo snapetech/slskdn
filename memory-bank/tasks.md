@@ -86,6 +86,11 @@
  - Priority: P3
  - Notes: Discovery Shelf can now copy a text policy report with expiry window, consensus requirement, promote/archive/expire/review counts, and item-level planned actions. The report is review-only and does not apply, move, delete, download, publish, or mutate files.
 
+- [x] **feature**: Add Library Health report export.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Library Health can now copy a read-only text report from the loaded scan summary, issue type counts, top artists, and issue sample. Report export does not start a scan, create remediation jobs, queue replacement searches, quarantine files, or mutate library files.
+
 - [x] **feature**: Add visible acquisition profiles to Search.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -185,6 +190,11 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Watchlists now persist manual/daily/weekly/monthly schedule intent, bounded cooldown days, and acquisition profile policy, and show enabled schedule status on each row. This is a local planning surface only; no scheduler, metadata provider lookup, Soulseek search, peer browse, download, or file mutation is started.
+
+- [x] **feature**: Add review-only Watchlist similar-artist expansion approval.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Watchlists can now store manually supplied similar-artist expansion candidates, show pending/approved/rejected expansion status, and approve a candidate into a manual Artist watchlist. Expansion approval remains browser-local and does not call providers, search Soulseek, browse peers, download, schedule automation, or mutate files.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)
@@ -1904,10 +1914,14 @@
   - Status: completed (2026-04-30)
   - Notes: System Integrations now exposes Pushbullet, Ntfy, and Pushover settings with enable toggles, private-message and room-mention triggers, masked secret replacement, validation warnings, runtime apply, YAML save, reset, and tooltip-backed actions. Runtime overlays were extended for these notification options.
 
+- [x] Add guided Web UI controls for FTP uploads
+  - Status: completed (2026-04-30)
+  - Notes: System Integrations now exposes FTP completed-download upload settings with enablement, address, port, username/password replacement, remote path, encryption mode, certificate handling, overwrite policy, timeout, retry attempts, runtime apply, YAML save, reset, validation warnings, and tooltip-backed actions. Runtime overlays were extended for FTP integration options.
+
 - [ ] Add guided admin settings for remaining YAML-only integrations and policies
   - Status: planned
   - Priority: P2
-  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: webhooks/scripts/FTP, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
+  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: webhooks/scripts, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
 
 - [x] Fix dark-mode inner surfaces and surface VPN/Lidarr admin status
   - Status: completed (2026-04-30)

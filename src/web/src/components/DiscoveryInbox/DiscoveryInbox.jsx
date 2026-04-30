@@ -17,9 +17,11 @@ import {
 } from '../../lib/discoveryInboxReview';
 import {
   buildWatchlistDiscoverySeed,
+  buildWatchlistExpansionSummary,
   buildWatchlistSchedulePreview,
   buildWatchlistSummary,
   getWatchlists,
+  recordWatchlistExpansionDecision,
   recordWatchlistManualScan,
   saveWatchlist,
   watchlistAcquisitionProfileOptions,
@@ -59,6 +61,30 @@ const formatTimestamp = (timestamp) => {
   return Number.isNaN(date.getTime()) ? 'Unknown time' : date.toLocaleString();
 };
 
+const expansionCandidateColor = (status) => {
+  if (status === 'Approved') {
+    return 'green';
+  }
+
+  if (status === 'Rejected') {
+    return 'red';
+  }
+
+  return 'grey';
+};
+
+const expansionCandidateIcon = (status) => {
+  if (status === 'Approved') {
+    return 'check';
+  }
+
+  if (status === 'Rejected') {
+    return 'ban';
+  }
+
+  return 'user plus';
+};
+
 const DiscoveryInbox = () => {
   const [items, setItems] = useState([]);
   const [plans, setPlans] = useState([]);
@@ -76,6 +102,7 @@ const DiscoveryInbox = () => {
   const [watchCooldownDays, setWatchCooldownDays] = useState(7);
   const [watchAcquisitionProfile, setWatchAcquisitionProfile] =
     useState('lossless-exact');
+  const [watchExpansionCandidates, setWatchExpansionCandidates] = useState('');
 
   const refreshItems = () => {
     setItems(getDiscoveryInboxItems());
@@ -156,6 +183,10 @@ const DiscoveryInbox = () => {
         acquisitionProfile: watchAcquisitionProfile,
         cooldownDays: watchCooldownDays,
         country: watchCountry,
+        expansionCandidates: watchExpansionCandidates
+          .split(',')
+          .map((candidate) => candidate.trim())
+          .filter(Boolean),
         format: watchFormat,
         kind: watchKind,
         releaseTypes: watchReleaseTypes,
@@ -164,10 +195,17 @@ const DiscoveryInbox = () => {
       }),
     );
     setWatchTarget('');
+    setWatchExpansionCandidates('');
   };
 
   const previewWatchlistScan = (watchlist) => {
     setWatchlists(recordWatchlistManualScan(watchlist.id));
+  };
+
+  const decideWatchlistExpansion = (watchlist, candidate, decision) => {
+    setWatchlists(
+      recordWatchlistExpansionDecision(watchlist.id, candidate.name, decision),
+    );
   };
 
   const seedWatchlistReview = (watchlist) => {
@@ -388,6 +426,15 @@ const DiscoveryInbox = () => {
               />
             </Form.Field>
           </Form.Group>
+          <Form.Field>
+            <label>Similar artist candidates</label>
+            <Input
+              aria-label="Watchlist similar artist candidates"
+              onChange={(event) => setWatchExpansionCandidates(event.target.value)}
+              placeholder="Comma-separated artists for review-only expansion"
+              value={watchExpansionCandidates}
+            />
+          </Form.Field>
           <Popup
             content="Add this target to the browser-local watchlist. This does not contact metadata providers or scan Soulseek."
             position="top center"
@@ -426,6 +473,7 @@ const DiscoveryInbox = () => {
         {watchlists.length > 0 && (
           <div className="discovery-inbox-watchlist-grid">
             {watchlists.map((watchlist) => {
+              const expansionSummary = buildWatchlistExpansionSummary(watchlist);
               const schedulePreview = buildWatchlistSchedulePreview(watchlist);
 
               return (
@@ -469,10 +517,38 @@ const DiscoveryInbox = () => {
                         <Icon name="gem outline" />
                         {schedulePreview.profileLabel}
                       </Label>
+                      {expansionSummary.total > 0 && (
+                        <Label basic>
+                          <Icon name="users" />
+                          Expansions {expansionSummary.Pending} pending
+                        </Label>
+                      )}
                     </div>
                     <div className="discovery-inbox-impact">
                       {schedulePreview.networkImpact}
                     </div>
+                    {expansionSummary.total > 0 && (
+                      <div className="discovery-inbox-impact">
+                        Similar-artist expansion is review-only. Approving a
+                        candidate creates a manual Artist watchlist and does not
+                        search, browse peers, or download.
+                      </div>
+                    )}
+                    {watchlist.expansionCandidates.length > 0 && (
+                      <div className="discovery-inbox-impact-labels">
+                        {watchlist.expansionCandidates.map((candidate) => (
+                          <Label
+                            basic
+                            color={expansionCandidateColor(candidate.status)}
+                            key={candidate.name}
+                          >
+                            <Icon name={expansionCandidateIcon(candidate.status)} />
+                            {candidate.name}
+                            <Label.Detail>{candidate.status}</Label.Detail>
+                          </Label>
+                        ))}
+                      </div>
+                    )}
                     {watchlist.lastScanPreview && (
                       <div className="discovery-inbox-impact">
                         {watchlist.lastScanPreview}
@@ -492,6 +568,49 @@ const DiscoveryInbox = () => {
                         />
                       }
                     />
+                    {watchlist.expansionCandidates
+                      .filter((candidate) => candidate.status === 'Pending')
+                      .map((candidate) => (
+                        <React.Fragment key={candidate.name}>
+                          <Popup
+                            content={`Approve ${candidate.name} as a browser-local Artist watchlist expansion. This does not search providers, browse peers, or download.`}
+                            position="top center"
+                            trigger={
+                              <Button
+                                aria-label={`Approve similar artist ${candidate.name}`}
+                                icon="user plus"
+                                onClick={() =>
+                                  decideWatchlistExpansion(
+                                    watchlist,
+                                    candidate,
+                                    'Approved',
+                                  )
+                                }
+                                size="small"
+                              />
+                            }
+                          />
+                          <Popup
+                            content={`Reject ${candidate.name} as a similar-artist expansion so it remains recorded without creating a new watchlist.`}
+                            position="top center"
+                            trigger={
+                              <Button
+                                aria-label={`Reject similar artist ${candidate.name}`}
+                                icon="user times"
+                                negative
+                                onClick={() =>
+                                  decideWatchlistExpansion(
+                                    watchlist,
+                                    candidate,
+                                    'Rejected',
+                                  )
+                                }
+                                size="small"
+                              />
+                            }
+                          />
+                        </React.Fragment>
+                      ))}
                     <Popup
                       content="Create a Discovery Inbox review seed from this watchlist target without starting a provider lookup, search, or download."
                       position="top center"

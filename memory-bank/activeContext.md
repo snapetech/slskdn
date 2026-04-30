@@ -1,3 +1,17 @@
+## Update 2026-04-30 21:29:48Z
+
+- Current task: Epic E6 review-only Watchlist similar-artist expansion approval is implemented locally.
+- Last activity:
+  - added manually supplied similar-artist expansion candidates to browser-local watchlists
+  - surfaced pending, approved, and rejected expansion evidence in Discovery Inbox watchlist rows
+  - added tooltip-backed approve/reject actions for pending candidates
+  - approving an expansion creates a manual Artist watchlist using the parent filter/profile policy
+  - kept the slice local-only with no provider lookup, Soulseek search, peer browse, download, scheduler, automation execution, or file mutation
+  - validated focused Watchlists and Discovery Inbox component tests
+- Next steps:
+  1. Continue beginning-lane burn-down into Epic E7 Playlist Intake only if it stays browser-local/file-first and avoids active System/Integrations work.
+  2. Defer provider-backed similar-artist discovery until credentials, rate limits, and explicit expansion evidence contracts are defined.
+
 ## Update 2026-04-30 21:20:12Z
 
 - Current task: T-937 Discography Concierge graph-density prioritization is implemented locally.
@@ -9,6 +23,18 @@
 - Next steps:
   1. Continue center-lane backend work with Bloom-filter library diff or artist radar persistence if it avoids active frontend/options lanes.
   2. Leave concurrent Discovery Inbox, Player, Watchlist, Discovery Shelf, and Options edits untouched unless asked to integrate.
+
+## Update 2026-04-30 21:30:10Z
+
+- Current task: Epic E12 Library Health report export is implemented locally.
+- Last activity:
+  - added a browser-side Library Health text report builder for loaded scan data
+  - surfaced Copy Report in the Library Health overview after summary/issues are loaded
+  - kept report export read-only with no scan start, remediation job, replacement search, quarantine, or file mutation
+  - validated focused Library Health tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue E12 with replacement-search or quarantine previews only if they stay explicit-review-first.
+  2. Keep Library Health remediation/export actions separately confirmed and non-automatic.
 
 ## Update 2026-04-30 21:19:35Z
 
@@ -3373,3 +3399,15 @@ dotnet test
 - Next steps:
   1. Continue the audit burn-down into webhooks/scripts/FTP or Transfer Policy.
   2. Keep additional admin settings surfaces redacted, tooltip-backed, and explicit about runtime versus YAML persistence.
+
+## Update 2026-04-30 21:27:05Z
+
+- Current task: Web UI FTP integration settings are implemented locally.
+- Last activity:
+  - added System Integrations controls for FTP completed-download uploads
+  - exposed enablement, address, port, username/password replacement, remote path, encryption mode, certificate handling, overwrite policy, timeout, retry attempts, runtime apply, YAML save, and reset actions
+  - extended `OptionsOverlay` so FTP integration settings can be applied at runtime when remote configuration is enabled
+  - updated changelog, the Web UI audit, task list, and progress notes
+- Next steps:
+  1. Continue the audit burn-down into webhooks/scripts or Transfer Policy.
+  2. Keep runtime-editable surfaces paired with YAML persistence and clear validation warnings.

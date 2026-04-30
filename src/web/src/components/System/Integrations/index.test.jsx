@@ -363,4 +363,106 @@ describe('Integrations', () => {
       screen.getByText('Notification integration settings saved to YAML.'),
     ).toBeInTheDocument();
   });
+
+  it('applies FTP integration settings without exposing secrets', async () => {
+    optionsApi.applyOverlay.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            ftp: {
+              address: 'ftp.old.invalid',
+              enabled: false,
+              password: '*****',
+              port: 21,
+              remotePath: '/',
+            },
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('FTP Uploads')).toBeInTheDocument();
+    expect(screen.getByText('Password Configured')).toBeInTheDocument();
+    expect(screen.queryByText('*****')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Enable FTP completed-download uploads'));
+    fireEvent.change(screen.getByLabelText('FTP server address'), {
+      target: { value: 'ftp.example.net' },
+    });
+    fireEvent.change(screen.getByLabelText('FTP username'), {
+      target: { value: 'slskdn' },
+    });
+    fireEvent.change(screen.getByLabelText('FTP password'), {
+      target: { value: 'ftp-secret' },
+    });
+    fireEvent.change(screen.getByLabelText('FTP remote upload path'), {
+      target: { value: '/incoming' },
+    });
+    fireEvent.click(screen.getAllByText('Apply Runtime')[2]);
+
+    await waitFor(() => {
+      expect(optionsApi.applyOverlay).toHaveBeenCalledWith({
+        integration: {
+          ftp: {
+            address: 'ftp.example.net',
+            connectionTimeout: 5000,
+            enabled: true,
+            encryptionMode: 'auto',
+            ignoreCertificateErrors: false,
+            overwriteExisting: true,
+            password: 'ftp-secret',
+            port: 21,
+            remotePath: '/incoming',
+            retryAttempts: 3,
+            username: 'slskdn',
+          },
+        },
+      });
+    });
+    expect(
+      screen.getByText('FTP integration settings applied for this running daemon.'),
+    ).toBeInTheDocument();
+  });
+
+  it('persists FTP settings to YAML from the web UI', async () => {
+    optionsApi.getYaml.mockResolvedValue('integrations: {}\n');
+    optionsApi.updateYaml.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            ftp: {},
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Enable FTP completed-download uploads'));
+    fireEvent.change(screen.getByLabelText('FTP server address'), {
+      target: { value: 'ftp.example.net' },
+    });
+    fireEvent.change(screen.getByLabelText('FTP password'), {
+      target: { value: 'ftp-secret' },
+    });
+    fireEvent.click(screen.getAllByText('Save YAML')[2]);
+
+    await waitFor(() => {
+      expect(optionsApi.updateYaml).toHaveBeenCalled();
+    });
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain('ftp');
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain(
+      'address: ftp.example.net',
+    );
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain(
+      'password: ftp-secret',
+    );
+    expect(
+      screen.getByText('FTP integration settings saved to YAML.'),
+    ).toBeInTheDocument();
+  });
 });

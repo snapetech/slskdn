@@ -1,3 +1,11 @@
+## 2026-04-30 21:29:48Z - Added Watchlist similar-artist expansion approval
+
+- Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
+- Added browser-local similar-artist expansion candidates to watchlists with pending, approved, and rejected states.
+- Added approve/reject controls that turn an approved candidate into a manual Artist watchlist while retaining review evidence on the source watchlist.
+- Kept the slice review-only: no metadata provider lookup, Soulseek search, peer browse, download, scheduler, automation execution, or file mutation is started.
+- Validation: focused Watchlists and Discovery Inbox component tests passed.
+
 ## 2026-04-30 21:17:09Z - Added Watchlist schedule and cooldown policy
 
 - Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
@@ -8347,6 +8355,14 @@ Code quality improvements were completed as part of Option A:
 - Extended the source-provider catalog with per-acquisition-profile provider priority policies.
 - Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
 - Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+## 2026-04-30 21:30:10Z
+
+- Continued the tail-side burn-down into Epic E12 Library Health.
+- Added a browser-side Library Health report builder covering loaded summary counts, issue type counts, top artists, and up to 50 sampled issues with safe-fix/review-only labels.
+- Surfaced a Copy Report action in the Library Health overview after scan data is loaded.
+- Kept the slice read-only: report export does not start scans, create remediation jobs, queue replacement searches, quarantine files, or mutate library files.
+- Validation: focused Library Health tests, frontend lint, frontend production build, and whitespace checks passed.
+
 ## 2026-04-30 21:19:35Z
 
 - Continued Epic E13 Discovery Shelf with exportable policy review.
@@ -8499,4 +8515,12 @@ Code quality improvements were completed as part of Option A:
 - Notification settings now expose provider enablement, private-message and room-mention triggers, redacted secret replacement, required-setting warnings, runtime apply, YAML save, reset, and tooltip-backed actions.
 - Extended the runtime options overlay so those notification settings can apply to the running daemon when remote configuration is enabled.
 - Updated the example config, changelog, audit, task list, and active context for the notification settings slice.
+- Validation: focused System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-04-30 21:27:05Z
+
+- Continued the System Integrations audit burn-down with FTP completed-download upload settings.
+- Added guided FTP controls for enablement, address, port, username/password replacement, remote path, encryption mode, certificate handling, overwrite policy, timeout, retry attempts, runtime apply, YAML save, reset, and validation warnings.
+- Extended the runtime options overlay so FTP integration settings can apply to the running daemon when remote configuration is enabled.
+- Updated the changelog, Web UI audit, task list, and active context for the FTP settings slice.
 - Validation: focused System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.

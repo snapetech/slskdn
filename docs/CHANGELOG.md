@@ -50,6 +50,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   and shared-library consensus gating.
 - Added copyable Discovery Shelf policy reports for offline review before any
   promote/archive/expiry action exists.
+- Added copyable Library Health text reports from loaded scan summaries and
+  issue samples without starting remediation.
 - Added browser-local Watchlist release, country, and format filters in
   Discovery Inbox.
 - Added browser-local listening history import/export for media-server CSV/JSON
@@ -92,6 +94,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   notification settings, including on/off toggles, private-message and
   room-mention triggers, masked secret replacement, validation warnings,
   runtime apply, YAML save, reset, and tooltips.
+- Added System Integrations controls for FTP completed-download uploads,
+  including connection, credential, encryption, retry, overwrite, certificate,
+  runtime apply, YAML save, reset, validation warnings, and tooltips.
 - Added a combined Messages workspace for direct chats and rooms with
   multi-panel windows, compact sizing, collapse/restore dock behavior, and
   compatibility routes from the old Chat and Rooms pages.

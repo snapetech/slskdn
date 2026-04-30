@@ -19,6 +19,9 @@ status signalling, and safe knobs/levers.
   Ntfy, and Pushover with delivery toggles, private-message and room-mention
   triggers, masked secret replacement, warnings, runtime apply, YAML save,
   reset, and tooltips.
+- Added FTP completed-download upload settings in System Integrations with
+  connection, credential, encryption, retry, overwrite, certificate, runtime
+  apply, YAML save, reset, warning, and tooltip affordances.
 
 ## Strongly Surfaced Already
 
@@ -32,9 +35,9 @@ status signalling, and safe knobs/levers.
 
 ## High-Value Missing Admin Knobs
 
-- Remaining notification/action integrations: webhooks, scripts, and FTP are
-  configured in YAML but lack a guided admin UI for enablement, event selection,
-  test-send/dry-run, retry policy, remote target visibility, and failure state.
+- Remaining action integrations: webhooks and scripts are configured in YAML but
+  lack a guided admin UI for enablement, event selection, test-send/dry-run,
+  retry policy, remote target visibility, and failure state.
 - Identity and access: API keys, JWT TTL/key status, passthrough auth, HTTPS
   certificate settings, force HTTPS, and rate limits are mostly YAML/raw-options
   surfaces. These need a security admin editor with redacted secret replacement
@@ -70,8 +73,8 @@ status signalling, and safe knobs/levers.
 
 ## Recommended Follow-Up Order
 
-1. Extend System Notifications/Actions to cover webhooks, scripts, and FTP
-   because these are operator-facing, testable, and still fragmented.
+1. Extend System Notifications/Actions to cover webhooks and scripts because
+   these are operator-facing, testable, and still fragmented.
 2. Build a Transfer Policy panel for global/group speed, slot, retry, scheduled,
    and auto-replace controls because these directly affect network citizenship.
 3. Build a Security/Auth settings panel for API keys, JWT, HTTPS, passthrough,

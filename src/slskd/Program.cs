@@ -1399,6 +1399,7 @@ namespace slskd
             services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<IDiscographyCoverageService, DiscographyCoverageService>();
+            services.AddSingleton<Integrations.MusicBrainz.Bloom.ILibraryBloomDiffService, Integrations.MusicBrainz.Bloom.LibraryBloomDiffService>();
             services.AddSingleton<Integrations.MusicBrainz.Radar.IArtistReleaseRadarService, Integrations.MusicBrainz.Radar.ArtistReleaseRadarService>();
             services.AddSingleton<Integrations.MusicBrainz.Overlay.IMusicBrainzOverlayService, Integrations.MusicBrainz.Overlay.MusicBrainzOverlayService>();
             services.AddSingleton<QuarantineJury.IQuarantineJuryService, QuarantineJury.QuarantineJuryService>();

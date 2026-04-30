@@ -217,4 +217,40 @@ describe('DiscoveryInbox', () => {
     expect(screen.getAllByText('Mesh Preferred').length).toBeGreaterThan(0);
     expect(screen.getByText(/does not execute provider lookups/)).toBeInTheDocument();
   });
+
+  it('approves similar-artist expansion into a manual watchlist', () => {
+    saveWatchlist({
+      expansionCandidates: ['Broadcast'],
+      target: 'Stereolab',
+    });
+
+    render(<DiscoveryInbox />);
+
+    expect(screen.getByText('Expansions 1 pending')).toBeInTheDocument();
+    expect(screen.getByText(/Similar-artist expansion is review-only/)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Approve similar artist Broadcast' }),
+    );
+
+    const persistedWatchlists = JSON.parse(
+      localStorage.getItem(watchlistStorageKey),
+    );
+    expect(persistedWatchlists[0]).toMatchObject({
+      expansionSource: 'Stereolab',
+      kind: 'Artist',
+      schedule: 'Manual only',
+      target: 'Broadcast',
+    });
+    expect(
+      persistedWatchlists
+        .find((watchlist) => watchlist.target === 'Stereolab')
+        .expansionCandidates,
+    ).toContainEqual(
+      expect.objectContaining({
+        name: 'Broadcast',
+        status: 'Approved',
+      }),
+    );
+  });
 });
