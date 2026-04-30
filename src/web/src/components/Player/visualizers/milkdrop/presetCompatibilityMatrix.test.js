@@ -28,10 +28,13 @@ describe('MilkDrop compatibility matrix', () => {
     const summary = summarizeMilkdropCompatibilityMatrix(matrix);
 
     expect(summary.totalCount).toBe(nativeMilkdropFixturePack.length);
-    expect(summary.supportedCount).toBe(3);
+    expect(summary.supportedCount).toBe(4);
     expect(summary.unsupportedCount).toBe(1);
+    expect(summary.maxQRegisterIndex).toBe(64);
+    expect(summary.qRegisters).toEqual(['q1', 'q2', 'q16', 'q32', 'q33', 'q34', 'q48', 'q63', 'q64']);
     expect(summary.unsupportedShaderSections).toEqual(['comp_shader']);
     expect(matrix.find((entry) => entry.id === 'milk2-double').presetCount).toBe(2);
+    expect(matrix.find((entry) => entry.id === 'milkdrop3-q-registers').presetCount).toBe(2);
   });
 
   it('tracks dense real-pack shape and wave count pressure', () => {
@@ -43,5 +46,28 @@ describe('MilkDrop compatibility matrix', () => {
     expect(entry.supported).toBe(true);
     expect(entry.metrics.maxShapeCount).toBe(40);
     expect(entry.metrics.maxWaveCount).toBe(20);
+  });
+
+  it('tracks q-register pressure across MilkDrop3-style preset bodies', () => {
+    const entry = buildMilkdropCompatibilityEntry({
+      format: 'milk2',
+      id: 'q-register-pack-probe',
+      source: `
+        [preset00]
+        q64=0.5
+        per_frame_1=q1=q64+bass;
+        wavecode_0_enabled=1
+        wavecode_0_per_point1=y=q48+sample;
+        [preset01]
+        per_frame_1=q63=q1+treb;
+        shape00_enabled=1
+        shape00_per_frame1=q32=q63*0.5;
+        comp_shader=ret = vec3(q32, q63, q64);
+      `,
+    });
+
+    expect(entry.supported).toBe(true);
+    expect(entry.metrics.maxQRegisterIndex).toBe(64);
+    expect(entry.metrics.qRegisters).toEqual(['q1', 'q32', 'q48', 'q63', 'q64']);
   });
 });

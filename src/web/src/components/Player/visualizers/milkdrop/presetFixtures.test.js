@@ -95,6 +95,35 @@ describe('native MilkDrop fixture pack', () => {
           },
         ],
       },
+      'milkdrop3-q-registers': {
+        format: 'milk2',
+        presets: [
+          {
+            baseValueKeys: ['q64'],
+            format: 'milk2',
+            hasCompShader: false,
+            hasPerFrame: true,
+            hasPerPixel: false,
+            hasWarpShader: true,
+            shapeCount: 0,
+            spriteCount: 0,
+            title: 'Fixture Q Register Coverage A',
+            waveCount: 1,
+          },
+          {
+            baseValueKeys: ['blend_alpha', 'composite_mode'],
+            format: 'milk2',
+            hasCompShader: true,
+            hasPerFrame: true,
+            hasPerPixel: false,
+            hasWarpShader: false,
+            shapeCount: 1,
+            spriteCount: 1,
+            title: 'Fixture Q Register Coverage B',
+            waveCount: 0,
+          },
+        ],
+      },
       'shader-subset': {
         format: 'milk',
         presets: [{
@@ -146,6 +175,7 @@ describe('native MilkDrop fixture pack', () => {
       { error: '', id: 'classic-primitives' },
       { error: '', id: 'shader-subset' },
       { error: '', id: 'milk2-double' },
+      { error: '', id: 'milkdrop3-q-registers' },
       {
         error: 'Native MilkDrop preset has shader translation pending: comp_shader.',
         id: 'unsupported-control-flow-shader',

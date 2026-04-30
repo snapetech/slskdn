@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **feature**: Add visible acquisition profiles to Search.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a reusable Web UI acquisition profile catalog and persisted Search-page selector for Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict. This is the first visible control surface for the competitive roadmap; backend ranking/download behavior is intentionally unchanged in this slice.
+
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
  - Priority: P1
@@ -70,6 +75,7 @@
  - Progress (2026-04-30): Added safe declared-temp reassignment support in translated native shader bodies while rejecting undeclared assignment and post-`ret` statements.
  - Progress (2026-04-30): Added native MilkDrop compatibility matrix reporting for curated fixtures and local preset files/folders, including first high-count wave/shape metric coverage for real-pack pressure.
  - Progress (2026-04-30): Added richer `.milk2` transition and composite controls with preset-defined transition durations plus alpha/additive/screen/multiply secondary blend modes.
+ - Progress (2026-04-30): Added q-register pressure metrics to the native MilkDrop compatibility matrix and a MilkDrop3-style fixture that exercises q1/q2/q16/q32/q48/q63/q64 across globals, primitives, and translated shaders.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -1604,3 +1610,7 @@
 - [x] Audit and fix fixed-chrome scroll regions
   - Status: completed (2026-04-30)
   - Notes: Measured nav/player/footer chrome into CSS variables used by the app scroll container; fixed safe-area double counting and nav bottom-edge under-reservation. Headless geometry audit passed Search, Rooms, Chat, Browse, and System at desktop/mobile sizes with the player expanded and collapsed.
+
+- [x] Audit and tune dark theme color contrast
+  - Status: completed (2026-04-30)
+  - Notes: Ran headless screenshots and computed contrast checks across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System. Tightened dark-mode Semantic UI colored button contrast, documented the gotcha, and validated frontend lint, production build, and a focused contrast sweep.

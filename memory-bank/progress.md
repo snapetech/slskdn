@@ -1,3 +1,10 @@
+## 2026-04-30 19:10Z - Started acquisition profile control surface
+
+- Added a local competitive roadmap update that closes product decisions and makes automations visible in the Web UI, with low-risk automations enabled by default and higher-impact recipes visibly disabled until enabled.
+- Added a reusable acquisition profile catalog for Search: Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict.
+- Added a persisted Search-page acquisition profile selector with profile summaries and tooltip context.
+- Validation: focused Search component tests, frontend lint, frontend production build, and whitespace checks passed.
+
 ## 2026-04-30 18:54Z - Added native MilkDrop `.milk2` composite controls
 
 - Added secondary `.milk2` blend mode aliases for alpha, additive, screen, and multiply final compositing.
@@ -7806,6 +7813,14 @@ Code quality improvements were completed as part of Option A:
 - ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
 - Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
 
+## 2026-04-30 19:10:00Z
+
+- Added native MilkDrop compatibility-matrix q-register pressure metrics, reporting the touched `q1`-`q64` set and highest q-register index across parsed preset bodies.
+- Added a MilkDrop3-style `.milk2` fixture that exercises q-registers across globals, custom waves, shapes, sprites, and translated warp/comp shaders.
+- Included the q-register fixture in the browser-native MilkDrop smoke path so the WebGL renderer covers high q-register usage during canvas pixel checks.
+- Included the dirty Search acquisition-profile selector scaffold with persisted conservative, mesh-preferred, metadata-strict, and related profile choices.
+- Validation: focused Search/fixture/matrix tests (`10/10`), broader native/player tests (`66/66`), `npm run test:native-milkdrop-compatibility`, `npm run test:native-milkdrop-smoke`, `npm run lint -- --quiet`, and `npm run build` passed.
+
 ## 2026-04-30 19:01:00Z
 
 - Added richer native `.milk2` transition and composite controls: preset-defined transition durations, secondary preset blend-mode aliases, and alpha/additive/screen/multiply final compositing in the WebGL blit path.
@@ -7887,3 +7902,11 @@ Code quality improvements were completed as part of Option A:
 - Applied `renderActiveOnly={false}` to every remaining Semantic UI `Tab` under `src/web/src/components`, extending the no-refresh tab behavior beyond Chat and Rooms.
 - Covered Browse, Contacts, top-level and nested Pods panels, both port-forwarding UIs, System, Files, Security, Adversarial Settings, and Library Health.
 - Validation: `npm run lint`, `npm run build`, and `git diff --check` passed.
+
+## 2026-04-30 19:08:57Z
+
+- Ran a headless color/contrast audit across Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System in the slskdN dark theme.
+- Tightened dark-mode Semantic UI colored action buttons so green/red/orange/yellow controls do not use low-contrast stock colors.
+- Confirmed the current shared dark palette uses stronger purple accents, deeper panel separation, and shadows across common Semantic UI surfaces.
+- Documented the dark-theme color-variant gotcha and committed it immediately as `a5da3f54a`.
+- Validation: `npm run lint`, `npm run build`, focused headless contrast sweep, and screenshots under `src/web/tmp/visual-audit/after`.

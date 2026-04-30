@@ -116,6 +116,24 @@ describe('Searches', () => {
     expect(localStorage.getItem('slskdn.search.section.songid')).toBe('open');
   });
 
+  it('shows and persists the selected acquisition profile', async () => {
+    await renderSearches();
+
+    expect(screen.getByText('Acquisition Profile')).toBeInTheDocument();
+    expect(screen.getAllByText('Lossless Exact').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByTestId('acquisition-profile-select'));
+    fireEvent.click(screen.getByText('Conservative Network'));
+
+    expect(localStorage.getItem('slskdn.acquisitionProfile')).toBe(
+      'conservative-network',
+    );
+    expect(
+      screen.getAllByText('Lower concurrency, no automatic public-peer retries.')
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
   it('uses stored collapsed state for primary search sections', async () => {
     localStorage.setItem('slskdn.search.section.search', 'closed');
 

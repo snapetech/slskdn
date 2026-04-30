@@ -1,3 +1,40 @@
+## Update 2026-04-30 19:10:00Z
+
+- Current task: Acquisition profile control surface is implemented locally.
+- Last activity:
+  - closed the local feature-expansion roadmap decisions, including visible Web UI automation enablement
+  - added persisted Search-page acquisition profiles for the first download/search decision surface
+  - validated focused Search tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Wire the selected acquisition profile into backend search/candidate ranking metadata.
+  2. Add an Automation Center shell that lists enabled and disabled recipes visibly.
+
+## Update 2026-04-30 19:08:57Z
+
+- Current task: None. Dark theme color/contrast audit is complete.
+- Last activity:
+  - ran headless screenshots for Search, Rooms, Chat, Browse, Downloads, Uploads, Wishlist, Users, and System
+  - ran computed contrast checks against the slskdN dark theme and fixed the remaining low-contrast stock Semantic UI green action button styling
+  - confirmed the shared palette and already-present page styles now lean further into purple accents, panel separation, and shadow depth
+  - documented the Semantic color-variant contrast gotcha and committed it as `a5da3f54a`
+  - validated frontend lint, production build, focused contrast sweep, and screenshot capture
+- Next steps:
+  1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
+  2. Keep any further visual polish centralized in `App.css` unless a page has a genuine local surface leak.
+
+## Update 2026-04-30 19:10:00Z
+
+- Current task: Native MilkDrop Phase 2 q-register compatibility coverage is implemented locally.
+- Last activity:
+  - added q-register pressure metrics to the native compatibility matrix
+  - added a MilkDrop3-style `.milk2` q-register fixture covering globals, waves, shapes, sprites, and translated shaders
+  - included that fixture in native browser smoke coverage
+  - included the dirty Search acquisition-profile selector scaffold and validated its focused test
+  - validated focused fixture/matrix/search tests, broader native/player tests, compatibility CLI, frontend lint/build, and native browser smoke
+- Next steps:
+  1. Run final whitespace/status checks.
+  2. Commit and push the q-register coverage phase.
+
 ## Update 2026-04-30 19:01:00Z
 
 - Current task: Native MilkDrop Phase 2 `.milk2` composite controls plus dirty workspace checkpoint are validated locally.

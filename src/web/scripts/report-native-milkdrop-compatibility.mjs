@@ -88,6 +88,10 @@ try {
       `Max counts: shapes=${summary.maxShapeCount}, `
       + `waves=${summary.maxWaveCount}, sprites=${summary.maxSpriteCount}.`,
     );
+    console.log(
+      `Q registers: ${summary.qRegisters.length}/64 touched; `
+      + `highest=${summary.maxQRegisterIndex || 0}.`,
+    );
     if (summary.unsupportedFunctions.length > 0) {
       console.log(`Unsupported functions: ${summary.unsupportedFunctions.join(', ')}`);
     }

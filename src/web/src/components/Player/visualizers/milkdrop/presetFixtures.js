@@ -89,6 +89,35 @@ export const nativeMilkdropFixturePack = [
     `,
   },
   {
+    description: 'MilkDrop3-style q-register coverage across equations, primitives, and shaders.',
+    id: 'milkdrop3-q-registers',
+    supported: true,
+    source: `
+      [preset00]
+      name=Fixture Q Register Coverage A
+      q64=0.64
+      per_frame_1=q1=bass_att+q64;
+      per_frame_2=q32=sin(time)+q1;
+      warp_shader=ret = tex2D(sampler_main, uv).rgb * vec3(q1, q32, q64);
+      wavecode_0_enabled=1
+      wavecode_0_samples=16
+      wavecode_0_per_frame1=q48=q32+0.1;
+      wavecode_0_per_point1=y=sample+q48;
+      [preset01]
+      name=Fixture Q Register Coverage B
+      blend_alpha=0.35
+      composite_mode=screen
+      per_frame_1=q63=treb_att+q2;
+      comp_shader=ret = vec3(q2, q63, q64);
+      shape00_enabled=1
+      shape00_sides=4
+      shape00_per_frame1=q64=max(q64,0.75);
+      sprite00_enabled=1
+      sprite00_image=fixture-logo.png
+      sprite00_per_frame1=q16=q63*0.5;
+    `,
+  },
+  {
     description: 'Unsupported shader control flow should be rejected cleanly.',
     id: 'unsupported-control-flow-shader',
     supported: false,

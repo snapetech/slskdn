@@ -16,6 +16,7 @@
   height: auto !important;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
@@ -69,7 +70,48 @@
 }
 
 .search-input {
+  flex: 1 1 560px;
   width: 100%;
+}
+
+.search-acquisition-profile-strip {
+  align-items: center;
+  border-top: 1px solid var(--slskd-border-color, rgba(34, 36, 38, 0.15));
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: auto minmax(210px, 280px) 1fr;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  width: 100%;
+}
+
+.search-acquisition-profile-label {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 600;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.search-acquisition-profile-dropdown {
+  width: 100%;
+}
+
+.search-acquisition-profile-option-summary,
+.search-acquisition-profile-summary {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.search-acquisition-profile-summary {
+  min-width: 0;
+}
+
+@media only screen and (max-width: 760px) {
+  .search-acquisition-profile-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ui.search-input > input {

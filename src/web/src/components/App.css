@@ -356,6 +356,34 @@ body {
     color: var(--slskdn-accent-primary-hover) !important;
 }
 
+:root.dark .ui.green.button,
+:root.dark .ui.green.buttons .button {
+    background: #147c32 !important;
+    box-shadow: 0 7px 18px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(78, 220, 116, 0.24) inset !important;
+    color: #f3fff5 !important;
+}
+
+:root.dark .ui.green.button:hover,
+:root.dark .ui.green.buttons .button:hover {
+    background: #1e9a43 !important;
+    box-shadow: 0 9px 24px rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(78, 220, 116, 0.38) inset !important;
+    color: #ffffff !important;
+}
+
+:root.dark .ui.red.button,
+:root.dark .ui.red.buttons .button {
+    background: #a91f2c !important;
+    color: #fff6f7 !important;
+}
+
+:root.dark .ui.orange.button,
+:root.dark .ui.orange.buttons .button,
+:root.dark .ui.yellow.button,
+:root.dark .ui.yellow.buttons .button {
+    background: #8f5a1f !important;
+    color: #fff7e8 !important;
+}
+
 :root.dark .ui.tabular.menu {
     border-bottom-color: var(--slskd-tertiary-border-color) !important;
 }

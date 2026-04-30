@@ -1,4 +1,10 @@
 import './Search.css';
+import {
+  acquisitionProfiles,
+  getAcquisitionProfile,
+  getStoredAcquisitionProfileId,
+  setStoredAcquisitionProfileId,
+} from '../../lib/acquisitionProfiles';
 import { createSearchHubConnection } from '../../lib/hubFactory';
 import { getCapabilities } from '../../lib/slskdn';
 import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
@@ -23,6 +29,7 @@ import { toast } from 'react-toastify';
 import {
   Button,
   Checkbox,
+  Dropdown,
   Header,
   Icon,
   Input,
@@ -118,12 +125,36 @@ const Searches = ({ server } = {}) => {
   const [providerPod, setProviderPod] = useState(true);
   const [providerScene, setProviderScene] = useState(true); // Enabled by default when feature is on
   const [showProviderOptions, setShowProviderOptions] = useState(false);
+  const [acquisitionProfileId, setAcquisitionProfileId] = useState(() =>
+    getStoredAcquisitionProfileId(getLocalStorageItem),
+  );
 
   const inputRef = useRef();
 
   const location = useLocation();
   const routerNavigate = useNavigate();
   const { id: searchId } = useParams();
+  const acquisitionProfile = getAcquisitionProfile(acquisitionProfileId);
+  const acquisitionProfileOptions = acquisitionProfiles.map((profile) => ({
+    content: (
+      <div>
+        <strong>{profile.label}</strong>
+        <div className="search-acquisition-profile-option-summary">
+          {profile.summary}
+        </div>
+      </div>
+    ),
+    icon: profile.icon,
+    key: profile.id,
+    text: profile.label,
+    value: profile.id,
+  }));
+
+  const updateAcquisitionProfile = (event, { value }) => {
+    setAcquisitionProfileId(
+      setStoredAcquisitionProfileId(setLocalStorageItem, value).id,
+    );
+  };
 
   // Handle URL query parameters for predictable search URLs
   useEffect(() => {
@@ -493,6 +524,30 @@ const Searches = ({ server } = {}) => {
               </div>
             </div>
           )}
+          <div className="search-acquisition-profile-strip">
+            <div className="search-acquisition-profile-label">
+              <Icon name={acquisitionProfile.icon} />
+              Acquisition Profile
+            </div>
+            <Popup
+              content={`${acquisitionProfile.label}: ${acquisitionProfile.description}`}
+              position="top center"
+              trigger={
+                <Dropdown
+                  aria-label="Acquisition profile"
+                  className="search-acquisition-profile-dropdown"
+                  data-testid="acquisition-profile-select"
+                  onChange={updateAcquisitionProfile}
+                  options={acquisitionProfileOptions}
+                  selection
+                  value={acquisitionProfile.id}
+                />
+              }
+            />
+            <span className="search-acquisition-profile-summary">
+              {acquisitionProfile.summary}
+            </span>
+          </div>
         </Segment>
       </CollapsibleSection>
       <CollapsibleSection
