@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z195. Fully Qualify slskd Options When Importing Microsoft.Extensions.Options
+
+**The Bug**: A service imported `Microsoft.Extensions.Options` and declared `IOptionsMonitor<Options>`, which resolved `Options` to the static `Microsoft.Extensions.Options.Options` helper instead of the app configuration type. The same file also put a static factory method named `Started` on a record with a `Started` property, causing a generated-member collision.
+
+**Files Affected**:
+- `src/slskd/Player/ExternalVisualizerLauncher.cs`
+
+**Wrong**:
+```csharp
+private readonly IOptionsMonitor<Options> _options;
+
+public sealed record LaunchResult(bool Started)
+{
+    public static LaunchResult Started() => new(true);
+}
+```
+
+**Correct**:
+```csharp
+private readonly IOptionsMonitor<global::slskd.Options> _options;
+
+public sealed record LaunchResult(bool Started)
+{
+    public static LaunchResult StartedResult() => new(true);
+}
+```
+
+**Why This Keeps Happening**: The slskd root options type has the same simple name as the `Microsoft.Extensions.Options.Options` static helper. Any file that imports the options namespace and needs the app root config should use `global::slskd.Options`. Records also synthesize members for positional properties, so factory method names must not duplicate property names.
+
 ### 0z194. MilkDrop Needs The Real Butterchurn Export And A Live Audio Tap
 
 **The Bug**: The Web UI MilkDrop panel mounted a canvas but showed "Failed to load visualizer" or a black frame because Vite wrapped `butterchurn` differently than the component expected, the browser could lack WebGL2, and the visualizer was connected to an audio node that graph rebuilds could disconnect.
