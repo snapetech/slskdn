@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z190. Autosave Forms Need Saved-State Affordances
+
+**The Bug**: The player ListenBrainz token field saved on every keystroke, but the modal only showed a generic Close button. The behavior was technically correct, but the UI looked like an unsent form with no submit action.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/Player.css`
+
+**Wrong**:
+```jsx
+<Input onChange={saveToken} value={token} />
+<Button>Close</Button>
+```
+
+**Correct**:
+```jsx
+<Input action={<Button aria-label="Clear token" />} onChange={saveToken} value={token} />
+<div className="player-token-save-state">Token changes are saved automatically.</div>
+<Button primary>Done</Button>
+```
+
+**Why This Keeps Happening**: Autosave is invisible unless the UI names it. Settings modals that persist on change need explicit saved-state copy, a completion affordance, and a way to undo/clear sensitive values.
+
 ### 0z189. Ref-Only Audio Elements Do Not Wake Player Visualizers
 
 **The Bug**: The Web UI player passed `audioRef.current` directly into MilkDrop and analyzer components during render. The first render often saw `null`, and attaching the `<audio>` ref later did not trigger a React render, so MilkDrop mounted without a usable audio element and appeared completely dead.
