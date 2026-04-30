@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z203. MilkDrop3 Double Presets Must Compatibility-Check Every Preset Body
+
+**The Bug**: Native `.milk2` imports parsed both preset bodies but only compatibility-checked `parsed.primary`, so an unsupported secondary preset could be accepted and stored as if the whole file were compatible.
+
+**Files Affected**:
+- `src/web/src/components/Player/visualizers/nativeMilkdropEngine.js`
+
+**Wrong**:
+```js
+const importedPreset = parseMilkdropPreset(source, { format: 'milk2' }).primary;
+const compatibilityError = getMilkdropCompatibilityError(
+  analyzeMilkdropPresetCompatibility(importedPreset),
+);
+```
+
+**Correct**:
+```js
+const parsed = parseMilkdropPreset(source, { format: 'milk2' });
+const compatibilityErrors = parsed.presets
+  .map((preset) => getMilkdropCompatibilityError(analyzeMilkdropPresetCompatibility(preset)))
+  .filter(Boolean);
+```
+
+**Why This Keeps Happening**: Early renderer work often consumes only the primary preset while parser work preserves the full double-preset file. Import/inspection paths still need to validate every preserved body so unsupported secondary content does not become a latent render bug when simultaneous `.milk2` rendering lands.
+
 ### 0z202. Batch Preset Import Must Inspect Before Mutating The Live Renderer
 
 **The Bug**: Native MilkDrop multi-file import called `loadPresetText()` for every compatible file while scanning the batch. That replaced and disposed the live WebGL renderer repeatedly before the user had selected an active preset.
