@@ -46,7 +46,39 @@ Layer 1 is deliberately conservative. It broadcasts only metadata and relies on 
 
 This keeps listening parties aligned with slskdN network-health rules: user-triggered playback, no aggressive scanning, and no surprise bandwidth fan-out from the host.
 
+## Layer 1.5: Global Radio Registry
+
+Hosts can explicitly opt in to listing a party in the slskdN radio directory. This is still integrated into slskdN:
+
+- Directory API: `GET /api/v0/listening-party`
+- Host publish API: `POST /api/v0/listening-party/{podId}/{channelId}`
+- Integrated radio stream: `GET /api/v0/listening-party/radio/{partyId}/{contentId}`
+
+The host controls two separate toggles:
+
+- **List globally** publishes a `slskdn.listeningParty.announce.v1` announcement into the mesh/DHT-backed party index.
+- **Mesh streaming** allows listeners who find the listing to stream the current track directly from the host's slskdN node.
+
+The registry announcement is TTL-based and contains metadata plus a relative stream path when mesh streaming is enabled:
+
+```json
+{
+  "kind": "slskdn.listeningParty.announce.v1",
+  "partyId": "party:...",
+  "podId": "pod:...",
+  "channelId": "general",
+  "hostPeerId": "alice",
+  "title": "Track title",
+  "artist": "Artist",
+  "contentId": "content:audio:file:...",
+  "allowMeshStreaming": true,
+  "streamPath": "/api/v0/listening-party/radio/party%3A.../content%3Aaudio%3Afile%3A...",
+  "expiresAtUnixMs": 1777501646000
+}
+```
+
+The integrated radio endpoint only serves the active party's current `ContentId`, only while the host has both listing and mesh streaming enabled, and only while the normal streaming feature is enabled. It uses the same content locator and stream session limiter pattern as `/api/v0/streams/{contentId}`.
+
 ## Deferred: Live Mic / Host Commentary
 
 Live microphone or host audio broadcast is a later layer. It should use opt-in WebRTC media with SDP/ICE signaling carried by pod messages, and it needs a separate rights and moderation review before public/listed pods can expose it.
-

@@ -73,7 +73,11 @@ EOF
         ;;
 esac
 
-WINGET_VERSION="$(echo "$VERSION" | sed 's/-/./g')"
+if [ "$CHANNEL" = "stable" ] && [[ "$VERSION" =~ ^([0-9]{10})-slskdn\.([0-9]+)$ ]]; then
+    WINGET_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+else
+    WINGET_VERSION="$(echo "$VERSION" | sed 's/-/./g')"
+fi
 MANIFEST_DIR="packaging/winget"
 INSTALLER_FILE="$MANIFEST_DIR/${FILE_BASENAME}.installer.yaml"
 LOCALE_FILE="$MANIFEST_DIR/${FILE_BASENAME}.locale.en-US.yaml"
@@ -84,7 +88,7 @@ cat > "$INSTALLER_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 
 PackageIdentifier: $PACKAGE_IDENTIFIER
-PackageVersion: $WINGET_VERSION
+PackageVersion: "$WINGET_VERSION"
 InstallerType: zip
 ReleaseDate: $RELEASE_DATE
 NestedInstallerType: portable
@@ -105,7 +109,7 @@ cat > "$LOCALE_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 
 PackageIdentifier: $PACKAGE_IDENTIFIER
-PackageVersion: $WINGET_VERSION
+PackageVersion: "$WINGET_VERSION"
 PackageLocale: en-US
 Publisher: slskdN Team
 PublisherUrl: https://github.com/snapetech
@@ -134,7 +138,7 @@ cat > "$VERSION_FILE" <<EOF
 # yaml-language-server: \$schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 
 PackageIdentifier: $PACKAGE_IDENTIFIER
-PackageVersion: $WINGET_VERSION
+PackageVersion: "$WINGET_VERSION"
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0

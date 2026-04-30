@@ -14,11 +14,12 @@
 
 - Current task: None. Layer 1 listening parties are implemented locally.
 - Last activity:
-  - documented the metadata-only pod listen-along protocol and deferred live mic/WebRTC layer
+  - documented the metadata-only pod listen-along protocol, opt-in global radio registry, and deferred live mic/WebRTC layer
   - added a persistent Web UI player for existing `ContentId` stream playback
   - wired browser playback into Now Playing updates
   - added collection item play controls
   - added pod listen-along host/follow controls backed by stored/routed pod messages and SignalR fan-out
+  - added a mesh/DHT-backed listed-party directory and integrated slskdN radio stream endpoint gated by a Mesh Streaming toggle
   - validated backend build, frontend lint/build, repo tests, and lint via `bash ./bin/lint`
 - Next steps:
   1. Review the listening-party UX in a live browser with real shared audio.

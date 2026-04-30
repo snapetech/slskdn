@@ -31,13 +31,13 @@ public sealed class ListeningPartyController : ControllerBase
     private readonly IContentLocator _locator;
     private readonly IListeningPartyService _listeningParty;
     private readonly IStreamSessionLimiter _limiter;
-    private readonly IOptionsMonitor<Options> _options;
+    private readonly IOptionsMonitor<global::slskd.Options> _options;
 
     public ListeningPartyController(
         IContentLocator locator,
         IListeningPartyService listeningParty,
         IStreamSessionLimiter limiter,
-        IOptionsMonitor<Options> options)
+        IOptionsMonitor<global::slskd.Options> options)
     {
         _locator = locator;
         _listeningParty = listeningParty;

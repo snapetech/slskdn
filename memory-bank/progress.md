@@ -10,7 +10,8 @@
 - Documented `docs/listening-party.md` with the metadata-only protocol, trust boundary, and deferred live mic/WebRTC layer.
 - Added a persistent Web UI player with collection item play controls, local stream playback through `/api/v0/streams/{contentId}`, queue display, and Now Playing updates from browser playback.
 - Added a pod listen-along panel that can publish/follow `play`, `pause`, `seek`, and `stop` metadata for the active pod channel.
-- Added backend listening-party state, REST endpoints, SignalR fan-out, and pod-message storage/routing for `slskdn.listenAlong.v1` messages without relaying audio bytes.
+- Added backend listening-party state, REST endpoints, SignalR fan-out, and pod-message storage/routing for `slskdn.listenAlong.v1` messages.
+- Added the opt-in global radio registry: listed parties publish `slskdn.listeningParty.announce.v1` records into a mesh/DHT-backed index, and the separate Mesh Streaming toggle exposes an integrated slskdN radio stream endpoint for the active track.
 - Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, `npm run lint -- --max-warnings=0`, `npm run build`, `dotnet test --no-build`, and `bash ./bin/lint` passed. Direct `./bin/lint` failed because the script is not executable in this checkout.
 
 ## 2026-04-30 00:58Z - Hardened security audit findings
