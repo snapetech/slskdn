@@ -1,3 +1,17 @@
+## Update 2026-04-30 00:21:00Z
+
+- Current task: Prepare replacement stable release `2026042900-slskdn.202`.
+- Last activity:
+  - monitored `.201` through failure in the Build release gate
+  - fixed manual-review SongID Discovery Graph catalog-context expansion
+  - updated the `UserService` disposal regression test for the fixture-owned regex matcher listener
+  - documented and committed the SongID graph expansion gotcha separately
+  - validated the affected release-gate unit-test slice
+- Next steps:
+  1. Run broader release-gate validation locally.
+  2. Commit and push the `.202` release-gate fix plus release-note update.
+  3. Push tag `build-main-2026042900-slskdn.202` and monitor the replacement release workflow.
+
 ## Update 2026-04-30 00:08:00Z
 
 - Current task: Prepare replacement stable release `2026042900-slskdn.201`.

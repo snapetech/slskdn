@@ -7201,3 +7201,11 @@ Code quality improvements were completed as part of Option A:
 - Fixed the stale `MusicBrainz.Enabled` assertion in the YAML alias test and disambiguated `System.IO.File` / `System.IO.Directory` in `ProgramPathNormalizationTests` where `Soulseek.File` and `Soulseek.Directory` were also in scope.
 - Documented the release-gate compile gotcha in ADR-0001 and committed that entry immediately as `9fa274c77`.
 - Validation: `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~YamlConfigurationSourceTests|FullyQualifiedName~ProgramPathNormalizationTests"` passed (`38/38`) with existing analyzer warnings.
+
+## 2026-04-30 00:21:00Z
+
+- Release tag `build-main-2026042900-slskdn.201` failed in the Build release gate on two unit regressions after the compile blockers were fixed.
+- Fixed SongID Discovery Graph expansion so weak manual-review candidates remain visible but no longer unlock album, artist, segment, or mix context that can pollute the graph with unrelated labels.
+- Updated `UserServiceTests.Dispose_UnsubscribesOptionsMonitor_AndSoulseekEvents` to account for the fixture-owned `RegexUsernameMatcher` options listener while still verifying `UserService` unsubscribes its own listener and Soulseek events.
+- Documented the weak SongID graph expansion gotcha in ADR-0001 and committed that entry immediately as `58de4816c`.
+- Validation: focused `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj --filter "FullyQualifiedName~DiscoveryGraphServiceTests|FullyQualifiedName~UserServiceTests"` passed (`14/14`), full Release-config `dotnet test tests/slskd.Tests.Unit/slskd.Tests.Unit.csproj -c Release --no-restore` passed (`3599/3599`), `./bin/lint` passed, and `git diff --check` passed. The .NET runs still report existing analyzer warnings.

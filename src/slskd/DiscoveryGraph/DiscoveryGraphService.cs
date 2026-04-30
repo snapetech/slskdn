@@ -14,6 +14,7 @@ public interface IDiscoveryGraphService
 public sealed class DiscoveryGraphService : IDiscoveryGraphService
 {
     private const double MinimumTrackIdentityForWeakRun = 0.70;
+    private const double MinimumTrackIdentityForCatalogExpansion = 0.85;
     private const double MinimumSegmentConfidenceForGraph = 0.65;
     private const double MinimumSegmentCandidateIdentityForGraph = 0.63;
     private const double MinimumMixIdentityForGraph = 0.60;
@@ -634,7 +635,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
             return true;
         }
 
-        if (run.Tracks.Any(track => track.IsExact || track.IdentityScore >= MinimumTrackIdentityForWeakRun))
+        if (run.Tracks.Any(track => track.IsExact || track.IdentityScore >= MinimumTrackIdentityForCatalogExpansion))
         {
             return true;
         }

@@ -22,11 +22,11 @@ namespace slskd.Tests.Unit.Users
         {
             var (service, mocks) = GetFixture();
 
-            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
+            Assert.Equal(2, mocks.OptionsMonitor.ListenerCount);
 
             service.Dispose();
 
-            Assert.Equal(0, mocks.OptionsMonitor.ListenerCount);
+            Assert.Equal(1, mocks.OptionsMonitor.ListenerCount);
             mocks.SoulseekClient.VerifyRemove(x => x.UserStatisticsChanged -= It.IsAny<EventHandler<UserStatistics>>(), Times.Once);
             mocks.SoulseekClient.VerifyRemove(x => x.UserStatusChanged -= It.IsAny<EventHandler<UserStatus>>(), Times.Once);
             mocks.SoulseekClient.VerifyRemove(x => x.LoggedIn -= It.IsAny<EventHandler>(), Times.Once);

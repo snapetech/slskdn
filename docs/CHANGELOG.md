@@ -22,7 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
-## [2026042900-slskdn.201] — 2026-04-30
+## [2026042900-slskdn.202] — 2026-04-30
 
 - Reworked the fixed Web UI header and footer chrome so primary navigation,
   utility actions, brand, speeds, network counters, and transport icons align
@@ -39,6 +39,12 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Fixed stale unit-test compile blockers in the release gate by removing an
   assertion against the retired `MusicBrainz.Enabled` option and disambiguating
   `System.IO.File` / `System.IO.Directory` in tests that import `Soulseek`.
+- Fixed manual-review SongID Discovery Graph expansion so weak track candidates
+  can remain visible without pulling unrelated album, artist, or segment
+  context into the neighborhood.
+- Updated the `UserService` disposal regression test to account for the
+  fixture-owned regex username matcher options listener while still verifying
+  `UserService` removes its own listener and Soulseek event handlers.
 
 ## [2026042900-slskdn.199] — 2026-04-29
 

@@ -1390,6 +1390,6 @@
   - Status: completed (2026-04-29)
   - Notes: Added conservative queue-position refresh batching, transfer peer Browse links, batch-aware delete-on-remove path resolution, README search-filter syntax documentation, and changelog notes. Larger items such as browser playback and browse UI pagination remain design-sized work rather than safe same-turn changes.
 
-- [x] Prepare `2026042900-slskdn.201` stable release
+- [x] Prepare `2026042900-slskdn.202` stable release
   - Status: completed (2026-04-30)
-  - Notes: Promoted the current Unreleased UI chrome and transfer polish notes into the `.201` changelog section for the tag-only stable release workflow after `.200` failed its release gate on stale unit-test compile blockers.
+  - Notes: Promoted the current Unreleased UI chrome and transfer polish notes into the `.202` changelog section for the tag-only stable release workflow after `.200` failed on stale unit-test compile blockers and `.201` failed on release-gate unit regressions. Fixed the manual-review SongID graph expansion bug and aligned the `UserService` disposal test with its fixture-owned regex matcher listener.
