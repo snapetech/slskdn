@@ -8022,6 +8022,13 @@ Code quality improvements were completed as part of Option A:
 - Kept the slice observational only: it does not start peer search, DHT lookup, download, credential validation, or remote repository probing.
 - Validation: focused `SourceProvidersControllerTests`, focused Source Providers Web UI tests, `npm run lint`, `npm run build`, and `git diff --check` passed.
 
+## 2026-04-30 19:41:54Z
+
+- Extended the source-provider catalog with per-acquisition-profile provider priority policies.
+- Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
+- Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+- Validation: focused `SourceProvidersControllerTests` and Source Providers Web UI tests passed.
+
 ## 2026-04-30 19:36:05Z
 
 - Rebuilt the player local-audio picker as a file-explorer style browser instead of a flat search table.

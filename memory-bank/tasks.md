@@ -36,6 +36,11 @@
  - Priority: P2
  - Notes: Added a read-only `/source-providers` API and System -> Source Providers tab that list all known acquisition source providers, active/disabled state, registration, risk level, capabilities, network policy, and disabled reasons. The catalog is observational only and does not start searches, downloads, peer probes, DHT work, or credential checks.
 
+- [x] **feature**: Show acquisition profile provider priority policies.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Extended the source-provider catalog with read-only provider priority chains for every acquisition profile. All profile policies currently report manual acquisition with auto-download disabled, making fallback order visible before provider execution is wired.
+
 - [x] **feature**: Add browser-local Discovery Inbox review surface.
  - Status: completed (2026-04-30)
  - Priority: P2
