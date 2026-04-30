@@ -3,6 +3,7 @@
 // </copyright>
 namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
 {
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -85,39 +86,76 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
         }
 
         [Fact]
-        public async Task TryGetWorkByTitleArtistAsync_CurrentlyReturnsNull()
+        public async Task TryGetWorkByTitleArtistAsync_ReturnsExactAlbumMatch()
         {
             // Arrange
+            _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new AlbumTargetEntry
+                    {
+                        ReleaseId = "12345678-1234-1234-1234-123456789abc",
+                        Title = "Test Album",
+                        Artist = "Test Artist",
+                        ReleaseDate = "2020-01-01"
+                    }
+                });
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);
 
             // Act
-            var result = await provider.TryGetWorkByTitleArtistAsync("Test Album", "Test Artist");
+            var result = await provider.TryGetWorkByTitleArtistAsync("Test Album", "Test Artist", 2020);
 
             // Assert
-            // T-VC02: Basic implementation - fuzzy matching not yet implemented
-            Assert.Null(result);
+            Assert.NotNull(result);
+            Assert.Equal("Test Album", result.Title);
+            Assert.Equal("Test Artist", result.Creator);
         }
 
         [Fact]
-        public async Task TryGetItemByRecordingIdAsync_CurrentlyReturnsNull()
+        public async Task TryGetItemByRecordingIdAsync_ReturnsTrack()
         {
             // Arrange
+            var recordingId = "12345678-1234-1234-1234-123456789abc";
+            var releaseId = "22345678-1234-1234-1234-123456789abc";
+            _hashDbMock.Setup(h => h.LookupHashesByRecordingIdAsync(recordingId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { new HashDbEntry { MusicBrainzId = recordingId } });
+            _hashDbMock.Setup(h => h.GetVariantsByRecordingAsync(recordingId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<slskd.Audio.AudioVariant>());
+            _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { new AlbumTargetEntry { ReleaseId = releaseId, Title = "Album", Artist = "Artist" } });
+            _hashDbMock.Setup(h => h.GetAlbumTracksAsync(releaseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new AlbumTargetTrackEntry { ReleaseId = releaseId, RecordingId = recordingId, Title = "Track", Artist = "Artist", Position = 1 }
+                });
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);
 
             // Act
-            var result = await provider.TryGetItemByRecordingIdAsync("12345678-1234-1234-1234-123456789abc");
+            var result = await provider.TryGetItemByRecordingIdAsync(recordingId);
 
             // Assert
-            // T-VC02: Basic implementation - direct track lookup not yet implemented
-            Assert.Null(result);
+            Assert.NotNull(result);
+            Assert.Equal("Track", result.Title);
+            Assert.True(result.IsAdvertisable);
         }
 
         [Fact]
-        public async Task TryGetItemByLocalMetadataAsync_CurrentlyReturnsNull()
+        public async Task TryGetItemByLocalMetadataAsync_ReturnsExactTagMatch()
         {
             // Arrange
             var fileMetadata = new LocalFileMetadata { Id = "test.flac", SizeBytes = 1024L };
-            var tags = new AudioTags("Test Track", "Test Artist", null, null, null, null, null, null, null, null, null, null, null, null);
+            var tags = new AudioTags("Test Track", "Test Artist", "Test Album", null, null, null, null, null, null, null, null, null, null, null);
+            var releaseId = "32345678-1234-1234-1234-123456789abc";
+            var recordingId = "42345678-1234-1234-1234-123456789abc";
+            _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { new AlbumTargetEntry { ReleaseId = releaseId, Title = "Test Album", Artist = "Test Artist" } });
+            _hashDbMock.Setup(h => h.GetAlbumTracksAsync(releaseId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new AlbumTargetTrackEntry { ReleaseId = releaseId, RecordingId = recordingId, Title = "Test Track", Artist = "Test Artist", Position = 1 }
+                });
+            _hashDbMock.Setup(h => h.LookupHashesByRecordingIdAsync(recordingId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { new HashDbEntry { MusicBrainzId = recordingId } });
 
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);
 
@@ -125,22 +163,37 @@ namespace slskd.Tests.Unit.VirtualSoulfind.Core.Music
             var result = await provider.TryGetItemByLocalMetadataAsync(fileMetadata, tags);
 
             // Assert
-            // T-VC02: Basic implementation - fuzzy matching not yet implemented
-            Assert.Null(result);
+            Assert.NotNull(result);
+            Assert.Equal("Test Track", result.Title);
         }
 
         [Fact]
-        public async Task TryMatchTrackByFingerprintAsync_CurrentlyReturnsNull()
+        public async Task TryMatchTrackByFingerprintAsync_ReturnsClosestDurationMatch()
         {
             // Arrange
+            var recordingId = "52345678-1234-1234-1234-123456789abc";
+            _hashDbMock.Setup(h => h.LookupHashesByAudioFingerprintAsync("fingerprint123", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[]
+                {
+                    new HashDbEntry { MusicBrainzId = recordingId, DurationMs = 200_000, QualityScore = 1.0, UseCount = 5 }
+                });
+            _hashDbMock.Setup(h => h.LookupHashesByRecordingIdAsync(recordingId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { new HashDbEntry { MusicBrainzId = recordingId } });
+            _hashDbMock.Setup(h => h.GetVariantsByRecordingAsync(recordingId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<slskd.Audio.AudioVariant>
+                {
+                    new() { MusicBrainzRecordingId = recordingId, VariantId = "Fingerprint Track", DurationMs = 200_000, QualityScore = 1.0 }
+                });
+            _hashDbMock.Setup(h => h.GetAlbumTargetsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Array.Empty<AlbumTargetEntry>());
             var provider = new MusicContentDomainProvider(_loggerMock.Object, _hashDbMock.Object);
 
             // Act
             var result = await provider.TryMatchTrackByFingerprintAsync("fingerprint123", 200);
 
             // Assert
-            // T-VC02: Basic implementation - Chromaprint integration not yet migrated
-            Assert.Null(result);
+            Assert.NotNull(result);
+            Assert.Equal("Fingerprint Track", result.Title);
         }
     }
 }

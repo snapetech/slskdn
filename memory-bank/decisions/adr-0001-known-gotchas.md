@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z210. Moq ReturnsAsync Must Match Concrete Task Collection Types
+
+**The Bug**: A unit test mocked a `Task<List<AudioVariant>>` API with array values, so Moq selected an incompatible `ReturnsAsync` overload and the whole test project failed to compile.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/VirtualSoulfind/Core/Music/MusicContentDomainProviderTests.cs`
+
+**Wrong**:
+```csharp
+mock.Setup(h => h.GetVariantsByRecordingAsync(id, It.IsAny<CancellationToken>()))
+    .ReturnsAsync(new[] { new AudioVariant() });
+```
+
+**Correct**:
+```csharp
+mock.Setup(h => h.GetVariantsByRecordingAsync(id, It.IsAny<CancellationToken>()))
+    .ReturnsAsync(new List<AudioVariant> { new AudioVariant() });
+```
+
+**Why This Keeps Happening**: Test setup often uses arrays because most repository methods return `IEnumerable<T>` or arrays, but Moq overload resolution follows the exact mocked return type. When a service contract returns `Task<List<T>>`, return a `List<T>` from the setup or the compiler may bind to a sequence-setup overload instead of the async-result overload.
+
 ### 0z209. Fixed Chrome Heights Cause Scroll Overlap
 
 **The Bug**: The main app scroll area reserved hard-coded nav/player/footer heights, so responsive nav wrapping, footer wrapping, safe-area padding, and player collapse/expand state could leave page content hidden behind fixed chrome.
