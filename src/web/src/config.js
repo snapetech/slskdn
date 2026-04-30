@@ -4,7 +4,9 @@ const developmentPort =
 const rootUrl =
   import.meta.env.PROD
     ? urlBase
-    : `http://localhost:${developmentPort}${urlBase}`;
+    : import.meta.env.VITE_USE_ABSOLUTE_API_URL === 'true'
+      ? `http://localhost:${developmentPort}${urlBase}`
+      : urlBase;
 const apiBaseUrl = `${rootUrl}/api/v0`;
 const hubBaseUrl = `${rootUrl}/hub`;
 const tokenKey = 'slskd-token';

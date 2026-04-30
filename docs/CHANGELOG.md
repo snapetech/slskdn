@@ -35,6 +35,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   endpoint gated by a separate mesh-streaming toggle.
 - Fixed listening-party startup by keeping the live registry singleton while
   resolving scoped PodCore message storage per publish operation.
+- Fixed Vite dev Web UI startup so browser API calls use the same-origin proxy
+  by default instead of bypassing it with CORS-blocked absolute daemon URLs.
 - Reworked pod, room, chat, and contact social affordances so saved
   conversations and joined rooms rehydrate from server state, pods can be
   created or discovered from the main Pods page, and discovered pods can be
