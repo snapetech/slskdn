@@ -52,6 +52,25 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z221. Source Feed Evidence Keys Must Not Include Row Numbers
+
+**The Bug**: Source-feed duplicate suppression included `SourceId` in the evidence key, but local parsers use row numbers as source ids. Repeated identical rows therefore produced different keys and were not deduped.
+
+**Files Affected**:
+- `src/slskd/SourceFeeds/SourceFeedImportService.cs`
+
+**Wrong**:
+```csharp
+var key = $"{provider}:{row.Source}:{row.SourceId}:{NormalizeKey(searchText)}";
+```
+
+**Correct**:
+```csharp
+var key = $"{provider}:{row.Source}:{NormalizeKey(searchText)}";
+```
+
+**Why This Keeps Happening**: Row ids are provenance, not identity. Review/import dedupe keys should use stable normalized work identity plus provider/source type, while per-row ids belong in `SourceItemId` for traceability.
+
 ### 0z220. Mesh Evidence Provenance Must Not Be User-Disableable
 
 **The Bug**: The browser-local mesh evidence policy sanitizer accepted `provenanceRequired: false` from stored JSON, making provenance look optional even though the product decision requires provenance for every mesh-derived claim.
