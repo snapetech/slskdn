@@ -32,13 +32,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Set up .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'self-hosted' }}
         run: |
           # Pre-installed at /usr/share/dotnet by myoung34/github-runner image
           echo "/usr/share/dotnet" >> $GITHUB_PATH
@@ -52,7 +52,7 @@ jobs:
           cache-dependency-path: src/web/package-lock.json
 
       - name: Setup Soulfind (Docker)
-        if: ${{ !contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'github-hosted' }}
         run: |
           # Pull Soulfind Docker image for protocol contract tests
           # Image: ghcr.io/soulfind-dev/soulfind (official Soulseek server simulator)
@@ -161,13 +161,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Set up .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'self-hosted' }}
         run: echo "/usr/share/dotnet" >> $GITHUB_PATH
 
       - name: Set Environment Variables

@@ -32,13 +32,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up .NET (GitHub-hosted)
-        if: ${{ !contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Verify .NET (self-hosted)
-        if: ${{ contains(runner.name, 'keith') }}
+        if: ${{ runner.environment == 'self-hosted' }}
         run: dotnet --version
 
       - name: Setup Node.js
