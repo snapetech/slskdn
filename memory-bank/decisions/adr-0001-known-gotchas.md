@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z209. Fixed Bottom Chrome Heights Cause Scroll Overlap
+
+**The Bug**: The main app scroll area reserved hard-coded player/footer heights, so responsive footer wrapping, safe-area padding, and player collapse/expand state could leave page content hidden behind the fixed player or footer.
+
+**Files Affected**:
+- `src/web/src/components/App.css`
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/Player.css`
+- `src/web/src/components/Shared/Footer.jsx`
+
+**Wrong**:
+```css
+.app-content {
+  height: calc(100dvh - 58px - 43px - 248px);
+}
+```
+
+**Correct**:
+```css
+.app-content {
+  height: calc(
+    100dvh -
+    var(--slskdn-nav-height) -
+    var(--slskdn-footer-height) -
+    var(--slskdn-player-reserved-height)
+  );
+}
+```
+
+**Why This Keeps Happening**: The player and footer are fixed-position chrome, but their real heights change with responsive wrapping, safe-area insets, and player expansion state. Reserve space from measured CSS variables instead of constants so every route scrolls only inside the unobscured viewport.
+
 ### 0z208. Test-Local Helper Types Still Need Real Framework Imports
 
 **The Bug**: Test-local helper implementations used `HttpRequestMessage`, `Enumerable`, `ToList`, and LINQ extension methods without importing `System.Net.Http` / `System.Linq`, causing the touched test project to fail compilation even though the helpers existed only inside unit test files. One test also passed an `IEnumerable<byte>` sequence to `Assert.DoesNotContain` where the string overload made the intended assertion explicit.
