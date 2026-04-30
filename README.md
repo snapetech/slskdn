@@ -88,6 +88,15 @@ If you've ever seen a feature request closed with *"this can be done via the API
       <sub>System overview and slskdN build details</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/assets/readme-showcase/player-commons-smoke.png">
+        <img src="docs/assets/readme-showcase/player-commons-smoke.png" alt="Collections playlist playing a Wikimedia Commons OGG through the slskdN player" width="100%">
+      </a>
+      <br>
+      <sub>Collections playlist streaming through the integrated player</sub>
+    </td>
+  </tr>
 </table>
 
 ## Features
