@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z228. Album Candidate Track Counts Must Count Unique Track Numbers
+
+**The Bug**: Album candidate review logic used total visible audio files as a lower bound for `expectedTrackCount`. Once manual substitution metadata allowed duplicate alternates for the same track number, a complete 4-track candidate with two options for track 3 looked like it was missing track 5.
+
+**Files Affected**:
+- `src/web/src/lib/albumCandidatePicker.js`
+
+**Wrong**:
+```javascript
+const highestTrackNumber = trackNumbers.at(-1) || group.trackCount;
+const expectedTrackCount = Math.max(highestTrackNumber, group.trackCount);
+```
+
+**Correct**:
+```javascript
+const highestTrackNumber = trackNumbers.at(-1) || 0;
+const expectedTrackCount = highestTrackNumber || group.trackCount;
+```
+
+**Why This Keeps Happening**: Album candidates can contain multiple visible source options for the same track. Total file count is not album length once alternates/substitutions are represented; completeness should use unique parsed track numbers when they exist and only fall back to file count for unnumbered folders.
+
 ### 0z227. Persistent Probe-Budget Tests Need Synthetic Peers
 
 **The Bug**: A content-verification unit test used the fixed peer name `alice`. The verification service persists per-peer probe budgets outside the test fixture, so a local exhausted `alice` budget made the test fail before it reached the intended verification path.
