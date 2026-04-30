@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z231. Interface Method Additions Must Land With Implementations
+
+**The Bug**: `IMusicBrainzOverlayService` gained route methods while `MusicBrainzOverlayService` was still missing matching members during validation, so the backend failed to compile with CS0535.
+
+**Files Affected**:
+- `src/slskd/Integrations/MusicBrainz/Overlay/IMusicBrainzOverlayService.cs`
+- `src/slskd/Integrations/MusicBrainz/Overlay/MusicBrainzOverlayService.cs`
+
+**Wrong**:
+```csharp
+public interface IMusicBrainzOverlayService
+{
+    Task<MusicBrainzOverlayRouteAttempt> RouteEditAsync(...);
+}
+```
+
+**Correct**:
+```csharp
+public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
+{
+    public Task<MusicBrainzOverlayRouteAttempt> RouteEditAsync(...) { ... }
+}
+```
+
+**Why This Keeps Happening**: Service interfaces and implementations often change in separate files. Add interface methods only in the same patch as the implementation, controller tests, and a backend build.
+
 ### 0z230. Empty Arrays Should Not Suppress Scalar Metadata Fallbacks
 
 **The Bug**: Player smart-radio planning treated an empty `tags` array as authoritative and returned it immediately, so a valid scalar `genre` on the now-playing item was ignored and the genre seed disappeared from the radio plan.
