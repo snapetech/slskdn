@@ -76,6 +76,32 @@ const streamUrl = `${urlBase}/api/v0/streams/${contentId}?ticket=${ticket}`;
 
 **Why This Keeps Happening**: Browser-managed media requests cannot use Axios authorization headers, so query strings look like the easiest fix. Use short-lived, content-bound opaque media tickets instead of putting long-lived session or API tokens in URLs.
 
+### 0z186. DHT Records Need Explicit Bytes And Signature Gates
+
+**The Bug**: Some DHT publishers serialized private DTOs or records implicitly through `IMeshDhtClient.PutAsync`, while readers used typed `GetAsync<T>`. This reintroduced MessagePack formatter failures and let invalid signed pod metadata continue into discovery results.
+
+**Files Affected**:
+- `src/slskd/ListeningParty/ListeningPartyService.cs`
+- `src/slskd/PodCore/PodDhtPublisher.cs`
+- `src/slskd/PodCore/API/Controllers/PodDhtController.cs`
+
+**Wrong**:
+```csharp
+await dht.PutAsync(key, announcement, ttlSeconds, ct);
+var announcement = await dht.GetAsync<ListeningPartyAnnouncement>(key, ct);
+return new PodMetadataResult(Found: true, IsValidSignature: false, PublishedPod: pod);
+```
+
+**Correct**:
+```csharp
+await dht.PutAsync(key, JsonSerializer.SerializeToUtf8Bytes(announcement), ttlSeconds, ct);
+var raw = await dht.GetRawAsync(key, ct);
+var announcement = JsonSerializer.Deserialize<ListeningPartyAnnouncement>(raw);
+if (!isValidSignature) return new PodMetadataResult(Found: false, PublishedPod: null, ...);
+```
+
+**Why This Keeps Happening**: Mesh DHT storage is a byte payload boundary, not a general object database. Writers and readers must agree on an explicit wire format, and signed records must fail closed before discovery or UI layers trust their contents.
+
 ### 0z184. Canvas Overlays Can Block Their Own Controls
 
 **The Bug**: The MilkDrop visualizer canvas and hidden overlay occupied the same absolute area as the preset/control buttons. In headless and some pointer paths, the canvas/container intercepted clicks intended for the visible buttons.
