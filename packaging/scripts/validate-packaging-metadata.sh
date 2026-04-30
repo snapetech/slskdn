@@ -225,12 +225,16 @@ validate_winget() {
     fi
 }
 
-validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
-validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
+if [[ "${VALIDATE_WINGET_RELEASE_METADATA:-false}" == "true" ]]; then
+  validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
+  validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
 
-WINGET_STABLE_VERSION=$(sed -n 's/^PackageVersion: \(.*\)$/\1/p' packaging/winget/snapetech.slskdn.installer.yaml | head -n1)
-if [[ "${WINGET_STABLE_VERSION/.slskdn./-slskdn.}" != "$STABLE_FORMULA_VERSION" ]]; then
-  fail "Winget stable PackageVersion ${WINGET_STABLE_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+  WINGET_STABLE_VERSION=$(sed -n 's/^PackageVersion: \(.*\)$/\1/p' packaging/winget/snapetech.slskdn.installer.yaml | head -n1)
+  if [[ "${WINGET_STABLE_VERSION/.slskdn./-slskdn.}" != "$STABLE_FORMULA_VERSION" ]]; then
+    fail "Winget stable PackageVersion ${WINGET_STABLE_VERSION} does not match stable Formula version ${STABLE_FORMULA_VERSION}"
+  fi
+else
+  echo "Skipping Winget release-version metadata validation; set VALIDATE_WINGET_RELEASE_METADATA=true to enforce it."
 fi
 
 CHOC_VERSION=$(sed -n 's#.*<version>\(.*\)</version>#\1#p' packaging/chocolatey/slskdn.nuspec | head -n 1)

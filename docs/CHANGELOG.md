@@ -23,6 +23,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Prepared the `2026042900-slskdn.203` stable release metadata.
+- Made Winget release-version metadata validation opt-in so stable releases
+  that intentionally skip Winget are not blocked by stale Winget URLs.
+- Added the WebGL MilkDrop3 port design, making the external visualizer
+  launcher an interim bridge while the long-term target becomes a
+  browser-native MilkDrop3-compatible renderer inside slskdN.
 
 ## [2026042900-slskdn.203] — 2026-04-30
 

@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z196. Winget Metadata Must Not Block Non-Winget Stable Releases
+
+**The Bug**: A stable tag release failed in the release gate before build/test because `validate-packaging-metadata.sh` unconditionally required checked-in Winget release URLs to match the current stable package metadata, even when the release was not publishing Winget.
+
+**Files Affected**:
+- `packaging/scripts/validate-packaging-metadata.sh`
+
+**Wrong**:
+```bash
+validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
+validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
+```
+
+**Correct**:
+```bash
+if [[ "${VALIDATE_WINGET_RELEASE_METADATA:-false}" == "true" ]]; then
+  validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
+  validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
+else
+  echo "Skipping Winget release-version metadata validation; set VALIDATE_WINGET_RELEASE_METADATA=true to enforce it."
+fi
+```
+
+**Why This Keeps Happening**: Winget publication is an optional/manual release step, but the package metadata gate was treating it as mandatory for every stable tag. Keep structural Winget manifest checks in place, and gate release-version URL checks behind an explicit environment flag when the release is intentionally not publishing Winget.
+
 ### 0z195. Fully Qualify slskd Options When Importing Microsoft.Extensions.Options
 
 **The Bug**: A service imported `Microsoft.Extensions.Options` and declared `IOptionsMonitor<Options>`, which resolved `Options` to the static `Microsoft.Extensions.Options.Options` helper instead of the app configuration type. The same file also put a static factory method named `Started` on a record with a `Started` property, causing a generated-member collision.
