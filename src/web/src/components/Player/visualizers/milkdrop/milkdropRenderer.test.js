@@ -8,6 +8,7 @@ import {
   createSpriteTextureUvs,
   createSpriteVertices,
   createRepeatedColors,
+  createScreenBorderVertices,
   createShapeVertices,
   createCustomWaveVertices,
   createMotionVectorVertices,
@@ -20,6 +21,7 @@ import {
   getMilkdropFrameColor,
   getMilkdropWarpState,
   getMotionVectorColor,
+  getScreenBorderColor,
   getShapeBorderColor,
   getShapeColor,
   getShapeFillEdgeColor,
@@ -263,6 +265,38 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.deleteFramebuffer).toHaveBeenCalledTimes(2);
     expect(gl.deleteTexture).toHaveBeenCalledTimes(3);
     expect(gl.deleteProgram).toHaveBeenCalledTimes(4);
+  });
+
+  it('draws configured inner and outer screen borders', () => {
+    const gl = createFakeGl();
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        ob_size=0.1
+        ob_r=1
+        ob_g=0.2
+        ob_b=0.3
+        ob_a=0.4
+        ib_size=0.05
+        ib_r=0.2
+        ib_g=0.8
+        ib_b=1
+        ib_a=0.5
+      `).primary,
+    });
+
+    renderer.render();
+
+    const triangleDraws = gl.drawArrays.mock.calls.filter((call) =>
+      call[0] === gl.TRIANGLES && call[2] === 24);
+
+    expect(triangleDraws).toHaveLength(2);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 1);
+    expect(gl.bufferData).toHaveBeenCalledWith(
+      gl.ARRAY_BUFFER,
+      expect.objectContaining({ length: 96 }),
+      gl.DYNAMIC_DRAW,
+    );
   });
 
   it('draws a per-pixel warp grid when preset warp equations are present', () => {
@@ -611,6 +645,33 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
       mv_g: 0.2,
       mv_r: 0.1,
     }, [0.4, 0.5, 0.6])).toEqual([0.1, 0.2, 0.3, 1]);
+  });
+
+  it('maps screen border settings into filled rectangle rings', () => {
+    const outer = Array.from(createScreenBorderVertices(0.1));
+    const inner = Array.from(createScreenBorderVertices(0.05, 0.2));
+
+    expect(outer).toHaveLength(48);
+    [
+      -1, -1,
+      1, -1,
+      -1, -0.8,
+      -1, -0.8,
+      1, -1,
+      1, -0.8,
+    ].forEach((value, index) => {
+      expect(outer[index]).toBeCloseTo(value);
+    });
+    expect(inner[0]).toBeCloseTo(-0.8);
+    expect(inner[2]).toBeCloseTo(0.8);
+    expect(createScreenBorderVertices(0)).toHaveLength(0);
+    expect(getScreenBorderColor({
+      ib_a: 0.4,
+      ib_b: 1.5,
+      ib_g: 0.2,
+      ib_r: -1,
+    }, 'ib', [0.3, 0.4, 0.5])).toEqual([0, 0.2, 1, 0.4]);
+    expect(getScreenBorderColor({}, 'ob', [0.3, 0.4, 0.5])).toEqual([0.3, 0.4, 0.5, 0]);
   });
 
   it('maps enabled shapes into closed line-strip vertices', () => {

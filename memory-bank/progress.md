@@ -1,3 +1,10 @@
+## 2026-04-30 18:01Z - Added native MilkDrop screen borders
+
+- Added filled rectangle-ring geometry for classic MilkDrop outer and inner screen borders.
+- The renderer now draws `ob_size/ob_r/g/b/a` and `ib_size/ib_r/g/b/a` values as alpha-blended GPU overlays.
+- Added focused renderer coverage for border geometry, color clamping, and draw calls.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 17:56Z - Added native MilkDrop primitive aliases
 
 - Custom waves now honor common native aliases such as `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, and `bAdditive`.

@@ -619,6 +619,60 @@ export const getMotionVectorColor = (scope = {}, fallbackColor = [0.7, 0.7, 0.7]
   clamp01(scope.mv_a ?? 0.8),
 ];
 
+const appendQuad = (vertices, left, bottom, right, top) => {
+  vertices.push(
+    left, bottom,
+    right, bottom,
+    left, top,
+    left, top,
+    right, bottom,
+    right, top,
+  );
+};
+
+export const createScreenBorderVertices = (size = 0, inset = 0) => {
+  const safeInset = Math.max(0, Math.min(0.95, toFiniteNumber(inset, 0)));
+  const extent = Math.max(0, 1 - safeInset);
+  const thickness = Math.max(
+    0,
+    Math.min(extent, toFiniteNumber(size, 0) * 2),
+  );
+  if (extent <= 0 || thickness <= 0) return new Float32Array();
+
+  const outerLeft = -extent;
+  const outerRight = extent;
+  const outerBottom = -extent;
+  const outerTop = extent;
+  const innerLeft = outerLeft + thickness;
+  const innerRight = outerRight - thickness;
+  const innerBottom = outerBottom + thickness;
+  const innerTop = outerTop - thickness;
+  if (innerLeft >= innerRight || innerBottom >= innerTop) {
+    return new Float32Array([
+      outerLeft, outerBottom,
+      outerRight, outerBottom,
+      outerRight, outerTop,
+      outerLeft, outerBottom,
+      outerRight, outerTop,
+      outerLeft, outerTop,
+    ]);
+  }
+
+  const vertices = [];
+  appendQuad(vertices, outerLeft, outerBottom, outerRight, innerBottom);
+  appendQuad(vertices, outerLeft, innerTop, outerRight, outerTop);
+  appendQuad(vertices, outerLeft, innerBottom, innerLeft, innerTop);
+  appendQuad(vertices, innerRight, innerBottom, outerRight, innerTop);
+  return new Float32Array(vertices);
+};
+
+export const getScreenBorderColor = (scope = {}, prefix = 'ob', fallbackColor = [0.7, 0.7, 0.7]) => [
+  clamp01(scope[`${prefix}_r`] ?? fallbackColor[0]),
+  clamp01(scope[`${prefix}_g`] ?? fallbackColor[1]),
+  clamp01(scope[`${prefix}_b`] ?? fallbackColor[2]),
+  clamp01(scope[`${prefix}_a`] ?? 0),
+];
+
 export const createShapeVertices = (shape = {}) => {
   if (!getEntryFlag(shape, ['enabled', 'benabled'])) {
     return new Float32Array();
@@ -1161,6 +1215,38 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         gl.drawArrays(gl.LINE_STRIP, 0, waveformVertices.length / 2);
         gl.useProgram(program);
       }
+
+      [
+        {
+          color: getScreenBorderColor(scope, 'ob', [r, g, b]),
+          inset: 0,
+          size: scope.ob_size,
+        },
+        {
+          color: getScreenBorderColor(scope, 'ib', [r, g, b]),
+          inset: clamp01(scope.ob_size ?? 0) * 2,
+          size: scope.ib_size,
+        },
+      ].forEach((border) => {
+        const vertices = createScreenBorderVertices(border.size, border.inset);
+        if (vertices.length === 0 || border.color[3] <= 0) return;
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(lineProgram);
+        bindLineBuffers(gl, lineBuffers);
+        gl.uniform1f(pointSizeUniform, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.colorBuffer);
+        gl.bufferData(
+          gl.ARRAY_BUFFER,
+          createRepeatedColors(vertices.length / 2, border.color),
+          gl.DYNAMIC_DRAW,
+        );
+        gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+        gl.disable(gl.BLEND);
+        gl.useProgram(program);
+      });
 
       const motionVectorVertices = createMotionVectorVertices(scope);
       if (motionVectorVertices.length > 0) {

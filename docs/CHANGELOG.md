@@ -75,6 +75,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added native MilkDrop primitive-field aliases so custom waves, shapes, and
   sprites honor common preset names such as `nSamples`, `bSpectrum`,
   `bUseDots`, `bDrawThick`, `bAdditive`, `bTextured`, and `texName`.
+- Added first native MilkDrop screen-border rendering for classic `ob_*` and
+  `ib_*` preset values.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

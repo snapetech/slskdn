@@ -1,3 +1,15 @@
+## Update 2026-04-30 18:01:27Z
+
+- Current task: Native MilkDrop has first classic screen-border rendering.
+- Last activity:
+  - added filled GPU ring geometry for classic MilkDrop outer and inner borders
+  - renderer now draws `ob_size/ob_r/g/b/a` and `ib_size/ib_r/g/b/a` as alpha-blended screen borders
+  - added focused geometry and render-call coverage for the border path
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely richer waveform modes or shader translation.
+
 ## Update 2026-04-30 17:56:49Z
 
 - Current task: Native MilkDrop primitives honor common MilkDrop field aliases.
