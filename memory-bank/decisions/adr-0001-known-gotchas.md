@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z232. Summary Buckets Must Use The Same Enum/String Keys As Writers
+
+**The Bug**: A discovery shelf helper wrote unrated items with action `unrated-expiry-watch`, but the summary initialized and displayed an `expiry-watch` bucket. Unrated shelf items would persist successfully while the summary stayed at zero for the intended bucket.
+
+**Files Affected**:
+- `src/web/src/lib/discoveryShelf.js`
+
+**Wrong**:
+```javascript
+if (rating === 3) return 'keep-reviewing';
+return 'unrated-expiry-watch';
+```
+
+**Correct**:
+```javascript
+if (rating === 3) return 'keep-reviewing';
+return 'expiry-watch';
+```
+
+**Why This Keeps Happening**: Browser-local helpers often use string unions without a central enum. When adding reducers or summaries, write a focused test that stores each action through the public writer and verifies the summary bucket that the UI will read.
+
 ### 0z231. Interface Method Additions Must Land With Implementations
 
 **The Bug**: `IMusicBrainzOverlayService` gained route methods while `MusicBrainzOverlayService` was still missing matching members during validation, so the backend failed to compile with CS0535.

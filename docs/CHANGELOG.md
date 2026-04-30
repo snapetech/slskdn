@@ -40,6 +40,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
   metadata.
 - Added explicit listening-stats recommendation seed handoffs from local top
   artists, genres, and forgotten favorites.
+- Added browser-local Discovery Shelf action previews from player ratings.
 - Added browser-local listening history import/export for media-server CSV/JSON
   play-history files, with duplicate suppression.
 - Added bounded player similar-track auto-queue from already-known recent
