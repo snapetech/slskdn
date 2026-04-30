@@ -205,11 +205,57 @@ const mergeFragmentIntoPresetSet = (parsed, fragment) => {
 };
 
 const defaultTransitionSeconds = 1.5;
+const defaultAutomation = {
+  beatSensitivity: 1.35,
+  beatsPerPreset: 8,
+  minBeatIntervalSeconds: 0.25,
+  mode: 'off',
+  timedIntervalSeconds: 30,
+};
+
+const normalizeAutomation = (automation = {}) => ({
+  ...defaultAutomation,
+  ...automation,
+  mode: ['beat', 'timed'].includes(automation.mode) ? automation.mode : 'off',
+});
 
 export const getNativeMilkdropTransitionProgress = (startedAt, seconds, now) => {
   if (!Number.isFinite(seconds) || seconds <= 0) return 1;
   const linear = Math.max(0, Math.min(1, (now - startedAt) / seconds));
   return linear * linear * (3 - linear * 2);
+};
+
+const getSpectrumEnergy = (spectrum = []) => {
+  if (!spectrum.length) return 0;
+  const limit = Math.max(1, Math.min(24, spectrum.length));
+  let total = 0;
+  for (let index = 0; index < limit; index += 1) {
+    total += Number(spectrum[index]) || 0;
+  }
+  return total / (limit * 255);
+};
+
+export const getNativeMilkdropBeatUpdate = (
+  previous = {},
+  spectrum = [],
+  now = 0,
+  automation = defaultAutomation,
+) => {
+  const energy = getSpectrumEnergy(spectrum);
+  const smoothedEnergy = previous.smoothedEnergy === undefined
+    ? energy
+    : (previous.smoothedEnergy * 0.85) + (energy * 0.15);
+  const secondsSinceBeat = now - (previous.lastBeatAt ?? -Infinity);
+  const isBeat = energy > Math.max(0.05, smoothedEnergy * automation.beatSensitivity)
+    && secondsSinceBeat >= automation.minBeatIntervalSeconds;
+  const beatCount = isBeat ? (previous.beatCount || 0) + 1 : (previous.beatCount || 0);
+  return {
+    beatCount,
+    energy,
+    isBeat,
+    lastBeatAt: isBeat ? now : previous.lastBeatAt,
+    smoothedEnergy,
+  };
 };
 
 const disposeRendererSet = (rendererSet) => {
@@ -279,6 +325,9 @@ export const createNativeMilkdropEngine = async ({
     transitionSeconds: 0,
   });
   let retiringRendererSets = [];
+  let automation = normalizeAutomation();
+  let beatState = {};
+  let lastAutomatedPresetAt = 0;
   const frameReader = createFrameReader(audioContext, audioNode);
 
   const pruneRetiredRenderers = (now) => {
@@ -329,6 +378,36 @@ export const createNativeMilkdropEngine = async ({
       title: activePresetTitle,
     }), options.blendSeconds ?? defaultTransitionSeconds);
     return activePresetTitle;
+  };
+
+  const maybeAdvanceAutomatedPreset = (renderFrame, now) => {
+    if (automation.mode === 'off') return null;
+    if (automation.mode === 'timed') {
+      if (now - lastAutomatedPresetAt < automation.timedIntervalSeconds) return null;
+      lastAutomatedPresetAt = now;
+      return loadPreset(presetIndex + 1);
+    }
+
+    const nextBeatState = getNativeMilkdropBeatUpdate(
+      beatState,
+      renderFrame.spectrum,
+      now,
+      automation,
+    );
+    beatState = nextBeatState;
+    if (
+      !nextBeatState.isBeat
+      || nextBeatState.beatCount < automation.beatsPerPreset
+      || now - lastAutomatedPresetAt < defaultTransitionSeconds
+    ) {
+      return null;
+    }
+    beatState = {
+      ...nextBeatState,
+      beatCount: 0,
+    };
+    lastAutomatedPresetAt = now;
+    return loadPreset(presetIndex + 1);
   };
 
   return {
@@ -393,6 +472,12 @@ export const createNativeMilkdropEngine = async ({
       };
     },
     nextPreset: (options = {}) => loadPreset(presetIndex + 1, options),
+    setPresetAutomation: (nextAutomation = {}) => {
+      automation = normalizeAutomation(nextAutomation);
+      beatState = {};
+      lastAutomatedPresetAt = audioContext.currentTime || 0;
+      return automation;
+    },
     render: () => {
       const now = audioContext.currentTime || 0;
       pruneRetiredRenderers(now);
@@ -402,6 +487,7 @@ export const createNativeMilkdropEngine = async ({
         sampleRate: audioContext.sampleRate,
         time: now,
       };
+      const automatedPresetName = maybeAdvanceAutomatedPreset(renderFrame, now);
 
       let clearNextSet = true;
       retiringRendererSets.forEach((rendererSet) => {
@@ -422,6 +508,7 @@ export const createNativeMilkdropEngine = async ({
         )
         : 1;
       renderRendererSet(activeRendererSet, renderFrame, activeProgress, clearNextSet);
+      return automatedPresetName ? { presetName: automatedPresetName } : null;
     },
     resize: (width, height) => {
       [activeRendererSet, ...retiringRendererSets].forEach((rendererSet) => {

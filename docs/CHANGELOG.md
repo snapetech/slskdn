@@ -58,6 +58,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   and `.milk2` secondary composite-alpha controls.
 - Added native MilkDrop `.shape` and `.wave` fragment import/export affordances
   with active-preset merge and browser-local persistence.
+- Added native MilkDrop beat and timed automatic preset change modes with
+  browser-local mode persistence.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

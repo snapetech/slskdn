@@ -94,6 +94,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add first folder import affordance for native preset packs.
 - [x] Add first native renderer-set crossfade scheduler and `.milk2` composite-alpha control.
 - [x] Add first `.shape` and `.wave` fragment import/export path.
+- [x] Add first beat and timed automatic preset change modes.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -129,6 +130,7 @@ Current parser/VM scope:
 - Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections only when the shader body is outside the current safe translator subset.
 - `.milk2` imports compatibility-scan every preserved preset body before storing or rendering the file. Compatible double presets now instantiate one renderer per preset body, draw the primary body normally, and blend secondary bodies over it. Secondary presets default to half opacity and can opt into `blend_alpha` / `blendalpha` / `composite_alpha` values for first-pass composite control.
 - Native preset switches and imported preset loads now use a renderer-set crossfade scheduler. The outgoing renderer set remains alive while fading down, the incoming set fades up with an eased progress curve, and expired outgoing renderers are disposed after the transition.
+- Native mode has first automatic preset change controls. Beat mode uses low-frequency spectrum energy to count detected bass beats before advancing, timed mode advances on an interval, and the selected mode is persisted in browser storage.
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 - Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
 - The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Control flow, matrix types, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
@@ -146,7 +148,7 @@ Current parser/VM scope:
 - Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - Add richer `.milk2` transition/composite controls beyond first secondary alpha support.
 - Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.
-- Add beat-driven preset selection modes.
+- Add richer beat-driven/random/history preset selection modes beyond the first beat and timed automation controls.
 - Add `get_fft(pos)` and `get_fft_hz(freq)` shader/audio access.
 
 ### Phase 3: Editing And VJ Controls

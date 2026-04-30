@@ -28,6 +28,7 @@ const nativeEngine = {
   presetName: 'Native preset',
   render: vi.fn(),
   resize: vi.fn(),
+  setPresetAutomation: vi.fn(),
   name: 'slskdN MilkDrop WebGL',
 };
 
@@ -69,6 +70,7 @@ describe('Visualizer', () => {
     nativeEngine.resize.mockClear();
     nativeEngine.render.mockReset();
     nativeEngine.render.mockImplementation(() => {});
+    nativeEngine.setPresetAutomation.mockClear();
   });
 
   it('switches to the native engine and imports a local preset', async () => {
@@ -299,6 +301,63 @@ describe('Visualizer', () => {
     expect(createObjectUrl).toHaveBeenCalledTimes(2);
     expect(click).toHaveBeenCalledTimes(2);
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:native-fragment');
+  });
+
+  it('cycles and persists native automatic preset change modes', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'off' });
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-native-automation'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetAutomation')).toBe(
+      'beat',
+    );
+    await waitFor(() => {
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'beat' });
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-native-automation'));
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetAutomation')).toBe(
+      'timed',
+    );
+    await waitFor(() => {
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'timed' });
+    });
+  });
+
+  it('updates displayed native preset name when automation advances', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    let animationFrameCalled = false;
+    window.requestAnimationFrame = vi.fn((callback) => {
+      if (!animationFrameCalled) {
+        animationFrameCalled = true;
+        callback();
+      }
+      return 1;
+    });
+    nativeEngine.render.mockImplementationOnce(() => ({
+      presetName: 'Native automated next',
+    }));
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="fullwindow"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/Native automated next/)).toBeInTheDocument();
   });
 
   it('stores selected image assets with imported native presets', async () => {

@@ -1,3 +1,15 @@
+## Update 2026-04-30 16:52:16Z
+
+- Current task: Native MilkDrop has first beat and timed automatic preset changes.
+- Last activity:
+  - native engine now supports `off`, `beat`, and `timed` preset automation
+  - beat mode derives low-frequency spectrum energy from analyzer FFT data and advances after repeated detected bass beats
+  - timed mode advances native presets on an interval
+  - visualizer UI adds a tooltipped automation mode button, persists the selected mode locally, and updates the displayed preset when automation advances inside the render loop
+  - validated focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue Phase 2/3 MilkDrop work, likely richer random/history preset selection or fragment library management.
+
 ## Update 2026-04-30 16:44:07Z
 
 - Current task: Native MilkDrop has first `.shape` and `.wave` fragment import/export.

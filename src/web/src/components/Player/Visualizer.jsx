@@ -8,6 +8,7 @@ import { createNativeMilkdropEngine } from './visualizers/nativeMilkdropEngine';
 const visualizerEngineStorageKey = 'slskdn.player.visualizerEngine';
 const nativePresetStorageKey = 'slskdn.player.nativeMilkdropPreset';
 const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary';
+const nativePresetAutomationStorageKey = 'slskdn.player.nativeMilkdropPresetAutomation';
 const nativePresetLibraryLimit = 20;
 const nativeTextureAssetMaxBytes = 1024 * 1024;
 
@@ -21,6 +22,24 @@ const readStoredEngine = () => {
 const getNextEngine = (engine) => (engine === 'native' ? 'butterchurn' : 'native');
 
 const getEngineLabel = (engine) => (engine === 'native' ? 'slskdN native' : 'Butterchurn');
+
+const getNextNativeAutomationMode = (mode) => {
+  if (mode === 'off') return 'beat';
+  if (mode === 'beat') return 'timed';
+  return 'off';
+};
+
+const getNativeAutomationLabel = (mode) => {
+  if (mode === 'beat') return 'Beat';
+  if (mode === 'timed') return 'Timed';
+  return 'Off';
+};
+
+const readStoredNativeAutomationMode = () => {
+  if (typeof window === 'undefined') return 'off';
+  const mode = window.localStorage.getItem(nativePresetAutomationStorageKey);
+  return ['beat', 'timed'].includes(mode) ? mode : 'off';
+};
 
 const getVisualizerErrorMessage = (engineType, error) => {
   const detail = error?.message ? ` ${error.message}` : '';
@@ -228,9 +247,13 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const fileInputRef = useRef(null);
   const rafRef = useRef(null);
   const engineAudioNodeRef = useRef(null);
+  const nativeAutomationModeRef = useRef(readStoredNativeAutomationMode());
   const [fallbackMode, setFallbackMode] = useState(false);
   const [engineType, setEngineType] = useState(readStoredEngine);
   const [engineName, setEngineName] = useState('');
+  const [nativeAutomationMode, setNativeAutomationMode] = useState(
+    () => nativeAutomationModeRef.current,
+  );
   const [activeNativePresetId, setActiveNativePresetId] = useState(
     () => readStoredNativePreset()?.id || '',
   );
@@ -241,7 +264,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const renderLoop = useCallback(() => {
     if (!engineRef.current) return;
     try {
-      engineRef.current.render();
+      const renderResult = engineRef.current.render();
+      if (renderResult?.presetName) {
+        setPresetName(renderResult.presetName);
+      }
     } catch (renderError) {
       // eslint-disable-next-line no-console
       console.error('Failed to render MilkDrop visualizer', renderError);
@@ -260,6 +286,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     if (nextPresetName) {
       setPresetName(nextPresetName);
     }
+  }, []);
+
+  const cycleNativeAutomationMode = useCallback(() => {
+    setNativeAutomationMode((current) => getNextNativeAutomationMode(current));
   }, []);
 
   const sizeCanvas = useCallback(() => {
@@ -316,6 +346,9 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         engineAudioNodeRef.current = graph.visualizerInput;
         setEngineName(engine.name);
         setPresetName(engine.presetName);
+        if (engineType === 'native' && engine.setPresetAutomation) {
+          engine.setPresetAutomation({ mode: nativeAutomationModeRef.current });
+        }
         const storedNativePreset = engineType === 'native' ? readStoredNativePreset() : null;
         if (storedNativePreset?.source && engine.loadPresetText) {
           const importedPresetName = engine.loadPresetText(
@@ -367,6 +400,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   useEffect(() => {
     window.localStorage.setItem(visualizerEngineStorageKey, engineType);
   }, [engineType]);
+
+  useEffect(() => {
+    nativeAutomationModeRef.current = nativeAutomationMode;
+    window.localStorage.setItem(nativePresetAutomationStorageKey, nativeAutomationMode);
+    if (engineType === 'native' && engineRef.current?.setPresetAutomation) {
+      engineRef.current.setPresetAutomation({ mode: nativeAutomationMode });
+    }
+  }, [engineType, nativeAutomationMode]);
 
   useEffect(() => {
     sizeCanvas();
@@ -764,6 +805,21 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                     size="mini"
                   >
                     <Icon name="download" />
+                  </Button>
+                }
+              />
+              <Popup
+                content={`Native automatic preset changes: ${getNativeAutomationLabel(nativeAutomationMode)}. Beat mode advances after repeated detected bass beats; timed mode advances on an interval.`}
+                trigger={
+                  <Button
+                    aria-label={`Native automatic preset changes: ${getNativeAutomationLabel(nativeAutomationMode)}`}
+                    active={nativeAutomationMode !== 'off'}
+                    data-testid="visualizer-native-automation"
+                    icon
+                    onClick={cycleNativeAutomationMode}
+                    size="mini"
+                  >
+                    <Icon name={nativeAutomationMode === 'beat' ? 'heartbeat' : 'clock outline'} />
                   </Button>
                 }
               />

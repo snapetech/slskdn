@@ -7696,3 +7696,10 @@ Code quality improvements were completed as part of Option A:
 - Native engine support now merges imported fragments into the active preset, compatibility-checks the merged preset before swapping renderers, persists the merged source, and exports the first active shape or wave as a fragment file.
 - Player UI native mode now accepts `.shape`/`.wave` imports, persists merged fragment presets into the local native preset library, and adds tooltipped export buttons for shape and wave fragments.
 - Validation: focused parser/native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
+## 2026-04-30 16:52:16Z
+
+- Added first native MilkDrop automatic preset change modes.
+- Native engine now supports `off`, `beat`, and `timed` automation; beat mode derives low-frequency energy from analyzer FFT data, counts detected bass beats, and advances through native presets after repeated beats.
+- Visualizer UI now has a tooltipped native automation button that cycles Off → Beat → Timed, persists the mode in browser storage, and updates the overlay when the engine advances presets inside the render loop.
+- Validation: focused native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.

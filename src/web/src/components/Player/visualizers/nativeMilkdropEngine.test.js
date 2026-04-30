@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createNativeMilkdropEngine,
+  getNativeMilkdropBeatUpdate,
   getNativeMilkdropTransitionProgress,
 } from './nativeMilkdropEngine';
 import { createMilkdropRenderer } from './milkdrop/milkdropRenderer';
@@ -32,6 +33,25 @@ describe('createNativeMilkdropEngine', () => {
     expect(getNativeMilkdropTransitionProgress(10, 2, 11)).toBe(0.5);
     expect(getNativeMilkdropTransitionProgress(10, 2, 12)).toBe(1);
     expect(getNativeMilkdropTransitionProgress(10, 0, 10)).toBe(1);
+  });
+
+  it('detects beat pulses from low-frequency spectrum energy', () => {
+    const baseline = getNativeMilkdropBeatUpdate(
+      {},
+      [16, 18, 17, 19],
+      1,
+      { beatSensitivity: 1.35, minBeatIntervalSeconds: 0.25 },
+    );
+    const pulse = getNativeMilkdropBeatUpdate(
+      baseline,
+      [240, 230, 220, 210],
+      1.4,
+      { beatSensitivity: 1.35, minBeatIntervalSeconds: 0.25 },
+    );
+
+    expect(baseline.isBeat).toBe(false);
+    expect(pulse.isBeat).toBe(true);
+    expect(pulse.beatCount).toBe(1);
   });
 
   it('feeds waveform and spectrum frames into the native renderer', async () => {
@@ -244,6 +264,76 @@ describe('createNativeMilkdropEngine', () => {
       expect.objectContaining({ sampleRate: 44100, time: 12.1 }),
       { clearScreen: true, outputAlpha: 1 },
     );
+  });
+
+  it('advances presets automatically on timed automation', async () => {
+    const analyser = createAnalyser();
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 0,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+
+    engine.setPresetAutomation({ mode: 'timed', timedIntervalSeconds: 5 });
+    audioContext.currentTime = 4.9;
+    expect(engine.render()).toBeNull();
+    audioContext.currentTime = 5.1;
+    expect(engine.render()).toEqual({ presetName: 'slskdN native waveform smoke' });
+  });
+
+  it('advances presets automatically after repeated detected beats', async () => {
+    const spectrumFrames = [
+      [16, 18, 17, 19],
+      [240, 230, 220, 210],
+      [18, 18, 17, 19],
+      [245, 235, 225, 215],
+    ];
+    const analyser = {
+      fftSize: 0,
+      frequencyBinCount: 4,
+      getByteFrequencyData: vi.fn((data) => {
+        data.set(spectrumFrames.shift() || [18, 18, 17, 19]);
+      }),
+      getByteTimeDomainData: vi.fn((data) => {
+        data.set([128, 128, 128, 128]);
+      }),
+    };
+    const audioContext = {
+      createAnalyser: () => analyser,
+      currentTime: 0,
+      sampleRate: 44100,
+    };
+    const engine = await createNativeMilkdropEngine({
+      audioContext,
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+
+    engine.setPresetAutomation({
+      beatSensitivity: 1.35,
+      beatsPerPreset: 2,
+      minBeatIntervalSeconds: 0.25,
+      mode: 'beat',
+    });
+    audioContext.currentTime = 0.1;
+    expect(engine.render()).toBeNull();
+    audioContext.currentTime = 0.5;
+    expect(engine.render()).toBeNull();
+    audioContext.currentTime = 0.9;
+    expect(engine.render()).toBeNull();
+    audioContext.currentTime = 1.8;
+    expect(engine.render()).toEqual({ presetName: 'slskdN native waveform smoke' });
   });
 
   it('inspects imported preset compatibility without replacing the renderer', async () => {
