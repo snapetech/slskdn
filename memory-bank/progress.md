@@ -7292,3 +7292,11 @@ Code quality improvements were completed as part of Option A:
 - Retried the manual workflow and found a third blocker: the stable locale description generated invalid YAML because the first two block-scalar lines were double-indented. Removed that source indentation, regenerated the checked-in stable manifests, and documented the gotcha in ADR-0001 as `0cd259344`.
 - Retried again and found WingetCreate validates flat scratch directories incorrectly for multi-file manifests. Changed both stable submission workflows to stage files under `winget-submit/manifests/s/snapetech/slskdn/<winget-version>/` before calling `wingetcreate submit`, and documented the layout gotcha in ADR-0001 as `6cc0ffb77`.
 - Aligned the stable zip portable installer manifest with accepted winget-pkgs examples by moving `NestedInstallerType`, `NestedInstallerFiles`, and `Commands` to the installer manifest root, then regenerated the checked-in stable manifests and documented the gotcha in ADR-0001 as `9262eed5b`.
+
+## 2026-04-30 01:40:00Z
+
+- Tested the integrated Web UI player against a local Wikimedia Commons OGG fixture without using Soulseek network credentials.
+- Seeded an isolated slskdN instance with `Sample2.ogg`, verified `/api/v0/library/items` indexed it, marked the local content mapping advertisable for the stream gate, and confirmed `/api/v0/streams/{contentId}` returns `206 Partial Content` with `audio/ogg` byte ranges.
+- Fixed Gold Star Club startup blockers uncovered during the smoke test: the reserved pod id and default channel id now both satisfy PodCore validation, with gotchas documented in ADR-0001.
+- Browser-verified playback from two separate Vite dev servers (`localhost:3001` and `localhost:3002`): both loaded the same integrated stream endpoint, reached `readyState: 4`, and played the 53.88-second audio without media errors.
+- Added `docs/assets/readme-showcase/player-commons-smoke.png` to the README screenshot gallery.

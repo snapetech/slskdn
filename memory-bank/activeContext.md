@@ -1418,3 +1418,16 @@ dotnet test
 - Next steps:
   1. Commit and push the full workspace.
   2. Release/deploy when the UI behavior should land on `kspls0`.
+
+## Update 2026-04-30 01:40:00Z
+
+- Current task: Player/listening-party smoke test with an open Commons file is complete locally.
+- Last activity:
+  - used Wikimedia Commons `Sample2.ogg` as the audio fixture and did not use Soulseek network credentials
+  - verified the integrated stream endpoint returns ranged `audio/ogg` responses for the local `sha256:` content id
+  - verified browser playback through two Vite dev servers, `localhost:3001` and `localhost:3002`
+  - fixed and documented Gold Star Club pod/channel validation startup crashes found while bringing up the isolated backend
+  - added the player smoke screenshot to the README showcase
+- Next steps:
+  1. Decide whether to make `library/items` automatically register local `sha256:` ids as advertisable stream mappings instead of needing a content-items seed.
+  2. If desired, improve collection item display metadata so playlist rows show filenames/titles instead of raw content ids.

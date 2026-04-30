@@ -1466,3 +1466,15 @@
 - [x] Prepare `2026042900-slskdn.202` stable release
   - Status: completed (2026-04-30)
   - Notes: Promoted the current Unreleased UI chrome and transfer polish notes into the `.202` changelog section for the tag-only stable release workflow after `.200` failed on stale unit-test compile blockers and `.201` failed on release-gate unit regressions. Fixed the manual-review SongID graph expansion bug and aligned the `UserService` disposal test with its fixture-owned regex matcher listener.
+
+- [x] Smoke test integrated Web UI player streaming
+  - Status: completed (2026-04-30)
+  - Notes: Used Wikimedia Commons `Sample2.ogg` in an isolated local slskdN instance, verified ranged `/api/v0/streams/{contentId}` playback through Vite dev servers on ports 3001 and 3002, and added the resulting player screenshot to the README showcase.
+
+- [ ] Auto-register streamable local library content ids
+  - Status: follow-up
+  - Notes: `library/items` can compute `sha256:` ids for local files before those ids exist in `content_items`; the stream endpoint correctly refuses ids that are not marked advertisable. Decide whether local library indexing should upsert an advertisable mapping after moderation, or whether the UI should surface non-streamable library results differently.
+
+- [ ] Improve collection item display metadata
+  - Status: follow-up
+  - Notes: Collection items currently persist only content id/media kind/hash, so playlist rows and the player can show raw `sha256:` ids for local test items. Add filename/title metadata resolution for better user-facing playlist/player labels.
