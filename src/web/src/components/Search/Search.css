@@ -201,6 +201,10 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
+:root.dark .album-completion-meta {
+  color: var(--slskd-color-subtle, #c8bad8);
+}
+
 .album-missing-tracks {
   margin-top: 0.75rem;
 }
@@ -244,12 +248,12 @@
 
 .result-card-presence.free {
   background: #21ba45;
-  box-shadow: 0 0 0 3px rgba(33, 186, 69, 0.12);
+  box-shadow: 0 0 0 3px rgba(33, 186, 69, 0.22), 0 0 14px rgba(33, 186, 69, 0.38);
 }
 
 .result-card-presence.queued {
   background: #fbbd08;
-  box-shadow: 0 0 0 3px rgba(251, 189, 8, 0.12);
+  box-shadow: 0 0 0 3px rgba(251, 189, 8, 0.24), 0 0 14px rgba(251, 189, 8, 0.36);
 }
 
 .result-card-user {
@@ -390,8 +394,11 @@
 
 :root.dark .songid-result-panel.ui.secondary.segment,
 :root.dark .discovery-graph-atlas-card.ui.secondary.segment {
-  background: var(--slskd-overlay-background) !important;
+  background:
+    linear-gradient(180deg, rgba(199, 167, 255, 0.07), rgba(199, 167, 255, 0)),
+    var(--slskd-overlay-background) !important;
   border: 1px solid var(--slskd-tertiary-border-color) !important;
+  box-shadow: var(--slskdn-surface-shadow-soft, 0 8px 24px rgba(0, 0, 0, 0.28)) !important;
   color: var(--slskd-color) !important;
 }
 
