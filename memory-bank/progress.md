@@ -1,3 +1,11 @@
+## 2026-04-30 15:04Z - Added first native MilkDrop3 double-preset composite
+
+- Renderer final composite output now supports explicit alpha and optional screen clearing, allowing multiple native renderer instances to draw into the same canvas in order.
+- Native `.milk2` imports now instantiate one renderer per compatible preset body, draw the primary body normally, and blend secondary bodies over it at half opacity.
+- Imported `.milk2` display names include both preset titles when available.
+- Browser smoke now renders `classic-primitives`, `shader-subset`, and `milk2-double`, giving Chromium pixel coverage to the first double-preset composite path.
+- Validation: focused native/player tests passed with `59/59` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 14:43Z - Compatibility-check all MilkDrop3 double-preset bodies
 
 - Native `.milk2` import and inspection now analyze every parsed preset body before accepting the file.

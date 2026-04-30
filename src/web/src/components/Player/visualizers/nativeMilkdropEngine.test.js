@@ -45,10 +45,13 @@ describe('createNativeMilkdropEngine', () => {
 
     expect(engine.name).toBe('slskdN MilkDrop WebGL');
     expect(audioNode.connect).toHaveBeenCalledWith(analyser);
-    expect(renderer.render).toHaveBeenCalledWith(expect.objectContaining({
-      sampleRate: 48000,
-      time: 12,
-    }));
+    expect(renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sampleRate: 48000,
+        time: 12,
+      }),
+      { clearScreen: true, outputAlpha: 1 },
+    );
     expect(renderer.render.mock.calls[0][0].samples.slice(0, 4)).toEqual([
       -1,
       0,
@@ -139,6 +142,51 @@ describe('createNativeMilkdropEngine', () => {
     expect(createMilkdropRenderer).toHaveBeenCalledWith(expect.objectContaining({
       textureAssets,
     }));
+  });
+
+  it('renders compatible .milk2 imports as blended double presets', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 3,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+    renderer.resize.mockClear();
+    createMilkdropRenderer.mockClear();
+
+    const presetName = engine.loadPresetText(`
+      [preset00]
+      name=Double primary
+      wave_r=1
+      [preset01]
+      name=Double secondary
+      wave_b=1
+    `, 'double.milk2');
+    engine.render();
+    engine.resize(640, 360);
+
+    expect(presetName).toBe('Double primary + Double secondary');
+    expect(createMilkdropRenderer).toHaveBeenCalledTimes(2);
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ sampleRate: 44100, time: 3 }),
+      { clearScreen: true, outputAlpha: 1 },
+    );
+    expect(renderer.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ sampleRate: 44100, time: 3 }),
+      { clearScreen: false, outputAlpha: 0.5 },
+    );
+    expect(renderer.resize).toHaveBeenCalledTimes(2);
+    expect(renderer.resize).toHaveBeenCalledWith(640, 360);
   });
 
   it('inspects imported preset compatibility without replacing the renderer', async () => {

@@ -13,7 +13,7 @@ const smokeHtml = `
 
         const canvas = document.getElementById('canvas');
         const gl = canvas.getContext('webgl2');
-        const fixtureIds = ['classic-primitives', 'shader-subset'];
+        const fixtureIds = ['classic-primitives', 'shader-subset', 'milk2-double'];
         const readCanvasStats = () => {
           const pixels = new Uint8Array(canvas.width * canvas.height * 4);
           gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
@@ -33,15 +33,24 @@ const smokeHtml = `
 
         window.__nativeMilkdropSmoke = fixtureIds.map((fixtureId, index) => {
           const fixture = getNativeMilkdropFixture(fixtureId);
-          const preset = parseMilkdropPreset(fixture.source).primary;
-          const renderer = createMilkdropRenderer({ canvas, preset });
-          renderer.render({
+          const parsed = parseMilkdropPreset(fixture.source, {
+            format: fixtureId === 'milk2-double' ? 'milk2' : undefined,
+          });
+          const renderers = parsed.presets.map((preset) =>
+            createMilkdropRenderer({ canvas, preset }));
+          const frame = {
             samples: [-1, -0.25, 0.5, 1, 0.25, -0.5],
             spectrum: new Uint8Array([0, 64, 128, 255, 96, 32]),
             time: 1.25 + index,
+          };
+          renderers.forEach((renderer, rendererIndex) => {
+            renderer.render(frame, {
+              clearScreen: rendererIndex === 0,
+              outputAlpha: rendererIndex === 0 ? 1 : 0.5,
+            });
           });
           const stats = readCanvasStats();
-          renderer.dispose();
+          renderers.forEach((renderer) => renderer.dispose());
           return {
             fixtureId,
             ...stats,

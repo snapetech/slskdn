@@ -1,3 +1,17 @@
+## Update 2026-04-30 15:04:01Z
+
+- Current task: Native `.milk2` double presets have a first simultaneous composite renderer.
+- Last activity:
+  - renderer final composite output now supports explicit alpha and optional screen clearing
+  - native engine creates one renderer per compatible `.milk2` preset body
+  - primary preset bodies render normally and secondary bodies blend over the primary at half opacity
+  - imported `.milk2` overlay titles now include both preset names when available
+  - browser smoke now renders `classic-primitives`, `shader-subset`, and `milk2-double`
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the `.milk2` composite phase.
+  2. Continue with the next larger renderer feature phase, likely sprite/image handling or richer `.milk2` transition controls.
+
 ## Update 2026-04-30 14:43:28Z
 
 - Current task: Native `.milk2` imports now compatibility-check every preset body.

@@ -46,6 +46,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   reporting plus path/basename/stem lookup for preset texture references.
 - Fixed native `.milk2` import inspection so every preserved preset body is
   compatibility-checked before the file is accepted.
+- Added the first native `.milk2` double-preset composite path, rendering the
+  primary preset body normally and blending compatible secondary bodies over it.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

@@ -14,6 +14,7 @@ precision highp float;
 uniform vec3 color;
 uniform sampler2D previousFrame;
 uniform float feedback;
+uniform float outputAlpha;
 uniform vec2 translate;
 uniform float rotation;
 uniform float zoom;
@@ -26,7 +27,7 @@ void main() {
   mat2 rotate = mat2(c, -s, s, c);
   vec2 warped = (rotate * (centered / max(zoom, 0.001))) + vec2(0.5) + translate;
   vec3 previous = texture(previousFrame, clamp(warped, vec2(0.0), vec2(1.0))).rgb;
-  outColor = vec4(mix(color, previous, feedback), 1.0);
+  outColor = vec4(mix(color, previous, feedback), outputAlpha);
 }`;
 
 const warpGridVertexShaderSource = `#version 300 es
@@ -43,11 +44,12 @@ precision highp float;
 uniform vec3 color;
 uniform sampler2D previousFrame;
 uniform float feedback;
+uniform float outputAlpha;
 in vec2 uv;
 out vec4 outColor;
 void main() {
   vec3 previous = texture(previousFrame, clamp(uv, vec2(0.0), vec2(1.0))).rgb;
-  outColor = vec4(mix(color, previous, feedback), 1.0);
+  outColor = vec4(mix(color, previous, feedback), outputAlpha);
 }`;
 
 const lineVertexShaderSource = `#version 300 es
@@ -155,6 +157,7 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
   const state = {
     colorUniform: gl.getUniformLocation(program, 'color'),
     feedbackUniform: gl.getUniformLocation(program, 'feedback'),
+    outputAlphaUniform: gl.getUniformLocation(program, 'outputAlpha'),
     previousFrameUniform: gl.getUniformLocation(program, 'previousFrame'),
     program,
     timeUniform: gl.getUniformLocation(program, 'time'),
@@ -163,10 +166,18 @@ const createOptionalShaderProgram = (gl, shaderSource) => {
   return state;
 };
 
-const bindTranslatedShaderProgram = (gl, shaderProgram, color, feedback, time) => {
+const bindTranslatedShaderProgram = (
+  gl,
+  shaderProgram,
+  color,
+  feedback,
+  time,
+  outputAlpha = 1,
+) => {
   gl.useProgram(shaderProgram.program);
   gl.uniform3f(shaderProgram.colorUniform, color[0], color[1], color[2]);
   gl.uniform1f(shaderProgram.feedbackUniform, feedback);
+  gl.uniform1f(shaderProgram.outputAlphaUniform, outputAlpha);
   gl.uniform1f(shaderProgram.timeUniform, time);
 };
 
@@ -816,6 +827,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
   gl.useProgram(program);
   const colorUniform = gl.getUniformLocation(program, 'color');
   const feedbackUniform = gl.getUniformLocation(program, 'feedback');
+  const outputAlphaUniform = gl.getUniformLocation(program, 'outputAlpha');
   const previousFrameUniform = gl.getUniformLocation(program, 'previousFrame');
   const rotationUniform = gl.getUniformLocation(program, 'rotation');
   const translateUniform = gl.getUniformLocation(program, 'translate');
@@ -823,6 +835,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
   gl.useProgram(warpGridProgram);
   const warpGridColorUniform = gl.getUniformLocation(warpGridProgram, 'color');
   const warpGridFeedbackUniform = gl.getUniformLocation(warpGridProgram, 'feedback');
+  const warpGridOutputAlphaUniform = gl.getUniformLocation(warpGridProgram, 'outputAlpha');
   const warpGridPreviousFrameUniform = gl.getUniformLocation(warpGridProgram, 'previousFrame');
   gl.useProgram(program);
   const feedbackTargets = [
@@ -856,7 +869,9 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
       Array.from(new Set(Object.values(namedShapeTextures))).forEach((texture) =>
         gl.deleteTexture(texture));
     },
-    render: (frame = {}) => {
+    render: (frame = {}, options = {}) => {
+      const clearScreen = options.clearScreen !== false;
+      const outputAlpha = clamp01(options.outputAlpha ?? 1);
       const frequencyData = frame.spectrum || frame.frequencies || frame.frequency || frame.fft || [];
       scope = {
         ...scope,
@@ -896,6 +911,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         bindWarpGridBuffers(gl, warpGridBuffers);
         gl.uniform3f(warpGridColorUniform, r, g, b);
         gl.uniform1f(warpGridFeedbackUniform, feedback);
+        gl.uniform1f(warpGridOutputAlphaUniform, 1);
         gl.bindBuffer(gl.ARRAY_BUFFER, warpGridBuffers.positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, warpGridMesh.positions, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, warpGridBuffers.sourceUvBuffer);
@@ -909,6 +925,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           [r, g, b],
           feedback,
           scope.time,
+          1,
         );
         bindFullscreenTriangle(gl, translatedWarpProgram.program, fullscreenBuffer);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -917,6 +934,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         gl.useProgram(program);
         gl.uniform3f(colorUniform, r, g, b);
         gl.uniform1f(feedbackUniform, feedback);
+        gl.uniform1f(outputAlphaUniform, 1);
         gl.uniform1f(rotationUniform, warp.rot);
         gl.uniform1f(zoomUniform, warp.zoom);
         gl.uniform2f(translateUniform, warp.dx, warp.dy);
@@ -1065,7 +1083,13 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
 
       gl.bindTexture(gl.TEXTURE_2D, writeTarget.texture);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (clearScreen) {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+      if (!clearScreen || outputAlpha < 1) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      }
       if (translatedCompProgram) {
         bindTranslatedShaderProgram(
           gl,
@@ -1073,18 +1097,23 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           [r, g, b],
           0,
           scope.time,
+          outputAlpha,
         );
         bindFullscreenTriangle(gl, translatedCompProgram.program, fullscreenBuffer);
       } else {
         gl.useProgram(program);
         gl.uniform3f(colorUniform, 0, 0, 0);
         gl.uniform1f(feedbackUniform, 1);
+        gl.uniform1f(outputAlphaUniform, outputAlpha);
         gl.uniform1f(rotationUniform, 0);
         gl.uniform1f(zoomUniform, 1);
         gl.uniform2f(translateUniform, 0, 0);
         bindFullscreenTriangle(gl, program, fullscreenBuffer);
       }
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (!clearScreen || outputAlpha < 1) {
+        gl.disable(gl.BLEND);
+      }
 
       [readTarget, writeTarget] = [writeTarget, readTarget];
       return scope;

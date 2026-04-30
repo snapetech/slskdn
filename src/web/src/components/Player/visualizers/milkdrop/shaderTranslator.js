@@ -48,6 +48,7 @@ precision highp float;
 uniform vec3 color;
 uniform sampler2D previousFrame;
 uniform float feedback;
+uniform float outputAlpha;
 uniform float time;
 in vec2 uv;
 out vec4 outColor;
@@ -66,7 +67,7 @@ vec4 clamp01(vec4 value) {
 void main() {
   vec3 ret = vec3(${expression});
   vec3 previous = texture(previousFrame, clamp(uv, vec2(0.0), vec2(1.0))).rgb;
-  outColor = vec4(mix(ret, previous, feedback), 1.0);
+  outColor = vec4(mix(ret, previous, feedback), outputAlpha);
 }`;
 };
 

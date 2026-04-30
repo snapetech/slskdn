@@ -127,8 +127,13 @@ const createFrameReader = (audioContext, audioNode) => {
   };
 };
 
-const getImportedPresetTitle = (preset, fileName) =>
-  preset.metadata?.title || fileName || 'Imported preset';
+const getParsedPresetSetTitle = (parsed, fileName) => {
+  const titles = parsed.presets
+    .map((preset) => preset.metadata?.title)
+    .filter(Boolean);
+  if (titles.length > 1) return titles.join(' + ');
+  return titles[0] || fileName || 'Imported preset';
+};
 
 const getCompatibilityErrors = (parsed) =>
   parsed.presets
@@ -153,8 +158,22 @@ const parseCompatiblePresetText = (source, fileName = '') => {
   if (compatibilityErrors.length > 0) {
     throw new Error(formatCompatibilityError(parsed, compatibilityErrors));
   }
-  return parsed.primary;
+  return parsed;
 };
+
+const disposeRenderers = (renderers) => {
+  renderers.forEach((entry) => entry.renderer.dispose());
+};
+
+const createRendererEntries = ({ canvas, parsed, textureAssets }) =>
+  parsed.presets.map((preset, index) => ({
+    blendAlpha: index === 0 ? 1 : 0.5,
+    renderer: createMilkdropRenderer({
+      canvas,
+      preset,
+      textureAssets,
+    }),
+  }));
 
 export const createNativeMilkdropEngine = async ({
   audioContext,
@@ -162,15 +181,19 @@ export const createNativeMilkdropEngine = async ({
   canvas,
 }) => {
   let presetIndex = 0;
-  let parsedPreset = parseMilkdropPreset(nativePresets[presetIndex].source).primary;
-  let renderer = createMilkdropRenderer({ canvas, preset: parsedPreset });
+  let rendererEntries = createRendererEntries({
+    canvas,
+    parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
+  });
   const frameReader = createFrameReader(audioContext, audioNode);
 
   const loadPreset = (index) => {
     presetIndex = index % nativePresets.length;
-    parsedPreset = parseMilkdropPreset(nativePresets[presetIndex].source).primary;
-    renderer.dispose();
-    renderer = createMilkdropRenderer({ canvas, preset: parsedPreset });
+    disposeRenderers(rendererEntries);
+    rendererEntries = createRendererEntries({
+      canvas,
+      parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
+    });
     return nativePresets[presetIndex].name;
   };
 
@@ -179,36 +202,41 @@ export const createNativeMilkdropEngine = async ({
     presetName: nativePresets[presetIndex].name,
     dispose: () => {
       frameReader.disconnect();
-      renderer.dispose();
+      disposeRenderers(rendererEntries);
     },
     loadPresetText: (source, fileName = '', options = {}) => {
-      const importedPreset = parseCompatiblePresetText(source, fileName);
-      renderer.dispose();
-      parsedPreset = importedPreset;
-      renderer = createMilkdropRenderer({
+      const importedPresetSet = parseCompatiblePresetText(source, fileName);
+      disposeRenderers(rendererEntries);
+      rendererEntries = createRendererEntries({
         canvas,
-        preset: parsedPreset,
+        parsed: importedPresetSet,
         textureAssets: options.textureAssets,
       });
-      return getImportedPresetTitle(parsedPreset, fileName);
+      return getParsedPresetSetTitle(importedPresetSet, fileName);
     },
     inspectPresetText: (source, fileName = '') => {
-      const importedPreset = parseCompatiblePresetText(source, fileName);
+      const importedPresetSet = parseCompatiblePresetText(source, fileName);
       return {
-        title: getImportedPresetTitle(importedPreset, fileName),
+        title: getParsedPresetSetTitle(importedPresetSet, fileName),
       };
     },
     nextPreset: () => loadPreset(presetIndex + 1),
     render: () => {
       const frame = frameReader.read();
-      renderer.render({
+      const renderFrame = {
         ...frame,
         sampleRate: audioContext.sampleRate,
         time: audioContext.currentTime,
+      };
+      rendererEntries.forEach((entry, index) => {
+        entry.renderer.render(renderFrame, {
+          clearScreen: index === 0,
+          outputAlpha: entry.blendAlpha,
+        });
       });
     },
     resize: (width, height) => {
-      renderer.resize(width, height);
+      rendererEntries.forEach((entry) => entry.renderer.resize(width, height));
     },
   };
 };

@@ -170,8 +170,8 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(scope.rot).toBe(0.25);
     expect(gl.uniform3f).toHaveBeenNthCalledWith(1, expect.anything(), 0.5, 0, 1);
     expect(gl.uniform1f).toHaveBeenNthCalledWith(1, expect.anything(), 0.9);
-    expect(gl.uniform1f).toHaveBeenNthCalledWith(2, expect.anything(), 0.25);
-    expect(gl.uniform1f).toHaveBeenNthCalledWith(3, expect.anything(), 1.2);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.25);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 1.2);
     expect(gl.uniform2f).toHaveBeenNthCalledWith(1, expect.anything(), 0.01, -0.02);
     expect(gl.bindFramebuffer).toHaveBeenCalledWith(
       gl.FRAMEBUFFER,
