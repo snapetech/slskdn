@@ -61,6 +61,11 @@
  - Priority: P2
  - Notes: Added a browser-side filename metadata matcher that parses artist, album, title, track number, file type evidence, confidence, and warnings. Import Staging rows can be matched individually or in bulk without contacting metadata services, fingerprinting audio, or mutating files.
 
+- [x] **feature**: Add opt-in import fingerprint verification.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Import Staging now has an explicit Fingerprint on add toggle. When enabled, newly selected files are read locally in the browser and hashed with SHA-256, storing only verification metadata in the staging queue without uploading, importing, tagging, or moving files.
+
 - [ ] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
  - Status: planned
  - Priority: P2

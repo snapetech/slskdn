@@ -10,6 +10,19 @@
   1. Run the full repo `dotnet test` and `./bin/lint` when the surrounding dirty workspace is ready for broad validation.
   2. Consider adding backend folder-level counts from the share repository directly if very large libraries need faster root-folder summary generation.
 
+## Update 2026-04-30 19:44:02Z
+
+- Current task: Opt-in import fingerprint verification is implemented locally.
+- Last activity:
+  - added browser-local SHA-256 file fingerprinting for selected staging files
+  - added the Import Staging Fingerprint on add toggle
+  - persisted only digest metadata on staged rows
+  - kept the flow local and non-mutating with no uploads, imports, tag writes, or remote fingerprint calls
+  - validated focused fingerprint/import staging tests
+- Next steps:
+  1. Add failed-import denylist as the next P3 Safe Acquisition Pipeline story.
+  2. Later add backend Chromaprint/AcoustID verification behind explicit profile settings and rate limits.
+
 ## Update 2026-04-30 19:41:00Z
 
 - Current task: Local import metadata matcher is implemented locally.

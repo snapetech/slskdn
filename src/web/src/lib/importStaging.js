@@ -23,6 +23,7 @@ const normalizeItem = (item) => {
   return {
     createdAt: item.createdAt || timestamp,
     fileName: item.fileName || item.name || 'Unknown file',
+    fingerprintVerification: item.fingerprintVerification || null,
     id: item.id || uuidv4(),
     lastModified: item.lastModified || null,
     metadataMatch: item.metadataMatch || null,
@@ -72,6 +73,7 @@ export const addImportStagingFiles = (
     .map((file) =>
       normalizeItem({
         fileName: file.name,
+        fingerprintVerification: file.fingerprintVerification,
         lastModified: file.lastModified,
         size: file.size,
         type: file.type,

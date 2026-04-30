@@ -1,4 +1,5 @@
 import './ImportStaging.css';
+import { fingerprintFile } from '../../lib/fileFingerprint';
 import {
   addImportStagingFiles,
   getImportStagingItems,
@@ -9,6 +10,7 @@ import {
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Button,
+  Checkbox,
   Header,
   Icon,
   Label,
@@ -77,8 +79,39 @@ const renderMetadataMatch = (match) => {
   );
 };
 
+const renderFingerprintVerification = (fingerprint) => {
+  if (!fingerprint) {
+    return (
+      <Label color="grey">
+        Not Requested
+      </Label>
+    );
+  }
+
+  if (fingerprint.status !== 'Verified') {
+    return (
+      <Label color="orange">
+        {fingerprint.status}
+      </Label>
+    );
+  }
+
+  return (
+    <div>
+      <Label color="green">
+        Verified
+        <Label.Detail>{fingerprint.algorithm.toUpperCase()}</Label.Detail>
+      </Label>
+      <div className="import-staging-fingerprint">
+        {fingerprint.value.slice(0, 16)}
+      </div>
+    </div>
+  );
+};
+
 const ImportStaging = () => {
   const fileInputRef = useRef(null);
+  const [fingerprintOnAdd, setFingerprintOnAdd] = useState(false);
   const [items, setItems] = useState(() => getImportStagingItems());
 
   const counts = useMemo(
@@ -97,8 +130,21 @@ const ImportStaging = () => {
     fileInputRef.current?.click();
   };
 
-  const addFiles = (event) => {
-    setItems(addImportStagingFiles(event.target.files || []));
+  const addFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
+    const stagedFiles = fingerprintOnAdd
+      ? await Promise.all(
+          files.map(async (file) => ({
+            fingerprintVerification: await fingerprintFile(file),
+            lastModified: file.lastModified,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          })),
+        )
+      : files;
+
+    setItems(addImportStagingFiles(stagedFiles));
     event.target.value = '';
   };
 
@@ -166,6 +212,20 @@ const ImportStaging = () => {
               </Button>
             }
           />
+          <Popup
+            content="When enabled, newly selected files are hashed locally with SHA-256 in the browser. This reads the selected file bytes but does not upload or import them."
+            position="top center"
+            trigger={
+              <Checkbox
+                aria-label="Fingerprint on add"
+                checked={fingerprintOnAdd}
+                data-testid="import-staging-fingerprint-toggle"
+                label="Fingerprint on add"
+                onChange={(_, data) => setFingerprintOnAdd(data.checked)}
+                toggle
+              />
+            }
+          />
         </div>
       </div>
 
@@ -204,6 +264,7 @@ const ImportStaging = () => {
               <Table.HeaderCell>File</Table.HeaderCell>
               <Table.HeaderCell width={2}>Size</Table.HeaderCell>
               <Table.HeaderCell width={4}>Metadata Match</Table.HeaderCell>
+              <Table.HeaderCell width={3}>Fingerprint</Table.HeaderCell>
               <Table.HeaderCell width={2}>State</Table.HeaderCell>
               <Table.HeaderCell width={4}>Actions</Table.HeaderCell>
             </Table.Row>
@@ -219,6 +280,9 @@ const ImportStaging = () => {
                 </Table.Cell>
                 <Table.Cell>{formatBytes(item.size)}</Table.Cell>
                 <Table.Cell>{renderMetadataMatch(item.metadataMatch)}</Table.Cell>
+                <Table.Cell>
+                  {renderFingerprintVerification(item.fingerprintVerification)}
+                </Table.Cell>
                 <Table.Cell>
                   <Label color={stateColors[item.state]}>{item.state}</Label>
                 </Table.Cell>

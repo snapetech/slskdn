@@ -28,6 +28,32 @@ describe('ImportStaging', () => {
     expect(persisted).toHaveLength(1);
   });
 
+  it('stores optional fingerprint verification for newly staged files', async () => {
+    render(<ImportStaging />);
+
+    fireEvent.click(screen.getByTestId('import-staging-fingerprint-toggle'));
+    fireEvent.change(screen.getByTestId('import-staging-file-input'), {
+      target: {
+        files: [
+          new File(['abc'], 'track.flac', {
+            lastModified: 123,
+            type: 'audio/flac',
+          }),
+        ],
+      },
+    });
+
+    expect(await screen.findByText('Verified')).toBeInTheDocument();
+    const persisted = JSON.parse(localStorage.getItem(importStagingStorageKey));
+    expect(persisted[0].fingerprintVerification).toEqual(
+      expect.objectContaining({
+        algorithm: 'sha256',
+        status: 'Verified',
+        value: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      }),
+    );
+  });
+
   it('persists review state changes', () => {
     localStorage.setItem(
       importStagingStorageKey,

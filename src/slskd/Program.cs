@@ -1399,6 +1399,7 @@ namespace slskd
             services.AddSingleton<IArtistReleaseGraphService, ReleaseGraphService>();
             services.AddSingleton<IDiscographyProfileService, DiscographyProfileService>();
             services.AddSingleton<IDiscographyCoverageService, DiscographyCoverageService>();
+            services.AddSingleton<Integrations.MusicBrainz.Overlay.IMusicBrainzOverlayService, Integrations.MusicBrainz.Overlay.MusicBrainzOverlayService>();
             services.AddSingleton<Jobs.IDiscographyJobService, Jobs.DiscographyJobService>();
             services.AddSingleton<Jobs.ILabelCrateJobService, Jobs.LabelCrateJobService>();
             services.AddSingleton<slskd.API.Native.IJobServiceWithList, slskd.Jobs.HashDbJobServiceListAdapter>();

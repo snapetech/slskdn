@@ -1,3 +1,11 @@
+## 2026-04-30 19:44:02Z - Added opt-in import fingerprint verification
+
+- Continued P3 Safe Acquisition Pipeline burn-down with the optional fingerprint verification story.
+- Added a browser-local `fingerprintFile` helper that hashes selected files with Web Crypto SHA-256.
+- Import Staging now has an explicit Fingerprint on add toggle; when enabled, selected files are read locally and only digest metadata is stored with the staged row.
+- Kept the feature non-mutating and local: no upload, no library import, no tag write, and no remote fingerprint service call.
+- Validation: focused fingerprint and import staging tests passed.
+
 ## 2026-04-30 19:41:00Z - Added local import metadata matcher
 
 - Continued P3 Safe Acquisition Pipeline burn-down with the metadata matcher story.

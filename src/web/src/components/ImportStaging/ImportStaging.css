@@ -46,6 +46,13 @@
   margin-top: 0.25rem;
 }
 
+.import-staging-fingerprint {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  font-family: monospace;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
 .import-staging-row-actions {
   align-items: center;
   display: flex;

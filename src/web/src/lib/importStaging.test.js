@@ -24,6 +24,7 @@ describe('importStaging', () => {
     expect(items[0]).toEqual(
       expect.objectContaining({
         fileName: 'track.flac',
+        fingerprintVerification: null,
         lastModified: 123,
         size: 3,
         state: 'Staged',
