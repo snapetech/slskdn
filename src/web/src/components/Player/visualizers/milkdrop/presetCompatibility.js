@@ -25,6 +25,8 @@ export const analyzeMilkdropPresetCompatibility = (preset = {}) => {
   collectEquationFunctions(preset.equations, unsupportedFunctions);
   (preset.shapes || []).forEach((shape) =>
     collectEquationFunctions(shape.equations, unsupportedFunctions));
+  (preset.sprites || []).forEach((sprite) =>
+    collectEquationFunctions(sprite.equations, unsupportedFunctions));
   (preset.waves || []).forEach((wave) =>
     collectEquationFunctions(wave.equations, unsupportedFunctions));
 

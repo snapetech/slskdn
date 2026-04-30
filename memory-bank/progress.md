@@ -1,3 +1,11 @@
+## 2026-04-30 15:21Z - Added first native MilkDrop sprite primitive path
+
+- Parser now recognizes `spriteNN_` indexed primitive entries with base values plus init/frame equations.
+- Compatibility analysis checks sprite equations for unsupported functions before imported presets replace the renderer.
+- Renderer evaluates sprite init/frame equations and draws enabled sprites as textured quads using imported image texture aliases or the procedural fallback texture.
+- The curated classic fixture now includes a sprite, so browser smoke exercises the sprite draw path.
+- Validation: focused native/player tests passed with `62/62` tests; multi-fixture native browser smoke; `npm run lint -- --quiet`; `npm run build`; `git diff --check`.
+
 ## 2026-04-30 15:04Z - Added first native MilkDrop3 double-preset composite
 
 - Renderer final composite output now supports explicit alpha and optional screen clearing, allowing multiple native renderer instances to draw into the same canvas in order.

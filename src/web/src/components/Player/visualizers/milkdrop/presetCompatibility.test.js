@@ -14,14 +14,16 @@ describe('MilkDrop preset compatibility analysis', () => {
       wavecode_0_per_point1=y=customcall(sample);
       shape00_enabled=1
       shape00_per_frame1=rad=rand(4);
+      sprite00_enabled=1
+      sprite00_per_frame1=x=spritecall(time);
     `).primary;
 
     const report = analyzeMilkdropPresetCompatibility(preset);
 
-    expect(report.unsupportedFunctions).toEqual(['customcall', 'megabuf']);
+    expect(report.unsupportedFunctions).toEqual(['customcall', 'megabuf', 'spritecall']);
     expect(report.shaderSections).toEqual(['comp_shader']);
     expect(getMilkdropCompatibilityError(report)).toBe(
-      'Native MilkDrop preset has unsupported functions: customcall, megabuf; shader translation pending: comp_shader.',
+      'Native MilkDrop preset has unsupported functions: customcall, megabuf, spritecall; shader translation pending: comp_shader.',
     );
   });
 

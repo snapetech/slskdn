@@ -281,6 +281,10 @@ const getTextureAssetCandidates = (shape = {}) => [
   shape.baseValues?.texture,
   shape.baseValues?.tex,
   shape.baseValues?.tex_name,
+  shape.baseValues?.image,
+  shape.baseValues?.img,
+  shape.baseValues?.file,
+  shape.baseValues?.filename,
 ].flatMap(getTextureNameAliases);
 
 const createTextureFromRawAsset = (gl, asset) => {
@@ -669,6 +673,29 @@ const shapeValueKeys = new Set([
   'y',
 ]);
 
+const spriteValueKeys = new Set([
+  'a',
+  'additive',
+  'ang',
+  'b',
+  'enabled',
+  'file',
+  'filename',
+  'g',
+  'h',
+  'height',
+  'image',
+  'img',
+  'r',
+  'tex',
+  'tex_name',
+  'texture',
+  'w',
+  'width',
+  'x',
+  'y',
+]);
+
 const waveValueKeys = new Set([
   'a',
   'additive',
@@ -711,6 +738,22 @@ export const evaluateShapeState = (shape = {}, frameScope = {}) => {
   return shape;
 };
 
+export const evaluateSpriteState = (sprite = {}, frameScope = {}) => {
+  let spriteScope = {
+    ...frameScope,
+    ...sprite.baseValues,
+  };
+  if (sprite.equations?.init && !sprite.initialized) {
+    spriteScope = evaluateMilkdropEquations(sprite.equations.init, spriteScope);
+    sprite.initialized = true;
+  }
+  if (sprite.equations?.frame) {
+    spriteScope = evaluateMilkdropEquations(sprite.equations.frame, spriteScope);
+  }
+  sprite.baseValues = persistScopedValues(sprite.baseValues, spriteScope, spriteValueKeys);
+  return sprite;
+};
+
 export const evaluateWaveState = (wave = {}, frameScope = {}) => {
   let waveScope = {
     ...frameScope,
@@ -726,6 +769,58 @@ export const evaluateWaveState = (wave = {}, frameScope = {}) => {
   wave.baseValues = persistScopedValues(wave.baseValues, waveScope, waveValueKeys);
   return wave;
 };
+
+export const isSpriteEnabled = (sprite = {}) =>
+  Number(sprite.baseValues?.enabled ?? 0) > 0;
+
+export const createSpriteVertices = (sprite = {}) => {
+  if (!isSpriteEnabled(sprite)) return new Float32Array();
+  const width = Math.max(
+    0.001,
+    Number(sprite.baseValues?.w ?? sprite.baseValues?.width ?? 0.25) || 0.25,
+  );
+  const height = Math.max(
+    0.001,
+    Number(sprite.baseValues?.h ?? sprite.baseValues?.height ?? width) || width,
+  );
+  const centerX = (Number(sprite.baseValues?.x ?? 0.5) * 2) - 1;
+  const centerY = (Number(sprite.baseValues?.y ?? 0.5) * 2) - 1;
+  const angle = Number(sprite.baseValues?.ang ?? 0);
+  const sine = Math.sin(angle);
+  const cosine = Math.cos(angle);
+  const halfWidth = width;
+  const halfHeight = height;
+  const corners = [
+    [-halfWidth, -halfHeight],
+    [halfWidth, -halfHeight],
+    [halfWidth, halfHeight],
+    [-halfWidth, halfHeight],
+  ];
+  const vertices = new Float32Array(10);
+  [...corners, corners[0]].forEach(([x, y], index) => {
+    vertices[index * 2] = centerX + (cosine * x) - (sine * y);
+    vertices[index * 2 + 1] = centerY + (sine * x) + (cosine * y);
+  });
+  return vertices;
+};
+
+export const createSpriteTextureUvs = (sprite = {}) =>
+  (isSpriteEnabled(sprite)
+    ? new Float32Array([
+      0, 1,
+      1, 1,
+      1, 0,
+      0, 0,
+      0, 1,
+    ])
+    : new Float32Array());
+
+export const getSpriteFillColor = (sprite = {}, fallbackColor = [1, 1, 1]) => [
+  clamp01(sprite.baseValues?.r ?? fallbackColor[0]),
+  clamp01(sprite.baseValues?.g ?? fallbackColor[1]),
+  clamp01(sprite.baseValues?.b ?? fallbackColor[2]),
+  clamp01(sprite.baseValues?.a ?? 1),
+];
 
 export const createCustomWaveVertices = (wave = {}, samples = [], frameScope = {}) => {
   if (!Number(wave.baseValues?.enabled ?? 0)) {
@@ -1077,6 +1172,34 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
             gl.lineWidth(1);
           }
         }
+        gl.disable(gl.BLEND);
+        gl.useProgram(program);
+      });
+
+      (preset.sprites || []).forEach((sprite) => {
+        const evaluatedSprite = evaluateSpriteState(sprite, scope);
+        const spriteVertices = createSpriteVertices(evaluatedSprite);
+        if (spriteVertices.length === 0) return;
+        const spriteUvs = createSpriteTextureUvs(evaluatedSprite);
+        const spriteColor = getSpriteFillColor(evaluatedSprite, [1, 1, 1]);
+        const additive = Number(evaluatedSprite.baseValues?.additive ?? 0) > 0;
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
+        gl.activeTexture(gl.TEXTURE1 ?? gl.TEXTURE0);
+        gl.bindTexture(
+          gl.TEXTURE_2D,
+          getShapeTexture(evaluatedSprite, namedShapeTextures, proceduralShapeTexture),
+        );
+        gl.useProgram(texturedShapeProgram);
+        bindTexturedShapeBuffers(gl, texturedShapeBuffers);
+        gl.uniform3f(texturedShapeTintUniform, spriteColor[0], spriteColor[1], spriteColor[2]);
+        gl.uniform1f(texturedShapeAlphaUniform, spriteColor[3]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texturedShapeBuffers.positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, spriteVertices, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texturedShapeBuffers.sourceUvBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, spriteUvs, gl.DYNAMIC_DRAW);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, spriteVertices.length / 2);
+        gl.activeTexture(gl.TEXTURE0);
         gl.disable(gl.BLEND);
         gl.useProgram(program);
       });

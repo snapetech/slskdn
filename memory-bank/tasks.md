@@ -47,6 +47,7 @@
  - Progress (2026-04-30): Improved native shape texture lookup to match imported assets by quoted path, normalized path, basename, or stem.
  - Progress (2026-04-30): Fixed `.milk2` import inspection so every preserved preset body is compatibility-checked before the file is accepted.
  - Progress (2026-04-30): Added first `.milk2` simultaneous composite rendering by drawing the primary preset body normally and blending secondary bodies over it, with native engine and browser smoke coverage.
+ - Progress (2026-04-30): Added first `spriteNN_` parse, compatibility, equation-evaluation, and textured-quad render path using imported image assets or procedural fallback.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

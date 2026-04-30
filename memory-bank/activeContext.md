@@ -1,3 +1,17 @@
+## Update 2026-04-30 15:21:59Z
+
+- Current task: Native MilkDrop has first sprite/image primitive support.
+- Last activity:
+  - parser now recognizes `spriteNN_` indexed primitive entries with base values and init/frame equations
+  - compatibility analysis now checks sprite equations for unsupported functions before import
+  - renderer evaluates sprite init/frame equations and draws enabled sprites as textured quads
+  - sprite texture lookup uses the same imported asset aliases as textured shapes and falls back to the procedural checker
+  - curated classic fixture now includes a sprite, and smoke continues to render all three native fixtures
+  - validated focused native/player tests, native browser smoke, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Commit and push the sprite primitive phase.
+  2. Continue with the next larger renderer phase, likely richer `.milk2` transition controls, higher shape/wave counts, or preset library controls.
+
 ## Update 2026-04-30 15:04:01Z
 
 - Current task: Native `.milk2` double presets have a first simultaneous composite renderer.

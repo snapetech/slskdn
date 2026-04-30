@@ -4,6 +4,7 @@ const keyedLinePattern = /^\s*([^=]+?)\s*=\s*(.*)$/;
 const numberedExpressionPattern = /^(per_frame|per_pixel|per_vertex|per_point|init|frame|point)(?:_\d+)?$/i;
 const shaderPattern = /^(warp|comp)_shader(?:_\d+)?$/i;
 const shapePattern = /^shape(\d+)_(.+)$/i;
+const spritePattern = /^sprite(\d+)_(.+)$/i;
 const wavePattern = /^wavecode_(\d+)_(.+)$/i;
 
 const normalizeKey = (key) => key.trim().toLowerCase();
@@ -50,6 +51,7 @@ const createPreset = (source, index = 0) => ({
     warp: '',
   },
   shapes: [],
+  sprites: [],
   waves: [],
   source,
 });
@@ -140,6 +142,16 @@ const parsePresetText = (text, index = 0) => {
       return;
     }
 
+    const spriteMatch = spritePattern.exec(key);
+    if (spriteMatch) {
+      const entry = ensureIndexedEntry(preset.sprites, Number(spriteMatch[1]));
+      const spriteKey = spriteMatch[2];
+      if (!assignIndexedEquation(entry, spriteKey, rawValue)) {
+        entry.baseValues[spriteKey] = value;
+      }
+      return;
+    }
+
     const waveMatch = wavePattern.exec(key);
     if (waveMatch) {
       const entry = ensureIndexedEntry(preset.waves, Number(waveMatch[1]));
@@ -192,6 +204,8 @@ export const normalizeMilkdropPresetForSnapshot = (preset) => ({
   shaders: preset.shaders,
   shapeCount: preset.shapes.length,
   shapes: preset.shapes,
+  spriteCount: preset.sprites.length,
+  sprites: preset.sprites,
   title: preset.metadata.title,
   waveCount: preset.waves.length,
   waves: preset.waves,

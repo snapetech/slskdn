@@ -3,6 +3,8 @@ import {
   createShapeFillColors,
   createShapeFillVertices,
   createShapeTextureUvs,
+  createSpriteTextureUvs,
+  createSpriteVertices,
   createRepeatedColors,
   createShapeVertices,
   createCustomWaveVertices,
@@ -10,6 +12,7 @@ import {
   createWarpGridMesh,
   createWaveformVertices,
   evaluateShapeState,
+  evaluateSpriteState,
   evaluateWaveState,
   getMilkdropFrameColor,
   getMilkdropWarpState,
@@ -18,10 +21,12 @@ import {
   getShapeColor,
   getShapeFillEdgeColor,
   getShapeFillColor,
+  getSpriteFillColor,
   getWaveColor,
   getWaveDrawMode,
   getWavePointSize,
   isShapeTextured,
+  isSpriteEnabled,
 } from './milkdropRenderer';
 import { parseMilkdropPreset } from './presetParser';
 
@@ -361,6 +366,53 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 6);
   });
 
+  it('renders enabled sprites with named texture assets', () => {
+    const gl = createFakeGl();
+    const textureData = new Uint8Array([
+      255, 255, 255, 255,
+      32, 64, 128, 255,
+    ]);
+    const renderer = createMilkdropRenderer({
+      canvas: createCanvas(gl),
+      preset: parseMilkdropPreset(`
+        sprite00_enabled=1
+        sprite00_image=sprites/logo.png
+        sprite00_x=0.5
+        sprite00_y=0.5
+        sprite00_w=0.2
+        sprite00_h=0.1
+        sprite00_r=0.75
+        sprite00_g=0.5
+        sprite00_b=0.25
+        sprite00_a=0.6
+      `).primary,
+      textureAssets: {
+        logo: {
+          data: textureData,
+          height: 1,
+          width: 2,
+        },
+      },
+    });
+
+    renderer.render();
+
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      2,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      textureData,
+    );
+    expect(gl.uniform3f).toHaveBeenCalledWith(expect.anything(), 0.75, 0.5, 0.25);
+    expect(gl.uniform1f).toHaveBeenCalledWith(expect.anything(), 0.6);
+    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLE_FAN, 0, 5);
+  });
+
   it('uses additive blending for additive custom shapes', () => {
     const gl = createFakeGl();
     const renderer = createMilkdropRenderer({
@@ -549,6 +601,46 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(uvs[3]).toBeCloseTo(0.5);
   });
 
+  it('maps enabled sprites into textured quads', () => {
+    const sprite = {
+      baseValues: {
+        enabled: 1,
+        h: 0.1,
+        w: 0.2,
+        x: 0.5,
+        y: 0.5,
+      },
+    };
+
+    expect(isSpriteEnabled(sprite)).toBe(true);
+    expect(isSpriteEnabled({ baseValues: { enabled: 0 } })).toBe(false);
+    const vertices = Array.from(createSpriteVertices(sprite));
+    [
+      -0.2, -0.1,
+      0.2, -0.1,
+      0.2, 0.1,
+      -0.2, 0.1,
+      -0.2, -0.1,
+    ].forEach((value, index) => {
+      expect(vertices[index]).toBeCloseTo(value);
+    });
+    expect(Array.from(createSpriteTextureUvs(sprite))).toEqual([
+      0, 1,
+      1, 1,
+      1, 0,
+      0, 0,
+      0, 1,
+    ]);
+    expect(getSpriteFillColor({
+      baseValues: {
+        a: 0.4,
+        b: 0.3,
+        g: 0.2,
+        r: 0.1,
+      },
+    })).toEqual([0.1, 0.2, 0.3, 0.4]);
+  });
+
   it('evaluates shape init and frame equations without leaking global scope', () => {
     const shape = {
       baseValues: {
@@ -579,6 +671,29 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
 
     expect(secondFrame.baseValues.rad).toBeCloseTo(0.8);
     expect(secondFrame.baseValues.q1).toBeCloseTo(0.2);
+  });
+
+  it('evaluates sprite init and frame equations without leaking global scope', () => {
+    const sprite = {
+      baseValues: {
+        enabled: 1,
+        w: 0.1,
+      },
+      equations: {
+        frame: 'w=w+q1+bass_att*0.1;',
+        init: 'q1=0.2;',
+      },
+    };
+
+    const evaluatedSprite = evaluateSpriteState(sprite, {
+      bass_att: 2,
+      time: 9,
+    });
+
+    expect(evaluatedSprite.baseValues.w).toBeCloseTo(0.5);
+    expect(evaluatedSprite.baseValues.q1).toBeCloseTo(0.2);
+    expect(evaluatedSprite.baseValues.bass_att).toBeUndefined();
+    expect(evaluatedSprite.baseValues.time).toBeUndefined();
   });
 
   it('evaluates wave init, frame, and point equations into clip-space vertices', () => {

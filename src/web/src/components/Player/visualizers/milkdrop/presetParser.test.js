@@ -22,6 +22,10 @@ shape00_enabled=1
 shape00_sides=5
 shape00_init1=q2=0;
 shape00_per_frame1=q2=q2+0.1;
+sprite00_enabled=1
+sprite00_image=logo.png
+sprite00_init1=q3=0.2;
+sprite00_per_frame1=x=0.5+q3;
 wavecode_0_enabled=1
 wavecode_0_samples=512
 wavecode_0_per_point1=x=sample;
@@ -60,6 +64,11 @@ describe('parseMilkdropPreset', () => {
     expect(snapshot.shapes[0].equations).toEqual({
       frame: 'q2=q2+0.1;',
       init: 'q2=0;',
+    });
+    expect(snapshot.sprites[0].baseValues).toEqual({ enabled: 1, image: 'logo.png' });
+    expect(snapshot.sprites[0].equations).toEqual({
+      frame: 'x=0.5+q3;',
+      init: 'q3=0.2;',
     });
     expect(snapshot.waves[0].baseValues).toEqual({ enabled: 1, samples: 512 });
     expect(snapshot.waves[0].equations.point).toBe('x=sample;');
