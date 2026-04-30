@@ -101,6 +101,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Add renderer-wide q1-q64 initialization and q-register propagation across evaluated stages.
 - [x] Add first shader-uniform binding for q-register and audio variables in translated warp/comp shaders.
 - [x] Add first shader-side `get_fft()` and `get_fft_hz()` support for translated warp/comp shaders.
+- [x] Add first native primitive-field alias support for common custom wave, shape, and sprite names.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -122,6 +123,7 @@ Current parser/VM scope:
 - Evaluates custom wave init/frame/point equations into WebGL line-strip vertices using audio samples as point inputs, with per-wave q-register persistence, color/alpha, additive blending, and thick line hints.
 - Propagates q-register writes from global frame equations and evaluated custom wave, shape, and sprite stages back into the frame scope while still preventing non-q primitive-local frame/audio values from leaking into primitive base values.
 - Supports first-pass custom wave dot rendering and spectrum-source sampling from frame frequency data.
+- Honors common native custom wave aliases including `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, and `bAdditive`, plus shape/sprite aliases including `bTextured`, `bAdditive`, `bDrawThick`, `numSides`, and `texName`.
 - Supports analyzer-backed `get_fft(pos)` and `get_fft_hz(freq)` expression helpers against renderer-provided frequency data. Full MilkDrop wave modes and shader-side FFT access are still pending.
 - Supported translated warp/comp shaders can reference `q1`-`q64` plus `bass`, `bass_att`, `mid`, `mid_att`, `treb`, and `treb_att`; the renderer binds those values from the current frame scope as uniforms before each translated shader pass.
 - Translated warp/comp shaders also expose first shader-side `get_fft(pos)` and `get_fft_hz(freq)` helpers backed by a 32-bin normalized FFT uniform array and current sample-rate uniform.
@@ -156,7 +158,7 @@ Current parser/VM scope:
 ### Phase 2: MilkDrop3 Feature Deltas
 
 - Add deeper q1-q64 compatibility coverage against real MilkDrop3 presets.
-- Add increased wave/shape counts.
+- Add increased wave/shape count validation against real MilkDrop3 preset packs.
 - Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - Add richer `.milk2` transition/composite controls beyond first secondary alpha support.
 - Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.

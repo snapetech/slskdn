@@ -1,3 +1,15 @@
+## Update 2026-04-30 17:56:49Z
+
+- Current task: Native MilkDrop primitives honor common MilkDrop field aliases.
+- Last activity:
+  - custom waves now read native aliases such as `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, and `bAdditive`
+  - shapes and sprites now read native aliases such as `bEnabled`, `bTextured`, `bAdditive`, `bDrawThick`, `numSides`, and `texName`
+  - parser and renderer coverage locks the alias-preservation path without rewriting imported preset data
+  - validated focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke
+- Next steps:
+  1. Run whitespace checks, commit, and push.
+  2. Continue the next large MilkDrop phase, likely real-preset compatibility expansion or richer shader translation.
+
 ## Update 2026-04-30 17:45:25Z
 
 - Current task: Native MilkDrop translated shaders have first shader-side FFT access.

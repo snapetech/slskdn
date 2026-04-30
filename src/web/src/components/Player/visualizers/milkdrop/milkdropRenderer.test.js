@@ -666,6 +666,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
 
     expect(isShapeTextured(shape)).toBe(true);
     expect(isShapeTextured({ baseValues: { texture: 'fixture' } })).toBe(true);
+    expect(isShapeTextured({ baseValues: { btextured: 1 } })).toBe(true);
     expect(isShapeTextured({ baseValues: {} })).toBe(false);
     expect(uvs).toHaveLength(12);
     expect(uvs[0]).toBe(0.5);
@@ -686,6 +687,7 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     };
 
     expect(isSpriteEnabled(sprite)).toBe(true);
+    expect(isSpriteEnabled({ baseValues: { benabled: 1 } })).toBe(true);
     expect(isSpriteEnabled({ baseValues: { enabled: 0 } })).toBe(false);
     const vertices = Array.from(createSpriteVertices(sprite));
     [
@@ -831,6 +833,47 @@ describe('native MilkDrop WebGL renderer skeleton', () => {
     expect(getWavePointSize(wave)).toBe(4);
     expect(getWavePointSize({ baseValues: { dots: 1 } })).toBe(2);
     expect(getWavePointSize({ baseValues: { dots: 0 } })).toBe(1);
+  });
+
+  it('honors native MilkDrop custom wave and shape aliases', () => {
+    const gl = createFakeGl();
+    const nativeWave = {
+      baseValues: {
+        benabled: 1,
+        bspectrum: 1,
+        bdrawthick: 1,
+        busedots: 1,
+        nsamples: 4,
+      },
+      equations: {
+        point: 'x=i; y=sample;',
+      },
+    };
+    const nativeShape = {
+      baseValues: {
+        badditive: 1,
+        benabled: 1,
+        btextured: 1,
+        numsides: 5,
+        rad: 0.2,
+        texang: 0,
+        texzoom: 2,
+        x: 0.5,
+        y: 0.5,
+      },
+    };
+
+    const vertices = Array.from(createCustomWaveVertices(nativeWave, [0, 64, 128, 255], {}));
+
+    expect(vertices).toHaveLength(8);
+    expect(vertices[1]).toBeCloseTo(-1);
+    expect(vertices[3]).toBeCloseTo((64 / 255) * 2 - 1);
+    expect(vertices[7]).toBeCloseTo(1);
+    expect(getWaveDrawMode(nativeWave, gl)).toBe(gl.POINTS);
+    expect(getWavePointSize(nativeWave)).toBe(4);
+    expect(createShapeVertices(nativeShape)).toHaveLength(12);
+    expect(isShapeTextured(nativeShape)).toBe(true);
+    expect(createShapeTextureUvs(nativeShape)[2]).toBeCloseTo(0.75);
   });
 
   it('uses shape colors with frame-color fallback', () => {

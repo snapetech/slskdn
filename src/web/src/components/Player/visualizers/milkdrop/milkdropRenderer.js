@@ -102,6 +102,22 @@ const defaultAudioState = {
 };
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
+const toFiniteNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const getEntryValue = (entry = {}, keys = [], fallback = undefined) => {
+  const baseValues = entry.baseValues || {};
+  const key = keys.find((candidate) => baseValues[candidate] !== undefined);
+  return key ? baseValues[key] : fallback;
+};
+
+const getEntryNumber = (entry, keys, fallback = 0) =>
+  toFiniteNumber(getEntryValue(entry, keys, fallback), fallback);
+
+const getEntryFlag = (entry, keys, fallback = 0) =>
+  getEntryNumber(entry, keys, fallback) > 0;
 
 const qRegisterNames = Array.from({ length: 64 }, (_unused, index) => `q${index + 1}`);
 const shaderScopeUniformNames = [
@@ -344,6 +360,7 @@ const getTextureAssetCandidates = (shape = {}) => [
   shape.baseValues?.texture,
   shape.baseValues?.tex,
   shape.baseValues?.tex_name,
+  shape.baseValues?.texname,
   shape.baseValues?.image,
   shape.baseValues?.img,
   shape.baseValues?.file,
@@ -603,15 +620,19 @@ export const getMotionVectorColor = (scope = {}, fallbackColor = [0.7, 0.7, 0.7]
 ];
 
 export const createShapeVertices = (shape = {}) => {
-  if (!Number(shape.baseValues?.enabled ?? 0)) {
+  if (!getEntryFlag(shape, ['enabled', 'benabled'])) {
     return new Float32Array();
   }
 
-  const sides = Math.max(3, Math.min(500, Math.floor(Number(shape.baseValues.sides ?? 4))));
-  const radius = Math.max(0, Number(shape.baseValues.rad ?? shape.baseValues.radius ?? 0.1));
-  const centerX = (Number(shape.baseValues.x ?? 0.5) * 2) - 1;
-  const centerY = (Number(shape.baseValues.y ?? 0.5) * 2) - 1;
-  const angle = Number(shape.baseValues.ang ?? 0);
+  const sides = Math.max(3, Math.min(500, Math.floor(getEntryNumber(
+    shape,
+    ['sides', 'numsides'],
+    4,
+  ))));
+  const radius = Math.max(0, getEntryNumber(shape, ['rad', 'radius'], 0.1));
+  const centerX = (getEntryNumber(shape, ['x'], 0.5) * 2) - 1;
+  const centerY = (getEntryNumber(shape, ['y'], 0.5) * 2) - 1;
+  const angle = getEntryNumber(shape, ['ang'], 0);
   const vertices = new Float32Array((sides + 1) * 2);
 
   for (let index = 0; index <= sides; index += 1) {
@@ -628,21 +649,26 @@ export const createShapeFillVertices = (shape = {}) => {
   if (outline.length === 0) return outline;
 
   const vertices = new Float32Array(outline.length + 2);
-  vertices[0] = (Number(shape.baseValues.x ?? 0.5) * 2) - 1;
-  vertices[1] = (Number(shape.baseValues.y ?? 0.5) * 2) - 1;
+  vertices[0] = (getEntryNumber(shape, ['x'], 0.5) * 2) - 1;
+  vertices[1] = (getEntryNumber(shape, ['y'], 0.5) * 2) - 1;
   vertices.set(outline, 2);
   return vertices;
 };
 
 export const isShapeTextured = (shape = {}) =>
-  Number(shape.baseValues?.textured ?? 0) > 0
-  || Boolean(shape.baseValues?.texture || shape.baseValues?.tex_name || shape.baseValues?.tex);
+  getEntryFlag(shape, ['textured', 'btextured'])
+  || Boolean(
+    shape.baseValues?.texture
+    || shape.baseValues?.tex_name
+    || shape.baseValues?.texname
+    || shape.baseValues?.tex,
+  );
 
 export const createShapeTextureUvs = (shape = {}) => {
   const vertexCount = createShapeFillVertices(shape).length / 2;
   if (!vertexCount) return new Float32Array();
-  const zoom = Math.max(0.001, Number(shape.baseValues?.tex_zoom ?? 1) || 1);
-  const angle = Number(shape.baseValues?.tex_ang ?? 0);
+  const zoom = Math.max(0.001, getEntryNumber(shape, ['tex_zoom', 'texzoom'], 1) || 1);
+  const angle = getEntryNumber(shape, ['tex_ang', 'texang'], 0);
   const sine = Math.sin(angle);
   const cosine = Math.cos(angle);
   const uvs = new Float32Array(vertexCount * 2);
@@ -714,13 +740,19 @@ const shapeValueKeys = new Set([
   'ang',
   'b',
   'b2',
+  'badditive',
   'border_a',
   'border_b',
   'border_g',
   'border_r',
+  'bdrawthick',
+  'benabled',
+  'btextured',
+  'bthickoutline',
   'enabled',
   'g',
   'g2',
+  'numsides',
   'r',
   'r2',
   'rad',
@@ -728,8 +760,11 @@ const shapeValueKeys = new Set([
   'sides',
   'tex',
   'tex_ang',
+  'texang',
   'tex_name',
+  'texname',
   'tex_zoom',
+  'texzoom',
   'texture',
   'textured',
   'thickoutline',
@@ -742,6 +777,8 @@ const spriteValueKeys = new Set([
   'additive',
   'ang',
   'b',
+  'badditive',
+  'benabled',
   'enabled',
   'file',
   'filename',
@@ -753,6 +790,7 @@ const spriteValueKeys = new Set([
   'r',
   'tex',
   'tex_name',
+  'texname',
   'texture',
   'w',
   'width',
@@ -764,9 +802,16 @@ const waveValueKeys = new Set([
   'a',
   'additive',
   'b',
+  'badditive',
+  'bdrawthick',
+  'benabled',
+  'bspectrum',
+  'bthick',
+  'busedots',
   'dots',
   'enabled',
   'g',
+  'nsamples',
   'r',
   'samples',
   'scaling',
@@ -833,21 +878,21 @@ export const evaluateWaveState = (wave = {}, frameScope = {}) => {
 };
 
 export const isSpriteEnabled = (sprite = {}) =>
-  Number(sprite.baseValues?.enabled ?? 0) > 0;
+  getEntryFlag(sprite, ['enabled', 'benabled']);
 
 export const createSpriteVertices = (sprite = {}) => {
   if (!isSpriteEnabled(sprite)) return new Float32Array();
   const width = Math.max(
     0.001,
-    Number(sprite.baseValues?.w ?? sprite.baseValues?.width ?? 0.25) || 0.25,
+    getEntryNumber(sprite, ['w', 'width'], 0.25) || 0.25,
   );
   const height = Math.max(
     0.001,
-    Number(sprite.baseValues?.h ?? sprite.baseValues?.height ?? width) || width,
+    getEntryNumber(sprite, ['h', 'height'], width) || width,
   );
-  const centerX = (Number(sprite.baseValues?.x ?? 0.5) * 2) - 1;
-  const centerY = (Number(sprite.baseValues?.y ?? 0.5) * 2) - 1;
-  const angle = Number(sprite.baseValues?.ang ?? 0);
+  const centerX = (getEntryNumber(sprite, ['x'], 0.5) * 2) - 1;
+  const centerY = (getEntryNumber(sprite, ['y'], 0.5) * 2) - 1;
+  const angle = getEntryNumber(sprite, ['ang'], 0);
   const sine = Math.sin(angle);
   const cosine = Math.cos(angle);
   const halfWidth = width;
@@ -885,16 +930,16 @@ export const getSpriteFillColor = (sprite = {}, fallbackColor = [1, 1, 1]) => [
 ];
 
 export const createCustomWaveVertices = (wave = {}, samples = [], frameScope = {}) => {
-  if (!Number(wave.baseValues?.enabled ?? 0)) {
+  if (!getEntryFlag(wave, ['enabled', 'benabled'])) {
     return new Float32Array();
   }
 
   const sampleCount = Math.max(
     2,
-    Math.min(4096, Math.floor(Number(wave.baseValues.samples ?? samples.length ?? 2) || 2)),
+    Math.min(4096, Math.floor(getEntryNumber(wave, ['samples', 'nsamples'], samples.length || 2))),
   );
   const fallbackSamples = samples.length > 0 ? samples : [0, 0];
-  const useSpectrum = Number(wave.baseValues.spectrum ?? 0) > 0;
+  const useSpectrum = getEntryFlag(wave, ['spectrum', 'bspectrum']);
   const vertices = new Float32Array(sampleCount * 2);
 
   for (let index = 0; index < sampleCount; index += 1) {
@@ -934,11 +979,11 @@ export const getWaveColor = (wave = {}, fallbackColor = [0.7, 0.7, 0.7]) => [
 ];
 
 export const getWaveDrawMode = (wave = {}, gl) =>
-  (Number(wave.baseValues?.dots ?? 0) > 0 ? gl.POINTS : gl.LINE_STRIP);
+  (getEntryFlag(wave, ['dots', 'busedots']) ? gl.POINTS : gl.LINE_STRIP);
 
 export const getWavePointSize = (wave = {}) => {
-  if (Number(wave.baseValues?.dots ?? 0) <= 0) return 1;
-  return Number(wave.baseValues?.thick ?? 0) > 0 ? 4 : 2;
+  if (!getEntryFlag(wave, ['dots', 'busedots'])) return 1;
+  return getEntryFlag(wave, ['thick', 'bdrawthick', 'bthick']) ? 4 : 2;
 };
 
 export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) => {
@@ -1141,7 +1186,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
       preset.waves.forEach((wave) => {
         const evaluatedWave = evaluateWaveState(wave, scope);
         scope = mergeQRegisters(scope, evaluatedWave.baseValues);
-        const waveSamples = Number(evaluatedWave.baseValues?.spectrum ?? 0) > 0
+        const waveSamples = getEntryFlag(evaluatedWave, ['spectrum', 'bspectrum'])
           ? frequencyData.length > 0 ? frequencyData : frame.waveform || frame.samples || []
           : frame.waveform || frame.samples || [];
         const customWaveVertices = createCustomWaveVertices(
@@ -1155,8 +1200,8 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           customWaveVertices.length / 2,
           customWaveColor,
         );
-        const additive = Number(evaluatedWave.baseValues?.additive ?? 0) > 0;
-        const thick = Number(evaluatedWave.baseValues?.thick ?? 0) > 0;
+        const additive = getEntryFlag(evaluatedWave, ['additive', 'badditive']);
+        const thick = getEntryFlag(evaluatedWave, ['thick', 'bdrawthick', 'bthick']);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
         gl.lineWidth(thick ? 2 : 1);
@@ -1183,7 +1228,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         const shapeFillVertices = createShapeFillVertices(evaluatedShape);
         const shapeVertices = createShapeVertices(evaluatedShape);
         if (shapeFillVertices.length === 0 && shapeVertices.length === 0) return;
-        const additive = Number(evaluatedShape.baseValues?.additive ?? 0) > 0;
+        const additive = getEntryFlag(evaluatedShape, ['additive', 'badditive']);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
         gl.useProgram(lineProgram);
@@ -1223,7 +1268,10 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
           const borderColor = getShapeBorderColor(evaluatedShape, [r, g, b]);
           const borderA = borderColor[3];
           if (borderA > 0) {
-            const borderWidth = Number(evaluatedShape.baseValues?.thickoutline ?? 0) > 0 ? 2 : 1;
+            const borderWidth = getEntryFlag(
+              evaluatedShape,
+              ['thickoutline', 'bthickoutline', 'bdrawthick'],
+            ) ? 2 : 1;
             gl.lineWidth(borderWidth);
             gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffers.positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, shapeVertices, gl.DYNAMIC_DRAW);
@@ -1248,7 +1296,7 @@ export const createMilkdropRenderer = ({ canvas, preset, textureAssets = {} }) =
         if (spriteVertices.length === 0) return;
         const spriteUvs = createSpriteTextureUvs(evaluatedSprite);
         const spriteColor = getSpriteFillColor(evaluatedSprite, [1, 1, 1]);
-        const additive = Number(evaluatedSprite.baseValues?.additive ?? 0) > 0;
+        const additive = getEntryFlag(evaluatedSprite, ['additive', 'badditive']);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, additive ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
         gl.activeTexture(gl.TEXTURE1 ?? gl.TEXTURE0);

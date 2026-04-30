@@ -59,6 +59,7 @@
  - Progress (2026-04-30): Added renderer-wide q1-q64 initialization plus q-register propagation from global, custom wave, shape, and sprite evaluation stages back into the frame scope.
  - Progress (2026-04-30): Added first translated shader uniform binding for q1-q64 and bass/mid/treble audio variables in supported native warp/comp shader expressions.
  - Progress (2026-04-30): Added first shader-side `get_fft()` and `get_fft_hz()` support for translated native warp/comp shaders using a normalized 32-bin FFT uniform array.
+ - Progress (2026-04-30): Added native primitive-field aliases for common MilkDrop custom wave, shape, and sprite names including `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, `bAdditive`, `bTextured`, `numSides`, and `texName`.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

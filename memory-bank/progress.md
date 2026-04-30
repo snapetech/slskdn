@@ -1,3 +1,10 @@
+## 2026-04-30 17:56Z - Added native MilkDrop primitive aliases
+
+- Custom waves now honor common native aliases such as `nSamples`, `bSpectrum`, `bUseDots`, `bDrawThick`, and `bAdditive`.
+- Shapes and sprites now honor native aliases such as `bEnabled`, `bTextured`, `bAdditive`, `bDrawThick`, `numSides`, and `texName`.
+- Parser and renderer tests cover preserving the normalized native names and rendering through those aliases.
+- Validation: focused MilkDrop/native tests, frontend lint, frontend production build, and native browser smoke passed.
+
 ## 2026-04-30 17:45Z - Added native MilkDrop shader-side FFT helpers
 
 - Translated native warp/comp shaders now receive `fftBins[32]` and `sampleRate` uniforms.

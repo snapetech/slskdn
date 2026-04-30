@@ -88,6 +88,30 @@ describe('parseMilkdropPreset', () => {
     expect(parsed.presets[1].metadata.format).toBe('milk2');
   });
 
+  it('preserves native MilkDrop primitive field names as normalized aliases', () => {
+    const parsed = parseMilkdropPreset(`
+      shape00_bTextured=1
+      shape00_numSides=6
+      shape00_texName=panel.png
+      wavecode_0_bSpectrum=1
+      wavecode_0_bUseDots=1
+      wavecode_0_bDrawThick=1
+      wavecode_0_nSamples=256
+    `);
+
+    expect(parsed.primary.shapes[0].baseValues).toMatchObject({
+      btextured: 1,
+      numsides: 6,
+      texname: 'panel.png',
+    });
+    expect(parsed.primary.waves[0].baseValues).toMatchObject({
+      bdrawthick: 1,
+      bspectrum: 1,
+      busedots: 1,
+      nsamples: 256,
+    });
+  });
+
   it('parses standalone .shape fragments and serializes merged preset text', () => {
     const fragment = parseMilkdropFragment(`
       [shape]
