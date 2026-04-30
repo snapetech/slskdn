@@ -14,7 +14,15 @@ const butterchurnEngine = {
 
 const nativeEngine = {
   dispose: vi.fn(),
+  exportPresetFragment: vi.fn((type) => ({
+    fileName: `active.${type}`,
+    source: `[${type}]\nenabled=1\n`,
+  })),
   inspectPresetText: vi.fn(() => ({ title: 'Imported native preset' })),
+  loadPresetFragmentText: vi.fn((_source, fileName) => ({
+    source: `name=Imported native preset\n; merged ${fileName}`,
+    title: `Imported native preset + ${fileName}`,
+  })),
   loadPresetText: vi.fn(() => 'Imported native preset'),
   nextPreset: vi.fn(() => 'Native next'),
   presetName: 'Native preset',
@@ -54,7 +62,9 @@ describe('Visualizer', () => {
     window.cancelAnimationFrame = vi.fn();
     butterchurnEngine.dispose.mockClear();
     nativeEngine.dispose.mockClear();
+    nativeEngine.exportPresetFragment.mockClear();
     nativeEngine.inspectPresetText.mockClear();
+    nativeEngine.loadPresetFragmentText.mockClear();
     nativeEngine.loadPresetText.mockClear();
     nativeEngine.resize.mockClear();
     nativeEngine.render.mockReset();
@@ -180,6 +190,115 @@ describe('Visualizer', () => {
       { textureAssets: {} },
     );
     expect(screen.getByText(/Imported 2; skipped 1: shader.milk/)).toBeInTheDocument();
+  });
+
+  it('imports native .shape and .wave fragments into the active preset', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'base.milk',
+        id: 'base',
+        source: 'name=Base\nwave_r=1',
+        title: 'Base',
+      }),
+    );
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetText).toHaveBeenCalledWith(
+        'name=Base\nwave_r=1',
+        'base.milk',
+        { textureAssets: undefined },
+      );
+    });
+
+    const input = document.querySelector('input[type="file"]');
+    const shapeFile = new File(['sides=6\nrad=0.2'], 'hex.shape', {
+      type: 'text/plain',
+    });
+    const waveFile = new File(['samples=32\nper_point_1=x=i;'], 'scope.wave', {
+      type: 'text/plain',
+    });
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: createFileList([shapeFile, waveFile]),
+    });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(nativeEngine.loadPresetFragmentText).toHaveBeenCalledWith(
+        'sides=6\nrad=0.2',
+        'hex.shape',
+        { textureAssets: {} },
+      );
+    });
+    expect(nativeEngine.loadPresetFragmentText).toHaveBeenCalledWith(
+      'samples=32\nper_point_1=x=i;',
+      'scope.wave',
+      { textureAssets: {} },
+    );
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+      'scope.wave',
+    );
+    const library = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary'),
+    );
+    expect(library[0]).toEqual(expect.objectContaining({
+      id: 'base',
+      title: 'Imported native preset + scope.wave',
+    }));
+  });
+
+  it('exports native shape and wave fragments from the active preset', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    const createObjectUrl = vi.fn(() => 'blob:native-fragment');
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectUrl,
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectUrl,
+    });
+    const click = vi.fn();
+    const createElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((name) => {
+      const element = createElement(name);
+      if (name === 'a') {
+        element.click = click;
+      }
+      return element;
+    });
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-export-native-shape'));
+    fireEvent.click(screen.getByTestId('visualizer-export-native-wave'));
+
+    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('shape');
+    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('wave');
+    expect(createObjectUrl).toHaveBeenCalledTimes(2);
+    expect(click).toHaveBeenCalledTimes(2);
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:native-fragment');
   });
 
   it('stores selected image assets with imported native presets', async () => {

@@ -66,6 +66,11 @@ const ensureIndexedEntry = (entries, index) => {
   return entries[index];
 };
 
+const cloneIndexedEntry = (entry = {}) => ({
+  baseValues: { ...(entry.baseValues || {}) },
+  equations: { ...(entry.equations || {}) },
+});
+
 const assignEquation = (preset, key, value) => {
   const normalized = normalizeKey(key);
   if (normalized.startsWith('per_frame') || normalized.startsWith('frame')) {
@@ -195,6 +200,129 @@ export const parseMilkdropPreset = (text, options = {}) => {
     presets,
     primary: presets[0],
   };
+};
+
+const parseStandaloneFragmentEntry = (text) => {
+  const entry = {
+    baseValues: {
+      enabled: 1,
+    },
+    equations: {},
+  };
+
+  text.replace(/\r\n?/g, '\n').split('\n').forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('//')) {
+      return;
+    }
+    if (sectionPattern.test(line)) {
+      return;
+    }
+
+    const keyedMatch = keyedLinePattern.exec(line);
+    if (!keyedMatch) return;
+
+    const key = normalizeKey(keyedMatch[1]);
+    const rawValue = keyedMatch[2].trim();
+    if (!assignIndexedEquation(entry, key, rawValue)) {
+      entry.baseValues[key] = normalizeValue(rawValue);
+    }
+  });
+
+  return entry;
+};
+
+const getFragmentType = (fileName = '', requestedType = '') => {
+  if (requestedType === 'shape' || requestedType === 'wave') return requestedType;
+  const normalizedFileName = fileName.toLowerCase();
+  if (normalizedFileName.endsWith('.shape')) return 'shape';
+  if (normalizedFileName.endsWith('.wave')) return 'wave';
+  return 'shape';
+};
+
+export const parseMilkdropFragment = (text, options = {}) => {
+  const source = String(text || '');
+  const type = getFragmentType(options.fileName, options.type);
+  const parsed = parseMilkdropPreset(source);
+  const parsedEntries = type === 'wave'
+    ? parsed.primary.waves
+    : parsed.primary.shapes;
+  const hasPrefixedEntries = parsedEntries.some((entry) =>
+    Object.keys(entry?.baseValues || {}).length > 0
+    || Object.keys(entry?.equations || {}).length > 0);
+  const entries = hasPrefixedEntries
+    ? parsedEntries.filter(Boolean).map(cloneIndexedEntry)
+    : [parseStandaloneFragmentEntry(source)];
+
+  return {
+    entries,
+    source,
+    type,
+  };
+};
+
+const formatScalarValue = (value) => String(value);
+
+const appendEquationLines = (lines, key, equationText) => {
+  String(equationText || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line, index) => {
+      lines.push(`${key}_${index + 1}=${line}`);
+    });
+};
+
+const appendBaseValueLines = (lines, values = {}, prefix = '') => {
+  Object.keys(values).sort().forEach((key) => {
+    lines.push(`${prefix}${key}=${formatScalarValue(values[key])}`);
+  });
+};
+
+const appendIndexedEntryLines = (lines, prefix, entry = {}) => {
+  appendBaseValueLines(lines, entry.baseValues, prefix);
+  appendEquationLines(lines, `${prefix}init`, entry.equations?.init);
+  appendEquationLines(lines, `${prefix}per_frame`, entry.equations?.frame);
+  appendEquationLines(lines, `${prefix}per_point`, entry.equations?.point);
+};
+
+const formatIndex = (index) => String(index).padStart(2, '0');
+
+const serializePreset = (preset, index, includeSection) => {
+  const lines = [];
+  if (includeSection) {
+    lines.push(`[preset${formatIndex(index)}]`);
+  }
+  if (preset.metadata?.title) {
+    lines.push(`name=${preset.metadata.title}`);
+  }
+  appendBaseValueLines(lines, preset.baseValues);
+  appendEquationLines(lines, 'init', preset.equations?.init);
+  appendEquationLines(lines, 'per_frame', preset.equations?.perFrame);
+  appendEquationLines(lines, 'per_pixel', preset.equations?.perPixel);
+  appendEquationLines(lines, 'warp_shader', preset.shaders?.warp);
+  appendEquationLines(lines, 'comp_shader', preset.shaders?.comp);
+  (preset.shapes || []).forEach((shape, shapeIndex) =>
+    appendIndexedEntryLines(lines, `shape${formatIndex(shapeIndex)}_`, shape));
+  (preset.sprites || []).forEach((sprite, spriteIndex) =>
+    appendIndexedEntryLines(lines, `sprite${formatIndex(spriteIndex)}_`, sprite));
+  (preset.waves || []).forEach((wave, waveIndex) =>
+    appendIndexedEntryLines(lines, `wavecode_${waveIndex}_`, wave));
+  return lines.join('\n');
+};
+
+export const serializeMilkdropPresetSet = (parsed) => {
+  const includeSections = parsed.format === 'milk2' || parsed.presets.length > 1;
+  return `${parsed.presets
+    .map((preset, index) => serializePreset(preset, index, includeSections))
+    .join('\n')}\n`;
+};
+
+export const serializeMilkdropFragment = (entry, options = {}) => {
+  const type = getFragmentType('', options.type);
+  const lines = [`[${type}]`];
+  appendIndexedEntryLines(lines, '', entry);
+  return `${lines.join('\n')}\n`;
 };
 
 export const normalizeMilkdropPresetForSnapshot = (preset) => ({

@@ -1,6 +1,9 @@
 import {
   normalizeMilkdropPresetForSnapshot,
+  parseMilkdropFragment,
   parseMilkdropPreset,
+  serializeMilkdropFragment,
+  serializeMilkdropPresetSet,
 } from './presetParser';
 
 const classicPreset = `
@@ -83,5 +86,73 @@ describe('parseMilkdropPreset', () => {
     expect(parsed.presets[1].metadata.title).toBe('right preset');
     expect(parsed.presets[1].equations.perFrame).toBe('q33=treb_att;');
     expect(parsed.presets[1].metadata.format).toBe('milk2');
+  });
+
+  it('parses standalone .shape fragments and serializes merged preset text', () => {
+    const fragment = parseMilkdropFragment(`
+      [shape]
+      sides=7
+      rad=0.22
+      r=1
+      per_frame_1=ang=time;
+    `, { fileName: 'star.shape' });
+
+    expect(fragment.type).toBe('shape');
+    expect(fragment.entries).toEqual([{
+      baseValues: {
+        enabled: 1,
+        r: 1,
+        rad: 0.22,
+        sides: 7,
+      },
+      equations: {
+        frame: 'ang=time;',
+      },
+    }]);
+    expect(serializeMilkdropFragment(fragment.entries[0], { type: 'shape' })).toContain(
+      'per_frame_1=ang=time;',
+    );
+  });
+
+  it('parses standalone .wave fragments and prefixed fragment files', () => {
+    const standalone = parseMilkdropFragment(`
+      samples=64
+      spectrum=1
+      per_point_1=x=i;
+      per_point_2=y=sample;
+    `, { fileName: 'spectrum.wave' });
+    const prefixed = parseMilkdropFragment(`
+      shape00_enabled=1
+      shape00_sides=4
+      shape00_per_frame1=rad=0.25+0.05*sin(time);
+    `, { fileName: 'prefixed.shape' });
+
+    expect(standalone.type).toBe('wave');
+    expect(standalone.entries[0].baseValues).toEqual({
+      enabled: 1,
+      samples: 64,
+      spectrum: 1,
+    });
+    expect(standalone.entries[0].equations.point).toBe('x=i;\ny=sample;');
+    expect(prefixed.entries[0].baseValues).toEqual({ enabled: 1, sides: 4 });
+    expect(prefixed.entries[0].equations.frame).toBe('rad=0.25+0.05*sin(time);');
+  });
+
+  it('serializes active preset sets with custom shape and wave fragments', () => {
+    const parsed = parseMilkdropPreset(`
+      name=Serializable
+      wave_r=1
+      shape00_enabled=1
+      shape00_sides=5
+      wavecode_0_enabled=1
+      wavecode_0_samples=16
+      wavecode_0_per_point1=x=i;
+    `);
+    const serialized = serializeMilkdropPresetSet(parsed);
+
+    expect(serialized).toContain('name=Serializable');
+    expect(serialized).toContain('shape00_sides=5');
+    expect(serialized).toContain('wavecode_0_samples=16');
+    expect(serialized).toContain('wavecode_0_per_point_1=x=i;');
   });
 });

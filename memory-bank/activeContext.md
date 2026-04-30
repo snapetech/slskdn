@@ -1,3 +1,15 @@
+## Update 2026-04-30 16:44:07Z
+
+- Current task: Native MilkDrop has first `.shape` and `.wave` fragment import/export.
+- Last activity:
+  - parser now handles standalone `.shape`/`.wave` fragments and prefixed fragment-style files
+  - active native presets can be reserialized after merging imported shape/wave fragments
+  - native engine merges fragments into the active preset, compatibility-checks before renderer replacement, and exposes fragment export
+  - visualizer UI accepts `.shape`/`.wave` imports, persists merged presets into the browser-local library, and adds tooltipped shape/wave export affordances
+  - validated focused parser/native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks
+- Next steps:
+  1. Continue Phase 2 MilkDrop3 deltas, likely beat-driven preset changes or richer fragment library management.
+
 ## Update 2026-04-30 15:58:21Z
 
 - Current task: Native MilkDrop has first renderer-set transitions and `.milk2` composite-alpha control.

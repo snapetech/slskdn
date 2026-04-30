@@ -56,6 +56,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   expose directory-relative file paths.
 - Added first native MilkDrop renderer-set crossfades for preset/import changes
   and `.milk2` secondary composite-alpha controls.
+- Added native MilkDrop `.shape` and `.wave` fragment import/export affordances
+  with active-preset merge and browser-local persistence.
 
 ## [2026042900-slskdn.204] — 2026-04-30
 

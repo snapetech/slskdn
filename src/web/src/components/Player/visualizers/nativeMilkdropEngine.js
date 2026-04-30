@@ -3,7 +3,12 @@ import {
   analyzeMilkdropPresetCompatibility,
   getMilkdropCompatibilityError,
 } from './milkdrop/presetCompatibility';
-import { parseMilkdropPreset } from './milkdrop/presetParser';
+import {
+  parseMilkdropFragment,
+  parseMilkdropPreset,
+  serializeMilkdropFragment,
+  serializeMilkdropPresetSet,
+} from './milkdrop/presetParser';
 
 const nativePresets = [
   {
@@ -161,6 +166,44 @@ const parseCompatiblePresetText = (source, fileName = '') => {
   return parsed;
 };
 
+const cloneEntry = (entry = {}) => ({
+  baseValues: { ...(entry.baseValues || {}) },
+  equations: { ...(entry.equations || {}) },
+});
+
+const clonePreset = (preset) => ({
+  baseValues: { ...(preset.baseValues || {}) },
+  equations: { ...(preset.equations || {}) },
+  index: preset.index,
+  metadata: { ...(preset.metadata || {}) },
+  rawSections: { ...(preset.rawSections || {}) },
+  shaders: { ...(preset.shaders || {}) },
+  shapes: (preset.shapes || []).map(cloneEntry),
+  sprites: (preset.sprites || []).map(cloneEntry),
+  source: preset.source,
+  waves: (preset.waves || []).map(cloneEntry),
+});
+
+const cloneParsedPresetSet = (parsed) => {
+  const presets = parsed.presets.map(clonePreset);
+  return {
+    format: parsed.format,
+    presets,
+    primary: presets[0],
+  };
+};
+
+const mergeFragmentIntoPresetSet = (parsed, fragment) => {
+  const merged = cloneParsedPresetSet(parsed);
+  const target = merged.primary;
+  const targetEntries = fragment.type === 'wave' ? target.waves : target.shapes;
+  fragment.entries.forEach((entry) => {
+    targetEntries.push(cloneEntry(entry));
+  });
+  target.source = serializeMilkdropPresetSet(merged);
+  return merged;
+};
+
 const defaultTransitionSeconds = 1.5;
 
 export const getNativeMilkdropTransitionProgress = (startedAt, seconds, now) => {
@@ -227,10 +270,12 @@ export const createNativeMilkdropEngine = async ({
   canvas,
 }) => {
   let presetIndex = 0;
+  let activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
+  let activePresetTitle = nativePresets[presetIndex].name;
   let activeRendererSet = createRendererSet({
     canvas,
-    parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
-    title: nativePresets[presetIndex].name,
+    parsed: activeParsedPresetSet,
+    title: activePresetTitle,
     transitionSeconds: 0,
   });
   let retiringRendererSets = [];
@@ -276,12 +321,14 @@ export const createNativeMilkdropEngine = async ({
 
   const loadPreset = (index, options = {}) => {
     presetIndex = index % nativePresets.length;
+    activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
+    activePresetTitle = nativePresets[presetIndex].name;
     activateRendererSet(createRendererSet({
       canvas,
-      parsed: parseMilkdropPreset(nativePresets[presetIndex].source),
-      title: nativePresets[presetIndex].name,
+      parsed: activeParsedPresetSet,
+      title: activePresetTitle,
     }), options.blendSeconds ?? defaultTransitionSeconds);
-    return nativePresets[presetIndex].name;
+    return activePresetTitle;
   };
 
   return {
@@ -296,13 +343,48 @@ export const createNativeMilkdropEngine = async ({
     loadPresetText: (source, fileName = '', options = {}) => {
       const importedPresetSet = parseCompatiblePresetText(source, fileName);
       const title = getParsedPresetSetTitle(importedPresetSet, fileName);
+      activeParsedPresetSet = importedPresetSet;
+      activePresetTitle = title;
       activateRendererSet(createRendererSet({
         canvas,
-        parsed: importedPresetSet,
+        parsed: activeParsedPresetSet,
         textureAssets: options.textureAssets,
         title,
       }), options.blendSeconds ?? defaultTransitionSeconds);
       return title;
+    },
+    loadPresetFragmentText: (source, fileName = '', options = {}) => {
+      const fragment = parseMilkdropFragment(source, { fileName });
+      const mergedPresetSet = mergeFragmentIntoPresetSet(activeParsedPresetSet, fragment);
+      const compatibilityErrors = getCompatibilityErrors(mergedPresetSet);
+      if (compatibilityErrors.length > 0) {
+        throw new Error(formatCompatibilityError(mergedPresetSet, compatibilityErrors));
+      }
+      const title = `${activePresetTitle} + ${fileName || fragment.type}`;
+      activeParsedPresetSet = mergedPresetSet;
+      activePresetTitle = title;
+      const mergedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
+      activateRendererSet(createRendererSet({
+        canvas,
+        parsed: activeParsedPresetSet,
+        textureAssets: options.textureAssets,
+        title,
+      }), options.blendSeconds ?? defaultTransitionSeconds);
+      return {
+        source: mergedSource,
+        title,
+      };
+    },
+    exportPresetFragment: (type = 'shape', index = 0) => {
+      const entries = type === 'wave'
+        ? activeParsedPresetSet.primary.waves
+        : activeParsedPresetSet.primary.shapes;
+      const entry = entries[index];
+      if (!entry) return null;
+      return {
+        fileName: `${activePresetTitle.replace(/[^A-Za-z0-9._-]+/g, '_')}.${type}`,
+        source: serializeMilkdropFragment(entry, { type }),
+      };
     },
     inspectPresetText: (source, fileName = '') => {
       const importedPresetSet = parseCompatiblePresetText(source, fileName);

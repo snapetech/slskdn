@@ -69,6 +69,8 @@ const getNativePresetFileId = (file) =>
 
 const isNativePresetFile = (file) => /\.(milk2?|txt)$/i.test(file.name);
 
+const isNativeFragmentFile = (file) => /\.(shape|wave)$/i.test(file.name);
+
 const getNativeImportFilePath = (file) =>
   file.webkitRelativePath || file.name;
 
@@ -76,7 +78,7 @@ const isNativeTextureAssetCandidateFile = (file) =>
   /^image\//i.test(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
 
 const getNativeTextureAssetSkip = (file) => {
-  if (isNativePresetFile(file)) return null;
+  if (isNativePresetFile(file) || isNativeFragmentFile(file)) return null;
   if (!isNativeTextureAssetCandidateFile(file)) {
     return {
       fileName: file.name,
@@ -101,6 +103,8 @@ const getTextureAssetKeys = (fileName) => {
 
 const textureReferencePattern =
   /(?:shape|sprite)\d+_(?:texture|tex|tex_name|image|img|file|filename)\s*=\s*([^\r\n;]+)/gi;
+const standaloneTextureReferencePattern =
+  /^\s*(?:texture|tex|tex_name|image|img|file|filename)\s*=\s*([^\r\n;]+)/gim;
 
 const collectNativePresetTextureReferences = (source) => {
   const references = new Set();
@@ -108,6 +112,11 @@ const collectNativePresetTextureReferences = (source) => {
   while (match) {
     getTextureAssetKeys(match[1]).forEach((key) => references.add(key));
     match = textureReferencePattern.exec(source || '');
+  }
+  match = standaloneTextureReferencePattern.exec(source || '');
+  while (match) {
+    getTextureAssetKeys(match[1]).forEach((key) => references.add(key));
+    match = standaloneTextureReferencePattern.exec(source || '');
   }
   return references;
 };
@@ -139,7 +148,8 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
 const readNativeTextureAssets = async (files) => {
   const textureAssets = {};
   const skippedTextureAssets = [];
-  for (const file of files.filter((entry) => !isNativePresetFile(entry))) {
+  for (const file of files.filter((entry) =>
+    !isNativePresetFile(entry) && !isNativeFragmentFile(entry))) {
     const skip = getNativeTextureAssetSkip(file);
     if (skip) {
       skippedTextureAssets.push(skip);
@@ -164,6 +174,18 @@ const readNativeTextureAssets = async (files) => {
     });
   }
   return { skippedTextureAssets, textureAssets };
+};
+
+const downloadTextFile = (fileName, source) => {
+  const blob = new Blob([source], { type: 'text/plain' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 const formatSkippedFileNames = (skipped) => {
@@ -394,6 +416,8 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
     setError(null);
     const imported = [];
+    let activePresetEntry = null;
+    let importedFragmentCount = 0;
     const skipped = [];
     const { skippedTextureAssets, textureAssets } = await readNativeTextureAssets(files);
 
@@ -429,6 +453,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         { textureAssets: activePreset.textureAssets },
       );
       activePreset.title = activePresetName;
+      activePresetEntry = activePreset;
       window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(activePreset));
       setActiveNativePresetId(activePreset.id);
       setNativePresetLibrary((library) => {
@@ -443,8 +468,58 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       sizeCanvas();
     }
 
+    for (const file of files.filter(isNativeFragmentFile)) {
+      if (!engineRef.current?.loadPresetFragmentText) {
+        skipped.push({
+          fileName: file.name,
+          message: 'Native fragment import is not available.',
+        });
+        continue;
+      }
+      try {
+        const source = await file.text();
+        const fragmentTextureAssets = selectNativePresetTextureAssets(source, textureAssets);
+        const mergedTextureAssets = {
+          ...(activePresetEntry?.textureAssets || {}),
+          ...fragmentTextureAssets,
+        };
+        const result = engineRef.current.loadPresetFragmentText(source, file.name, {
+          textureAssets: mergedTextureAssets,
+        });
+        const existingPreset = activePresetEntry || readStoredNativePreset();
+        const mergedPreset = {
+          fileName: existingPreset?.fileName || file.name,
+          id: existingPreset?.id || `fragment:${getNativePresetFileId(file)}`,
+          source: result.source,
+          textureAssets: {
+            ...(existingPreset?.textureAssets || {}),
+            ...fragmentTextureAssets,
+          },
+          title: result.title,
+        };
+        activePresetEntry = mergedPreset;
+        importedFragmentCount += 1;
+        window.localStorage.setItem(nativePresetStorageKey, JSON.stringify(mergedPreset));
+        setActiveNativePresetId(mergedPreset.id);
+        setNativePresetLibrary((library) => {
+          const nextLibrary = upsertNativePresetLibraryEntry(library, mergedPreset);
+          writeStoredNativePresetLibrary(nextLibrary);
+          return nextLibrary;
+        });
+        setPresetName(result.title);
+        sizeCanvas();
+      } catch (presetError) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to import native MilkDrop fragment', presetError);
+        skipped.push({
+          fileName: file.name,
+          message: presetError?.message || 'Unsupported fragment syntax may be present.',
+        });
+      }
+    }
+
     const importMessage = getNativePresetImportMessage({
-      importedCount: imported.length,
+      importedCount: imported.length + importedFragmentCount,
       skipped,
       skippedTextureAssets,
     });
@@ -452,6 +527,23 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       setError(importMessage);
     }
   }, [sizeCanvas]);
+
+  const exportNativeFragment = useCallback((type) => {
+    if (!engineRef.current?.exportPresetFragment) return;
+    try {
+      const exported = engineRef.current.exportPresetFragment(type);
+      if (!exported) {
+        setError(`No ${type} fragment is available in the active native preset.`);
+        return;
+      }
+      downloadTextFile(exported.fileName, exported.source);
+      setError(null);
+    } catch (exportError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to export native MilkDrop fragment', exportError);
+      setError(exportError?.message || 'Native fragment export failed.');
+    }
+  }, []);
 
   const loadNativeLibraryPreset = useCallback((event) => {
     const preset = nativePresetLibrary.find((entry) => entry.id === event.target.value);
@@ -532,7 +624,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           onClick={(event) => event.stopPropagation()}
         >
           <input
-            accept=".milk,.milk2,text/plain,image/png,image/jpeg,image/webp,image/gif"
+            accept=".milk,.milk2,.shape,.wave,text/plain,image/png,image/jpeg,image/webp,image/gif"
             hidden
             multiple
             onChange={importNativePreset}
@@ -644,6 +736,34 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                     size="mini"
                   >
                     <Icon name="folder open outline" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Export the first custom shape in the active native preset as a .shape fragment."
+                trigger={
+                  <Button
+                    aria-label="Export native MilkDrop shape fragment"
+                    data-testid="visualizer-export-native-shape"
+                    icon
+                    onClick={() => exportNativeFragment('shape')}
+                    size="mini"
+                  >
+                    <Icon name="download" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Export the first custom wave in the active native preset as a .wave fragment."
+                trigger={
+                  <Button
+                    aria-label="Export native MilkDrop wave fragment"
+                    data-testid="visualizer-export-native-wave"
+                    icon
+                    onClick={() => exportNativeFragment('wave')}
+                    size="mini"
+                  >
+                    <Icon name="download" />
                   </Button>
                 }
               />

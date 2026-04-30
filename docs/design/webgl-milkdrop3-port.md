@@ -93,6 +93,7 @@ The current Butterchurn adapter should sit behind this boundary first. The MilkD
 - [x] Scope imported texture/image assets to the presets that reference them.
 - [x] Add first folder import affordance for native preset packs.
 - [x] Add first native renderer-set crossfade scheduler and `.milk2` composite-alpha control.
+- [x] Add first `.shape` and `.wave` fragment import/export path.
 - Render feedback, warp, comp, simple waves, custom waves, shapes, borders, motion vectors, and basic textures in WebGL2.
 - Use a curated compatibility fixture pack with golden parse snapshots and headless canvas smoke tests.
 
@@ -121,6 +122,7 @@ Current parser/VM scope:
 - `npm run test:native-milkdrop-smoke` starts a local Vite server, loads the real native renderer modules in Chromium, renders a curated WebGL preset to a canvas, and fails if readback pixel statistics indicate a blank frame.
 - Native mode exposes a local file import button for `.milk` and `.milk2` text presets. Imported preset text is loaded into the native renderer, the preset name is surfaced in the overlay, and the last imported preset is persisted in browser local storage for the next native-engine session.
 - Native mode exposes a separate folder import affordance for preset packs. Browsers that support directory file inputs provide relative paths for presets and image assets, which feed the scoped texture lookup path without requiring users to flatten pack folders manually.
+- Native mode accepts standalone `.shape` and `.wave` fragments, merges them into the active native preset, reserializes the merged preset for browser-local persistence, and can export the first active custom shape or wave back to a fragment file.
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
@@ -141,7 +143,7 @@ Current parser/VM scope:
 
 - Add q1-q64 support.
 - Add increased wave/shape counts.
-- Add `.shape` and `.wave` import/export.
+- Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - Add richer `.milk2` transition/composite controls beyond first secondary alpha support.
 - Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.
 - Add beat-driven preset selection modes.

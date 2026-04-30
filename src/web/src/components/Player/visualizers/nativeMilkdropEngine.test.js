@@ -324,4 +324,87 @@ describe('createNativeMilkdropEngine', () => {
     );
     expect(renderer.dispose).not.toHaveBeenCalled();
   });
+
+  it('merges .shape and .wave fragments into the active preset and exports them', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    createMilkdropRenderer.mockClear();
+
+    engine.loadPresetText(`
+      name=Fragment base
+      wave_r=1
+    `, 'base.milk', { blendSeconds: 0 });
+    const shapeResult = engine.loadPresetFragmentText(`
+      sides=7
+      rad=0.2
+      per_frame_1=ang=time;
+    `, 'star.shape', { blendSeconds: 0 });
+    const waveResult = engine.loadPresetFragmentText(`
+      samples=32
+      per_point_1=x=i;
+      per_point_2=y=sample;
+    `, 'scope.wave', { blendSeconds: 0 });
+
+    expect(shapeResult.title).toBe('Fragment base + star.shape');
+    expect(shapeResult.source).toContain('shape00_sides=7');
+    expect(shapeResult.source).toContain('shape00_per_frame_1=ang=time;');
+    expect(waveResult.title).toBe('Fragment base + star.shape + scope.wave');
+    expect(waveResult.source).toContain('wavecode_0_samples=32');
+    expect(waveResult.source).toContain('wavecode_0_per_point_2=y=sample;');
+    expect(createMilkdropRenderer).toHaveBeenLastCalledWith(expect.objectContaining({
+      preset: expect.objectContaining({
+        shapes: expect.arrayContaining([
+          expect.objectContaining({
+            baseValues: expect.objectContaining({ sides: 7 }),
+          }),
+        ]),
+        waves: expect.arrayContaining([
+          expect.objectContaining({
+            baseValues: expect.objectContaining({ samples: 32 }),
+          }),
+        ]),
+      }),
+    }));
+    expect(engine.exportPresetFragment('shape')).toEqual(expect.objectContaining({
+      fileName: 'Fragment_base_star.shape_scope.wave.shape',
+      source: expect.stringContaining('sides=7'),
+    }));
+    expect(engine.exportPresetFragment('wave')).toEqual(expect.objectContaining({
+      fileName: 'Fragment_base_star.shape_scope.wave.wave',
+      source: expect.stringContaining('samples=32'),
+    }));
+  });
+
+  it('rejects unsupported fragment equations before replacing the active renderer', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    createMilkdropRenderer.mockClear();
+
+    expect(() => engine.loadPresetFragmentText(`
+      per_frame_1=rad=unknown_shape_call(time);
+    `, 'bad.shape')).toThrow('unsupported functions: unknown_shape_call');
+    expect(createMilkdropRenderer).not.toHaveBeenCalled();
+  });
 });

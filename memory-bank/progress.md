@@ -7688,3 +7688,11 @@ Code quality improvements were completed as part of Option A:
 - Extended `.milk2` double-preset compositing so secondary presets can control their overlay opacity with `blend_alpha` / `blendalpha` / `composite_alpha` instead of always using the fixed half-alpha fallback.
 - Updated the curated `.milk2` fixture and WebGL MilkDrop3 port plan to reflect the new transition/composite phase.
 - Validation: focused native engine/parser/fixture/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
+
+## 2026-04-30 16:44:07Z
+
+- Added first native MilkDrop `.shape` and `.wave` fragment support.
+- Parser support now handles standalone fragment files and prefixed fragment-style files, serializes active preset sets, and serializes individual shape/wave fragments for export.
+- Native engine support now merges imported fragments into the active preset, compatibility-checks the merged preset before swapping renderers, persists the merged source, and exports the first active shape or wave as a fragment file.
+- Player UI native mode now accepts `.shape`/`.wave` imports, persists merged fragment presets into the local native preset library, and adds tooltipped export buttons for shape and wave fragments.
+- Validation: focused parser/native-engine/player tests, frontend lint, frontend production build, native browser smoke, and whitespace checks passed.
