@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z207. Browser Storage Access Can Throw In Privacy-Locked Contexts
+
+**The Bug**: Player, visualizer, ListenBrainz, and token helpers used `window.localStorage`, `window.sessionStorage`, or bare storage globals directly, which can throw in locked-down privacy browsers, private contexts, or embedded webviews and crash UI initialization.
+
+**Files Affected**:
+- `src/web/src/lib/storage.js`
+- `src/web/src/lib/listenBrainz.js`
+- `src/web/src/lib/token.js`
+- `src/web/src/components/Player/Equalizer.jsx`
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/Visualizer.jsx`
+
+**Wrong**:
+```js
+const mode = window.localStorage.getItem(key);
+window.localStorage.setItem(key, value);
+```
+
+**Correct**:
+```js
+const mode = getLocalStorageItem(key, fallback);
+setLocalStorageItem(key, value);
+```
+
+**Why This Keeps Happening**: UI preference persistence feels harmless, but browser storage APIs are not guaranteed to be available or writable. New browser-local preferences should use `src/web/src/lib/storage.js` so blocked persistence degrades to defaults instead of taking down the page.
+
 ### 0z206. Semantic UI Dark Mode Needs Central Surface Overrides
 
 **The Bug**: Chat, rooms, System panels, modals, tables, dropdowns, and other nested Semantic UI components showed light inner boxes in dark mode because the app themed the page shell but left many Semantic UI default surfaces and inline `#f8f9fa` styles intact.
