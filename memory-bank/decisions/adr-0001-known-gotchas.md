@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z220. Mesh Evidence Provenance Must Not Be User-Disableable
+
+**The Bug**: The browser-local mesh evidence policy sanitizer accepted `provenanceRequired: false` from stored JSON, making provenance look optional even though the product decision requires provenance for every mesh-derived claim.
+
+**Files Affected**:
+- `src/web/src/lib/meshEvidencePolicy.js`
+
+**Wrong**:
+```js
+return {
+  provenanceRequired: policy.provenanceRequired !== false,
+};
+```
+
+**Correct**:
+```js
+return {
+  provenanceRequired: true,
+};
+```
+
+**Why This Keeps Happening**: Policy objects often get treated like regular user preferences, but mesh evidence safety invariants are not preferences. Sanitizers must force non-negotiable safety fields back to their safe value even when local storage or a future API returns a weaker setting.
+
 ### 0z219. Acquisition Profile Logic Must Use Catalog IDs
 
 **The Bug**: A candidate-ranking helper checked obsolete profile ids like `quick-hit` and `archive-broad`, so the actual persisted profiles (`fast-good-enough`, `album-complete`, etc.) would silently fall through to the default lossless ranking path.
