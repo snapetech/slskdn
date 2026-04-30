@@ -50,6 +50,14 @@
 - Added follow-up tasks for persistence, signed federation/realm observation routing, and Web UI controls.
 - Validation: focused `ArtistReleaseRadar` tests passed (`12/12`), `bash ./bin/lint` passed, and full `dotnet test` passed (`46` app tests, `3657` unit tests, `276` integration tests).
 
+## 2026-04-30 20:21:05Z - Added bounded automation dry-run reports
+
+- Continued feature-expansion burn-down from the tail with the E16 Automation story.
+- Added cooldown, max-runtime, and approval-gate metadata to every visible Automation Center recipe.
+- Dry-run checkpoints now persist a report with network/file impact, approval gate, generated time, and `executed: false`.
+- Kept recipes as shell-only controls: no network, file, import, scan, or download work is executed.
+- Validation: focused Automation Center tests passed.
+
 ## 2026-04-30 20:17:39Z - Added Wishlist request portal summary
 
 - Continued feature-expansion burn-down from the tail with the E17 Wishlist and Requests story.

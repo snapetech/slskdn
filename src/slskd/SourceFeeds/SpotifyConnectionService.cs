@@ -344,4 +344,3 @@ public sealed class SpotifyConnectionService : ISpotifyConnectionService
         public string DisplayName { get; init; } = string.Empty;
     }
 }
-

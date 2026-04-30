@@ -27,4 +27,3 @@ public sealed class SpotifyConnectionStatus
 
     public DateTimeOffset? ExpiresAt { get; init; }
 }
-

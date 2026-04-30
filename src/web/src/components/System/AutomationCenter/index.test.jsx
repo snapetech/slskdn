@@ -3,7 +3,11 @@
 // </copyright>
 
 import AutomationCenter from './index';
-import { automationRecipeStorageKey } from '../../../lib/automationRecipes';
+import {
+  automationRecipeStorageKey,
+  buildAutomationDryRunReport,
+  automationRecipes,
+} from '../../../lib/automationRecipes';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
@@ -25,6 +29,8 @@ describe('AutomationCenter', () => {
     expect(screen.getByText('Local Diagnostics')).toBeInTheDocument();
     expect(screen.getByText('Wishlist Retry')).toBeInTheDocument();
     expect(screen.getByText('Visible Disabled')).toBeInTheDocument();
+    expect(screen.getByText('Cooldown 2 hours')).toBeInTheDocument();
+    expect(screen.getByText('Download approval')).toBeInTheDocument();
   });
 
   it('persists recipe enablement from the visible toggle', () => {
@@ -44,5 +50,31 @@ describe('AutomationCenter', () => {
 
     const stored = JSON.parse(localStorage.getItem(automationRecipeStorageKey));
     expect(stored['local-diagnostics'].lastDryRunAt).toBeTruthy();
+    expect(stored['local-diagnostics'].lastDryRunReport).toEqual(
+      expect.objectContaining({
+        executed: false,
+        networkImpact: 'Local',
+        recipeId: 'local-diagnostics',
+      }),
+    );
+  });
+
+  it('builds bounded dry-run reports without execution', () => {
+    expect(
+      buildAutomationDryRunReport(
+        automationRecipes.find((recipe) => recipe.id === 'wishlist-retry'),
+        '2026-04-30T20:20:00.000Z',
+      ),
+    ).toEqual({
+      approvalGate: 'Download approval',
+      cooldown: '2 hours',
+      executed: false,
+      fileImpact: 'Downloads after approval',
+      generatedAt: '2026-04-30T20:20:00.000Z',
+      maxRunTime: '20 minutes',
+      networkImpact: 'Public peers possible',
+      recipeId: 'wishlist-retry',
+      title: 'Wishlist Retry',
+    });
   });
 });

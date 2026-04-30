@@ -41,6 +41,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   base URL, API key, wanted pull, completed import, and path-map sanity.
 - Added a Wishlist request portal summary with enabled, automatic, review, and
   quota-style counts derived from current requests and Discovery Inbox state.
+- Added bounded Automation Center dry-run reports with cooldown, max-runtime,
+  impact, and approval-gate visibility while still executing no recipe work.
 - Added a signed local MusicBrainz overlay-edit API that applies corrections at
   release-graph read time with original/effective graph provenance.
 - Added browser-local Mesh Evidence Policy controls in the Mesh tab with

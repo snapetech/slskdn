@@ -131,6 +131,11 @@
  - Priority: P3
  - Notes: Added derived Wishlist request summary counts for total requests, enabled requests, automatic requests, Discovery Inbox review load, and quota-style remaining capacity. This is read-only/operator-facing and does not change request submission, approval, scheduling, or download behavior.
 
+- [x] **feature**: Add bounded Automation Center dry-run reports.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Added cooldown, max-runtime, and approval-gate metadata to visible automation recipes. Dry-run checkpoints now persist a preview report with network/file impact and explicit `executed: false`, preserving the current shell-only behavior.
+
 - [ ] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
  - Status: planned
  - Priority: P2

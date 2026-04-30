@@ -107,19 +107,18 @@ public sealed class SpotifyConnectionController : ControllerBase
     }
 
     private static string BuildCallbackHtml(string message)
-        => $"""
+        => $$"""
             <!doctype html>
             <html>
               <head><title>Spotify Connection</title></head>
               <body>
-                <p>{System.Net.WebUtility.HtmlEncode(message)}</p>
+                <p>{{System.Net.WebUtility.HtmlEncode(message)}}</p>
                 <script>
-                  if (window.opener) {{
-                    window.opener.postMessage({{ type: 'slskdn:spotify-connected' }}, window.location.origin);
-                  }}
+                  if (window.opener) {
+                    window.opener.postMessage({ type: 'slskdn:spotify-connected' }, window.location.origin);
+                  }
                 </script>
               </body>
             </html>
             """;
 }
-

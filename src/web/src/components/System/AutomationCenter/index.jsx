@@ -136,6 +136,14 @@ const AutomationCenter = () => {
                     <Icon name="clock outline" />
                     {recipe.cadence}
                   </Label>
+                  <Label basic>
+                    <Icon name="hourglass half" />
+                    Cooldown {recipe.cooldown}
+                  </Label>
+                  <Label basic>
+                    <Icon name="stopwatch" />
+                    Max {recipe.maxRunTime}
+                  </Label>
                   <Label
                     basic
                     color={impactColor(recipe.networkImpact)}
@@ -147,6 +155,10 @@ const AutomationCenter = () => {
                     <Icon name="file outline" />
                     {recipe.fileImpact}
                   </Label>
+                  <Label basic>
+                    <Icon name="lock" />
+                    {recipe.approvalGate}
+                  </Label>
                 </div>
               </Card.Content>
               <Card.Content extra>
@@ -154,6 +166,14 @@ const AutomationCenter = () => {
                   <span className="automation-recipe-dry-run">
                     Dry run: {formatLastDryRun(state.lastDryRunAt)}
                   </span>
+                  {state.lastDryRunReport && (
+                    <Label
+                      basic
+                      color="green"
+                    >
+                      Preview only
+                    </Label>
+                  )}
                   <Popup
                     content={`Record a dry run checkpoint for ${recipe.title}. This shell does not execute network or file actions yet.`}
                     position="top center"

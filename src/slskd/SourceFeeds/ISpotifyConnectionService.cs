@@ -20,4 +20,3 @@ public interface ISpotifyConnectionService
 
     void Disconnect();
 }
-
