@@ -40,6 +40,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
   durations and alpha/additive/screen/multiply secondary blend modes.
 - Added native MilkDrop compatibility-matrix q-register coverage and a
   MilkDrop3-style q-register fixture in browser smoke coverage.
+- Added native MilkDrop dense primitive validation with a 40-shape/20-wave
+  fixture included in compatibility and browser smoke coverage.
+- Added app-wide interaction affordances for hover, focus-visible, disabled,
+  and clickable row states.
+- Added a System Automation Center scaffold with visible opt-in recipe states
+  and local dry-run checkpoints.
+- Added missing button labels/titles in chat, rooms, users, and player browser
+  entry points.
 - Switched CI self-hosted/GitHub-hosted branching to GitHub's runner
   environment context instead of local runner-name checks.
 - Refined dark-mode surface styling for Semantic UI shells plus chat, rooms,

@@ -124,6 +124,26 @@ describe('native MilkDrop fixture pack', () => {
           },
         ],
       },
+      'milkdrop3-dense-primitives': {
+        format: 'milk',
+        presets: [{
+          baseValueKeys: [
+            'decay',
+            'wave_b',
+            'wave_g',
+            'wave_r',
+          ],
+          format: 'milk',
+          hasCompShader: false,
+          hasPerFrame: false,
+          hasPerPixel: false,
+          hasWarpShader: false,
+          shapeCount: 40,
+          spriteCount: 0,
+          title: 'Fixture Dense Primitive Pack',
+          waveCount: 20,
+        }],
+      },
       'shader-subset': {
         format: 'milk',
         presets: [{
@@ -176,6 +196,7 @@ describe('native MilkDrop fixture pack', () => {
       { error: '', id: 'shader-subset' },
       { error: '', id: 'milk2-double' },
       { error: '', id: 'milkdrop3-q-registers' },
+      { error: '', id: 'milkdrop3-dense-primitives' },
       {
         error: 'Native MilkDrop preset has shader translation pending: comp_shader.',
         id: 'unsupported-control-flow-shader',

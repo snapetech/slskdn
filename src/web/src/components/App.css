@@ -41,6 +41,9 @@
     --slskdn-surface-shadow: 0 18px 46px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.045);
     --slskdn-surface-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.035);
     --slskdn-focus-ring: 0 0 0 3px rgba(199, 167, 255, 0.28);
+    --slskdn-affordance-hover-background: rgba(199, 167, 255, 0.14);
+    --slskdn-affordance-active-background: rgba(199, 167, 255, 0.24);
+    --slskdn-affordance-outline: #d8c4ff;
 
     --background-color: var(--slskd-primary-background) !important;
 
@@ -158,6 +161,132 @@ body,
 
 body {
     background-color: var(--background-color);
+}
+
+:where(
+    a[href],
+    button,
+    .ui.button,
+    .ui.dropdown,
+    .ui.checkbox label,
+    .ui.menu .item,
+    .ui.accordion .title,
+    .ui.selectable.table tbody tr,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+) {
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        color 120ms ease,
+        opacity 120ms ease,
+        transform 120ms ease;
+}
+
+:where(
+    a[href],
+    button,
+    .ui.button,
+    .ui.dropdown,
+    .ui.checkbox label,
+    .ui.menu .item,
+    .ui.accordion .title,
+    .ui.selectable.table tbody tr,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+):not(:disabled):not(.disabled) {
+    cursor: pointer;
+}
+
+:where(button, .ui.button):disabled,
+:where(button, .ui.button).disabled,
+:where(.ui.dropdown).disabled,
+:where(.ui.menu .item).disabled {
+    cursor: not-allowed !important;
+    filter: saturate(0.72);
+    opacity: 0.54 !important;
+}
+
+:where(a[href], button, .ui.button, .ui.dropdown, .ui.checkbox label, .ui.menu .item, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 3px solid var(--slskdn-affordance-outline, #6f5796) !important;
+    outline-offset: 3px;
+}
+
+.app-content a[href] {
+    color: var(--smui-site-link-color, #4183c4);
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+}
+
+.app-content a[href]:hover,
+.app-content a[href]:focus-visible {
+    text-decoration: underline;
+}
+
+.app-content .ui.selectable.table tbody tr:hover,
+.app-content .ui.table tbody tr[onclick]:hover {
+    background: var(--slskdn-affordance-hover-background, rgba(0, 0, 0, 0.04)) !important;
+}
+
+.app-content .ui.selectable.table tbody tr:active,
+.app-content .ui.table tbody tr[onclick]:active {
+    background: var(--slskdn-affordance-active-background, rgba(0, 0, 0, 0.08)) !important;
+}
+
+.app-content .ui.accordion .title:hover,
+.app-content .ui.accordion .title:focus-visible {
+    background: var(--slskdn-affordance-hover-background, rgba(0, 0, 0, 0.04));
+}
+
+.app-content .ui.checkbox label:hover,
+.app-content .ui.checkbox input:focus-visible ~ label {
+    color: var(--slskd-color, rgba(0, 0, 0, 0.87)) !important;
+}
+
+:root.dark .app-content a[href]:hover,
+:root.dark .app-content a[href]:focus-visible {
+    color: var(--slskdn-accent-primary-hover) !important;
+    text-shadow: 0 0 12px rgba(199, 167, 255, 0.28);
+}
+
+:root.dark .app-content .ui.selectable.table tbody tr:hover,
+:root.dark .app-content .ui.table tbody tr[onclick]:hover {
+    box-shadow: inset 3px 0 0 var(--slskdn-accent-primary);
+}
+
+:root.dark .ui.dropdown:hover,
+:root.dark .ui.selection.dropdown:hover {
+    border-color: var(--slskdn-accent-primary-border) !important;
+    box-shadow: 0 0 0 1px rgba(199, 167, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+:root.dark .ui.checkbox label:hover,
+:root.dark .ui.checkbox input:focus-visible ~ label {
+    color: var(--slskdn-accent-primary-hover) !important;
+}
+
+:root.dark .ui.checkbox input:focus-visible ~ label::before {
+    border-color: var(--slskdn-accent-primary-border) !important;
+    box-shadow: var(--slskdn-focus-ring) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :where(
+        a[href],
+        button,
+        .ui.button,
+        .ui.dropdown,
+        .ui.checkbox label,
+        .ui.menu .item,
+        .ui.accordion .title,
+        .ui.selectable.table tbody tr,
+        [role="button"],
+        [tabindex]:not([tabindex="-1"])
+    ) {
+        transition: none;
+    }
 }
 
 :root.dark .ui.segment:not(.inverted),

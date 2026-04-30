@@ -266,6 +266,7 @@ const Chat = ({ state }) => {
         </div>
         <Input
           action={{
+            'aria-label': 'Start chat with user',
             icon: 'chat',
             onClick: () => {
               if (usernameInput?.trim()) {
@@ -273,6 +274,7 @@ const Chat = ({ state }) => {
                 setUsernameInput('');
               }
             },
+            title: 'Start chat with user',
           }}
           className="chat-input"
           onChange={(event) => setUsernameInput(event.target.value)}
@@ -290,8 +292,10 @@ const Chat = ({ state }) => {
           content="Reload saved conversations from the server after a browser refresh or restart."
           trigger={
             <Button
+              aria-label="Reload saved conversations"
               icon="refresh"
               onClick={hydrateConversations}
+              title="Reload saved conversations"
             />
           }
         />
@@ -342,8 +346,10 @@ const Chat = ({ state }) => {
           {
             menuItem: (
               <Menu.Item
+                aria-label="Open a new chat tab"
                 key="add-tab"
                 onClick={handleAddTab}
+                title="Open a new chat tab"
               >
                 <Icon name="plus" />
               </Menu.Item>

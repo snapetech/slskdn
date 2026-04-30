@@ -186,6 +186,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
         content="Browse your collections and play an item from a playlist or share list."
         trigger={
           <Button
+            aria-label="Open collections browser"
             className="player-library-button"
             compact
             data-testid="player-open-collections-browser"
@@ -193,6 +194,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
             labelPosition={compact ? undefined : 'left'}
             onClick={() => setCollectionsOpen(true)}
             size="small"
+            title="Open collections browser"
           >
             <Icon name="list" />
             {compact ? null : 'Collections'}
@@ -203,6 +205,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
         content="Browse shared and downloaded local audio that slskdN can stream in this browser."
         trigger={
           <Button
+            aria-label="Open local audio file browser"
             className="player-library-button"
             compact
             data-testid="player-open-file-browser"
@@ -210,6 +213,7 @@ const PlayerLauncher = ({ compact = false, onPlayItem }) => {
             labelPosition={compact ? undefined : 'left'}
             onClick={() => setFilesOpen(true)}
             size="small"
+            title="Open local audio file browser"
           >
             <Icon name="folder open" />
             {compact ? null : 'Files'}

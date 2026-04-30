@@ -180,8 +180,10 @@ const Browse = () => {
           {
             menuItem: (
               <Menu.Item
+                aria-label="Open a new browse tab"
                 key="add-tab"
                 onClick={handleAddTab}
+                title="Open a new browse tab"
               >
                 <Icon name="plus" />
               </Menu.Item>

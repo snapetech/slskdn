@@ -9,6 +9,17 @@
   1. Wire the selected acquisition profile into backend search/candidate ranking metadata.
   2. Add an Automation Center shell that lists enabled and disabled recipes visibly.
 
+## Update 2026-04-30 19:15:00Z
+
+- Current task: Automation Center shell is implemented locally.
+- Last activity:
+  - added System -> Automations with visible recipe enablement, impact labels, cadence, and dry-run checkpoints
+  - low-risk local recipes default enabled; higher-impact recipes are visible but disabled until enabled
+  - validated focused Automation Center/Search tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Wire acquisition profile intent into search request payloads and backend DTOs.
+  2. Begin candidate-ranking/dry-run search plan support.
+
 ## Update 2026-04-30 19:08:57Z
 
 - Current task: None. Dark theme color/contrast audit is complete.
@@ -21,6 +32,19 @@
 - Next steps:
   1. Commit the implementation and memory-bank updates with the current dirty workspace when requested.
   2. Keep any further visual polish centralized in `App.css` unless a page has a genuine local surface leak.
+
+## Update 2026-04-30 19:16:00Z
+
+- Current task: Native MilkDrop Phase 2 dense wave/shape validation is implemented locally.
+- Last activity:
+  - added a dense 40-shape/20-wave curated MilkDrop fixture
+  - made compatibility reporting and browser smoke cover the dense primitive fixture
+  - included dirty app-wide affordance CSS for hover/focus/disabled/clickable row states
+  - included dirty System Automation Center scaffold and missing button labels/titles in chat, rooms, users, and player browser entry points
+  - validated focused automation/fixture/matrix tests, broader native/player tests, compatibility CLI, native browser smoke, frontend lint, and frontend production build
+- Next steps:
+  1. Run final whitespace/status checks.
+  2. Commit and push this dense primitive validation pass.
 
 ## Update 2026-04-30 19:10:00Z
 

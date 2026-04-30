@@ -13,7 +13,13 @@ const smokeHtml = `
 
         const canvas = document.getElementById('canvas');
         const gl = canvas.getContext('webgl2');
-        const fixtureIds = ['classic-primitives', 'shader-subset', 'milk2-double', 'milkdrop3-q-registers'];
+        const fixtureIds = [
+          'classic-primitives',
+          'shader-subset',
+          'milk2-double',
+          'milkdrop3-q-registers',
+          'milkdrop3-dense-primitives',
+        ];
         const readCanvasStats = () => {
           const pixels = new Uint8Array(canvas.width * canvas.height * 4);
           gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);

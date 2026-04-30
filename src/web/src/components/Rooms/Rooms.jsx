@@ -302,8 +302,10 @@ const Rooms = () => {
               content="Reload rooms joined by the daemon and reopen their tabs."
               trigger={
                 <Button
+                  aria-label="Reload joined rooms"
                   icon="refresh"
                   onClick={hydrateJoinedRooms}
+                  title="Reload joined rooms"
                 />
               }
             />
@@ -347,8 +349,10 @@ const Rooms = () => {
           {
             menuItem: (
               <Menu.Item
+                aria-label="Open a new room tab"
                 key="add-tab"
                 onClick={handleAddTab}
+                title="Open a new room tab"
               >
                 <Icon name="plus" />
               </Menu.Item>

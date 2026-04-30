@@ -16,6 +16,11 @@
  - Priority: P2
  - Notes: Added a reusable Web UI acquisition profile catalog and persisted Search-page selector for Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict. This is the first visible control surface for the competitive roadmap; backend ranking/download behavior is intentionally unchanged in this slice.
 
+- [x] **feature**: Add visible Automation Center shell.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a System -> Automations tab that lists every planned automation recipe, persists visible enablement toggles, shows network/file impact and cadence, keeps low-risk local recipes enabled by default, and records dry-run checkpoints without executing network or file actions.
+
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
  - Priority: P1
@@ -76,6 +81,7 @@
  - Progress (2026-04-30): Added native MilkDrop compatibility matrix reporting for curated fixtures and local preset files/folders, including first high-count wave/shape metric coverage for real-pack pressure.
  - Progress (2026-04-30): Added richer `.milk2` transition and composite controls with preset-defined transition durations plus alpha/additive/screen/multiply secondary blend modes.
  - Progress (2026-04-30): Added q-register pressure metrics to the native MilkDrop compatibility matrix and a MilkDrop3-style fixture that exercises q1/q2/q16/q32/q48/q63/q64 across globals, primitives, and translated shaders.
+ - Progress (2026-04-30): Added dense primitive-count validation with a curated 40-shape/20-wave fixture in compatibility reporting and native browser smoke coverage.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)

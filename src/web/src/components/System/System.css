@@ -14,6 +14,54 @@
   gap: 14px;
 }
 
+.automation-center {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.automation-summary.ui.statistics {
+  margin: 0 !important;
+}
+
+.automation-recipe-grid.ui.cards {
+  margin-top: 0 !important;
+}
+
+.automation-recipe-card.ui.card {
+  border-radius: 8px;
+}
+
+.automation-recipe-head,
+.automation-recipe-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.automation-recipe-title.ui.header {
+  margin: 0 !important;
+}
+
+.automation-recipe-labels {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.automation-recipe-labels .ui.label {
+  margin: 0 !important;
+}
+
+.automation-recipe-dry-run {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
+  font-size: 0.86rem;
+  min-width: 0;
+}
+
 .integration-status-row {
   align-items: center;
   display: flex;

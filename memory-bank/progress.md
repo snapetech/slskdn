@@ -5,6 +5,13 @@
 - Added a persisted Search-page acquisition profile selector with profile summaries and tooltip context.
 - Validation: focused Search component tests, frontend lint, frontend production build, and whitespace checks passed.
 
+## 2026-04-30 19:15Z - Added Automation Center shell
+
+- Added System -> Automations as the visible home for planned automation recipes.
+- Recipes now show enabled/disabled state, cadence, network impact, file impact, and dry-run checkpoint status.
+- Low-risk local recipes default enabled; network-contacting or file-mutating recipes are visible but disabled until the user enables them.
+- Validation: focused Automation Center/Search tests, frontend lint, frontend production build, and whitespace checks passed.
+
 ## 2026-04-30 18:54Z - Added native MilkDrop `.milk2` composite controls
 
 - Added secondary `.milk2` blend mode aliases for alpha, additive, screen, and multiply final compositing.
@@ -7812,6 +7819,15 @@ Code quality improvements were completed as part of Option A:
 - Local library/stream fallback no longer hashes arbitrary allowed-root files to satisfy `sha256:` misses; it uses bounded path IDs and displays relative/file-only paths.
 - ListenBrainz token clearing now removes storage and submission reports HTTP failure instead of always returning success.
 - Validation: `dotnet build --no-incremental --nologo --configuration Release`, focused backend test slice (`424/424`), `npm run lint`, `npm run build`, full `dotnet test` (`46/46`, `3613/3613`, `276/276`), and `bash ./bin/lint` passed. The web production build still reports the existing large chunk warning, and .NET still reports existing analyzer warnings.
+
+## 2026-04-30 19:16:00Z
+
+- Added a curated dense native MilkDrop fixture with 40 shapes and 20 custom waves to validate higher MilkDrop3-style primitive counts.
+- Compatibility reporting now includes that dense fixture, raising curated max counts to shapes=40 and waves=20.
+- Native browser smoke now renders the dense primitive fixture and checks canvas pixel output so high primitive-count coverage exercises the WebGL renderer, not only parser metrics.
+- Included the dirty app-wide affordance CSS pass for hover, focus-visible, disabled, clickable row, checkbox, dropdown, and reduced-motion states.
+- Included the dirty System Automation Center scaffold with visible recipe enablement state and local dry-run checkpoints, plus missing button labels/titles in chat, rooms, users, and player browser entry points.
+- Validation: focused automation/search/fixture/matrix tests (`13/13`), broader native/player tests (`64/64`), `npm run test:native-milkdrop-compatibility`, `npm run test:native-milkdrop-smoke`, `npm run lint -- --quiet`, and `npm run build` passed.
 
 ## 2026-04-30 19:10:00Z
 

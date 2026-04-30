@@ -101,10 +101,18 @@ const Users = () => {
             !fetching &&
             (user == null
               ? {
+                  'aria-label': 'Search for user',
                   icon: 'search',
                   onClick: () => setSelectedUsername(usernameInput),
+                  title: 'Search for user',
                 }
-              : { color: 'red', icon: 'x', onClick: clear })
+              : {
+                  'aria-label': 'Clear selected user',
+                  color: 'red',
+                  icon: 'x',
+                  onClick: clear,
+                  title: 'Clear selected user',
+                })
           }
           className="users-input"
           disabled={fetching}

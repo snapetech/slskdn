@@ -28,13 +28,20 @@ describe('MilkDrop compatibility matrix', () => {
     const summary = summarizeMilkdropCompatibilityMatrix(matrix);
 
     expect(summary.totalCount).toBe(nativeMilkdropFixturePack.length);
-    expect(summary.supportedCount).toBe(4);
+    expect(summary.supportedCount).toBe(5);
     expect(summary.unsupportedCount).toBe(1);
     expect(summary.maxQRegisterIndex).toBe(64);
+    expect(summary.maxShapeCount).toBe(40);
+    expect(summary.maxWaveCount).toBe(20);
     expect(summary.qRegisters).toEqual(['q1', 'q2', 'q16', 'q32', 'q33', 'q34', 'q48', 'q63', 'q64']);
     expect(summary.unsupportedShaderSections).toEqual(['comp_shader']);
     expect(matrix.find((entry) => entry.id === 'milk2-double').presetCount).toBe(2);
     expect(matrix.find((entry) => entry.id === 'milkdrop3-q-registers').presetCount).toBe(2);
+    expect(matrix.find((entry) => entry.id === 'milkdrop3-dense-primitives').metrics)
+      .toEqual(expect.objectContaining({
+        maxShapeCount: 40,
+        maxWaveCount: 20,
+      }));
   });
 
   it('tracks dense real-pack shape and wave count pressure', () => {

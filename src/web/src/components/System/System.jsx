@@ -1,5 +1,6 @@
 import './System.css';
 import { Switch } from '../Shared';
+import AutomationCenter from './AutomationCenter';
 import Bridge from './Bridge';
 import Data from './Data';
 import Events from './Events';
@@ -196,6 +197,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'jobs',
+    },
+    {
+      menuItem: {
+        content: 'Automations',
+        icon: 'magic',
+        key: 'automations',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <AutomationCenter />
+        </Tab.Pane>
+      ),
+      route: 'automations',
     },
     {
       menuItem: {

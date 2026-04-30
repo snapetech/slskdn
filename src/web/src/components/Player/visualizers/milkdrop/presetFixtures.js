@@ -1,3 +1,34 @@
+const createDensePrimitiveFixtureSource = () => {
+  const lines = [
+    'name=Fixture Dense Primitive Pack',
+    'decay=0.84',
+    'wave_r=0.4',
+    'wave_g=0.8',
+    'wave_b=0.95',
+  ];
+  for (let index = 0; index < 40; index += 1) {
+    const padded = String(index).padStart(2, '0');
+    lines.push(`shape${padded}_enabled=1`);
+    lines.push(`shape${padded}_sides=${3 + (index % 6)}`);
+    lines.push(`shape${padded}_rad=${(0.035 + (index % 5) * 0.006).toFixed(3)}`);
+    lines.push(`shape${padded}_x=${(0.08 + (index % 10) * 0.09).toFixed(3)}`);
+    lines.push(`shape${padded}_y=${(0.12 + Math.floor(index / 10) * 0.2).toFixed(3)}`);
+    lines.push(`shape${padded}_a=0.18`);
+    lines.push(`shape${padded}_per_frame1=ang=time*${(0.05 + index * 0.001).toFixed(3)};`);
+  }
+  for (let index = 0; index < 20; index += 1) {
+    lines.push(`wavecode_${index}_enabled=1`);
+    lines.push(`wavecode_${index}_samples=32`);
+    lines.push(`wavecode_${index}_r=${(0.25 + (index % 4) * 0.14).toFixed(3)}`);
+    lines.push(`wavecode_${index}_g=${(0.45 + (index % 5) * 0.08).toFixed(3)}`);
+    lines.push(`wavecode_${index}_b=${(0.75 - (index % 3) * 0.12).toFixed(3)}`);
+    lines.push(`wavecode_${index}_a=0.34`);
+    lines.push(`wavecode_${index}_per_point1=x=i;`);
+    lines.push(`wavecode_${index}_per_point2=y=${(0.05 + index * 0.045).toFixed(3)}+sample*0.08;`);
+  }
+  return lines.join('\n');
+};
+
 export const nativeMilkdropFixturePack = [
   {
     description: 'Classic feedback, warp grid, vectors, textured shape, and spectrum dots.',
@@ -116,6 +147,12 @@ export const nativeMilkdropFixturePack = [
       sprite00_image=fixture-logo.png
       sprite00_per_frame1=q16=q63*0.5;
     `,
+  },
+  {
+    description: 'MilkDrop3-style dense primitive count probe with many shapes and waves.',
+    id: 'milkdrop3-dense-primitives',
+    supported: true,
+    source: createDensePrimitiveFixtureSource(),
   },
   {
     description: 'Unsupported shader control flow should be rejected cleanly.',
