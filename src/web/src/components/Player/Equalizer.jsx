@@ -1,4 +1,5 @@
 import { bands, setEqGains } from './audioGraph';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import React, { useEffect, useState } from 'react';
 import { Button, Dropdown, Icon, Popup } from 'semantic-ui-react';
 
@@ -20,10 +21,8 @@ const defaultState = {
 };
 
 const readStoredState = () => {
-  if (typeof window === 'undefined') return defaultState;
-
   try {
-    const stored = JSON.parse(window.localStorage.getItem(storageKey));
+    const stored = JSON.parse(getLocalStorageItem(storageKey, 'null'));
     if (!stored || !Array.isArray(stored.gains)) return defaultState;
     return {
       enabled: stored.enabled === true,
@@ -47,7 +46,7 @@ const Equalizer = ({ audioElement }) => {
   }, [audioElement, state.enabled, state.gains]);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(state));
+    setLocalStorageItem(storageKey, JSON.stringify(state));
   }, [state]);
 
   const presetOptions = Object.keys(presets).map((name) => ({

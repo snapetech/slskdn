@@ -1,3 +1,10 @@
+## 2026-04-30 18:37Z - Added native MilkDrop shader temp reassignment
+
+- Translated native shader bodies now accept safe reassignment operators for declared local temp variables before the final `ret = ...`.
+- Assignment to undeclared names, duplicate `ret`, and any statement after `ret` are still rejected to keep translated shader support deterministic and bounded.
+- Added focused shader translator coverage plus changelog, design, and T-938 progress updates.
+- Validation: pending.
+
 ## 2026-04-30 18:36Z - Completed Semantic UI cleanup pass
 
 - Added a shared `TooltipButton` wrapper and applied it to high-use Semantic UI action surfaces so icon/text buttons have consistent tooltip and accessible-label behavior.

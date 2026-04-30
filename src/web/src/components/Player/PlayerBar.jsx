@@ -2,6 +2,7 @@ import './Player.css';
 import * as collectionsAPI from '../../lib/collections';
 import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
+import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
 import * as streaming from '../../lib/streaming';
 import Equalizer from './Equalizer';
 import LyricsPane from './LyricsPane';
@@ -34,19 +35,16 @@ const visualTileStorageKey = 'slskdn.player.visualTileMode';
 const analyzerModeStorageKey = 'slskdn.player.analyzerMode';
 
 const readStoredBoolean = (key) => {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(key) === 'true';
+  return getLocalStorageItem(key) === 'true';
 };
 
 const readStoredTileMode = () => {
-  if (typeof window === 'undefined') return 'art';
-  const mode = window.localStorage.getItem(visualTileStorageKey);
+  const mode = getLocalStorageItem(visualTileStorageKey);
   return mode === 'milkdrop' ? 'milkdrop' : 'art';
 };
 
 const readStoredAnalyzerMode = () => {
-  if (typeof window === 'undefined') return 'spectrum';
-  const mode = window.localStorage.getItem(analyzerModeStorageKey);
+  const mode = getLocalStorageItem(analyzerModeStorageKey);
   return mode === 'scope' ? 'scope' : 'spectrum';
 };
 
@@ -632,11 +630,11 @@ const PlayerBar = () => {
   useEffect(() => {
     if (!playerAudioElement) return;
     playerAudioElement.muted = localMuted;
-    window.localStorage.setItem(localMuteStorageKey, localMuted ? 'true' : 'false');
+    setLocalStorageItem(localMuteStorageKey, localMuted ? 'true' : 'false');
   }, [localMuted, playerAudioElement]);
 
   useEffect(() => {
-    window.localStorage.setItem(collapsedStorageKey, collapsed ? 'true' : 'false');
+    setLocalStorageItem(collapsedStorageKey, collapsed ? 'true' : 'false');
   }, [collapsed]);
 
   useEffect(() => {
@@ -647,18 +645,18 @@ const PlayerBar = () => {
   }, [collapsed]);
 
   useEffect(() => {
-    window.localStorage.setItem(
+    setLocalStorageItem(
       visualizerStorageKey,
       visualizerMode !== 'off' ? 'true' : 'false',
     );
   }, [visualizerMode]);
 
   useEffect(() => {
-    window.localStorage.setItem(visualTileStorageKey, visualTileMode);
+    setLocalStorageItem(visualTileStorageKey, visualTileMode);
   }, [visualTileMode]);
 
   useEffect(() => {
-    window.localStorage.setItem(analyzerModeStorageKey, analyzerMode);
+    setLocalStorageItem(analyzerModeStorageKey, analyzerMode);
   }, [analyzerMode]);
 
   useEffect(() => {
@@ -668,15 +666,15 @@ const PlayerBar = () => {
   }, [integrationsOpen, refreshExternalVisualizerStatus]);
 
   useEffect(() => {
-    window.localStorage.setItem(eqPanelStorageKey, eqPanelOpen ? 'true' : 'false');
+    setLocalStorageItem(eqPanelStorageKey, eqPanelOpen ? 'true' : 'false');
   }, [eqPanelOpen]);
 
   useEffect(() => {
-    window.localStorage.setItem(lyricsStorageKey, lyricsOpen ? 'true' : 'false');
+    setLocalStorageItem(lyricsStorageKey, lyricsOpen ? 'true' : 'false');
   }, [lyricsOpen]);
 
   useEffect(() => {
-    window.localStorage.setItem(
+    setLocalStorageItem(
       karaokeStorageKey,
       karaokeEnabled ? 'true' : 'false',
     );
@@ -686,7 +684,7 @@ const PlayerBar = () => {
   }, [karaokeEnabled, playerAudioElement]);
 
   useEffect(() => {
-    window.localStorage.setItem(
+    setLocalStorageItem(
       crossfadeStorageKey,
       crossfadeEnabled ? 'true' : 'false',
     );

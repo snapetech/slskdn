@@ -1,3 +1,15 @@
+## Update 2026-04-30 18:37:00Z
+
+- Current task: Native MilkDrop translated shaders accept declared temp reassignment.
+- Last activity:
+  - added safe `=`, `+=`, `-=`, `*=`, and `/=` handling for declared local shader temps before final `ret`
+  - kept assignment to undeclared names, duplicate `ret`, and statements after `ret` rejected by the translator
+  - updated shader translator coverage, changelog, design notes, and T-938 progress notes
+  - validation is pending
+- Next steps:
+  1. Run focused MilkDrop/native tests, frontend lint, frontend production build, native browser smoke, and whitespace checks.
+  2. Commit and push the complete dirty workspace per the current user instruction.
+
 ## Update 2026-04-30 18:36:00Z
 
 - Current task: None. Semantic UI cleanup pass is implemented locally.

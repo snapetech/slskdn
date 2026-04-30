@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Refined browser player controls and equalizer storage behavior during the
+  native MilkDrop player integration work.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.
