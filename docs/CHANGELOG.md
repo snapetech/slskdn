@@ -33,6 +33,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added an opt-in slskdN radio directory for listed listening parties, with a
   mesh/DHT-backed announcement index and an integrated host radio stream
   endpoint gated by a separate mesh-streaming toggle.
+- Reworked pod, room, chat, and contact social affordances so saved
+  conversations and joined rooms rehydrate from server state, pods can be
+  created or discovered from the main Pods page, and discovered pods can be
+  saved locally for daemon-backed retrieval after restarts.
 - Hardened security boundaries by requiring authentication for ActivityPub
   outbox publishing, adding SSRF and size guards to HTTP share backfill,
   fixing file-list path prefix authorization, removing query-string API-key
@@ -49,7 +53,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   PR can be opened before the package exists in `microsoft/winget-pkgs`, and
   stage manifests in the repository-shaped path expected by WingetCreate. The
   stable locale description now emits valid YAML block indentation, and the
-  zip portable metadata now follows accepted winget-pkgs layout.
+  zip portable metadata now follows accepted winget-pkgs layout. Stable Winget
+  workflow staging now uses the same numeric dotted package version emitted in
+  the manifests.
 
 ## [2026042900-slskdn.202] — 2026-04-30
 

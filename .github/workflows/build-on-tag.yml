@@ -1890,7 +1890,11 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $ReleaseVersion = "${{ needs.parse.outputs.version }}"
-          $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          if ($ReleaseVersion -match '^(\d{10})-slskdn\.(\d+)$') {
+            $WingetVersion = "$($Matches[1]).$($Matches[2])"
+          } else {
+            $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          }
           $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
           $InstallerSha = (Get-FileHash slskdn-main-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
 
@@ -1911,7 +1915,11 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $ReleaseVersion = "${{ needs.parse.outputs.version }}"
-          $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          if ($ReleaseVersion -match '^(\d{10})-slskdn\.(\d+)$') {
+            $WingetVersion = "$($Matches[1]).$($Matches[2])"
+          } else {
+            $WingetVersion = $ReleaseVersion.Replace('-', '.')
+          }
           $InstallerUrl = "https://github.com/${{ github.repository }}/releases/download/$ReleaseVersion/slskdn-main-win-x64.zip"
 
           Write-Host "Submitting Winget update for snapetech.slskdn"
