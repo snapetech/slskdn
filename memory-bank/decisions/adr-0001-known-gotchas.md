@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z233. Do Not Persist While Holding A Domain Lock If Persistence Takes Another Lock
+
+**The Bug**: Artist release radar persistence was called while holding the observation-domain lock. A concurrent subscription save could hold the storage lock and then wait for the domain lock while the observation path waited for the storage lock, creating a potential deadlock.
+
+**Files Affected**:
+- `src/slskd/Integrations/MusicBrainz/Radar/ArtistReleaseRadarService.cs`
+
+**Wrong**:
+```csharp
+lock (_sync)
+{
+    _seenObservationKeys.Add(observationKey);
+    _notifications[notification.Id] = notification;
+    PersistState();
+}
+```
+
+**Correct**:
+```csharp
+lock (_sync)
+{
+    _seenObservationKeys.Add(observationKey);
+    _notifications[notification.Id] = notification;
+}
+
+PersistState();
+```
+
+**Why This Keeps Happening**: Persistence helpers often need their own serialization or file locks. If a domain mutation lock is held while calling those helpers, later snapshot locking can invert lock order. Mutate protected state first, release the domain lock, then persist a snapshot with one consistent lock order.
+
 ### 0z232. Summary Buckets Must Use The Same Enum/String Keys As Writers
 
 **The Bug**: A discovery shelf helper wrote unrated items with action `unrated-expiry-watch`, but the summary initialized and displayed an `expiry-watch` bucket. Unrated shelf items would persist successfully while the summary stayed at zero for the intended bucket.
