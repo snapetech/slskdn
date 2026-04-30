@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z202. Batch Preset Import Must Inspect Before Mutating The Live Renderer
+
+**The Bug**: Native MilkDrop multi-file import called `loadPresetText()` for every compatible file while scanning the batch. That replaced and disposed the live WebGL renderer repeatedly before the user had selected an active preset.
+
+**Files Affected**:
+- `src/web/src/components/Player/Visualizer.jsx`
+- `src/web/src/components/Player/visualizers/nativeMilkdropEngine.js`
+
+**Wrong**:
+```js
+for (const file of files) {
+  const title = engine.loadPresetText(await file.text(), file.name);
+  imported.push({ fileName: file.name, title });
+}
+```
+
+**Correct**:
+```js
+for (const file of files) {
+  const source = await file.text();
+  const { title } = engine.inspectPresetText(source, file.name);
+  imported.push({ fileName: file.name, source, title });
+}
+
+const activePreset = imported[imported.length - 1];
+engine.loadPresetText(activePreset.source, activePreset.fileName);
+```
+
+**Why This Keeps Happening**: Import validation and renderer activation are separate operations. Batch workflows should parse and compatibility-scan candidates without touching GPU state, then mutate the live renderer once for the selected/active preset.
+
 ### 0z201. Auto-Replace Must Be Opt-In And Must Exclude Our Own Username
 
 **The Bug**: Auto-replace defaulted to enabled when its state file was missing, even though `AutoReplaceStuck` defaults false. It also excluded only the original failed source from replacement candidates, so the daemon's own Soulseek username could be selected and the host downloaded from itself through the LAN/NAT path.
