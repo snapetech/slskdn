@@ -1,3 +1,15 @@
+## Update 2026-04-30 18:45:00Z
+
+- Current task: None. Browser storage cleanup now covers older UI paths too.
+- Last activity:
+  - moved remaining production direct storage calls to shared storage wrappers outside `src/web/src/lib/storage.js`
+  - covered App, Search, Discovery Graph, Browse, Chat, Rooms, Users, System Network, Footer, blocked-user, and user-context persistence paths
+  - verified the only production direct storage calls left are inside the storage helper itself
+  - validated focused App/Search/System/player tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Browser-check storage-disabled/private-mode behavior against a target browser if needed.
+  2. Ignore the unrelated dirty Mesh unit test files unless the current task changes to backend mesh tests.
+
 ## Update 2026-04-30 18:42:00Z
 
 - Current task: Native MilkDrop Phase 2 compatibility matrix is implemented locally.

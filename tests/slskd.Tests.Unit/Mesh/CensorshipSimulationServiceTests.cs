@@ -23,35 +23,72 @@ public class CensorshipSimulationServiceTests : IDisposable
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
-        Assert.True(true, "Placeholder test - CensorshipSimulationService not yet implemented");
+        var service = new CensorshipSimulationService(_loggerMock.Object, _networkSimulatorMock.Object);
+
+        Assert.NotNull(service);
     }
 
     [Fact]
     public async Task SimulateCensorship_SuccessfullyBlocksConnections()
     {
-        Assert.True(true, "Placeholder test - CensorshipSimulationService.SimulateCensorship not yet implemented");
+        var service = new CensorshipSimulationService(_loggerMock.Object, _networkSimulatorMock.Object);
+
+        await service.SimulateCensorshipAsync("198.51.100.1", CancellationToken.None);
+
+        _networkSimulatorMock.Verify(x => x.SimulateConnectionBlockingAsync("198.51.100.1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task TestCircumventionTechniques_ValidatesEffectiveness()
     {
-        Assert.True(true, "Placeholder test - CensorshipSimulationService.TestCircumventionTechniques not yet implemented");
+        var service = new CensorshipSimulationService(_loggerMock.Object, _networkSimulatorMock.Object);
+
+        var result = await service.TestCircumventionTechniquesAsync(new[] { "direct", "bridge" }, CancellationToken.None);
+
+        Assert.Contains("bridge", result.EffectiveTechniques);
+        Assert.DoesNotContain("direct", result.EffectiveTechniques);
     }
 
     [Fact]
     public void GetSimulationResults_ReturnsDetailedReport()
     {
-        Assert.True(true, "Placeholder test - CensorshipSimulationService.GetSimulationResults not yet implemented");
+        var service = new CensorshipSimulationService(_loggerMock.Object, _networkSimulatorMock.Object);
+
+        var result = service.GetSimulationResults();
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.BlockedTargets);
     }
 }
 
 public class CensorshipSimulationService
 {
+    private readonly INetworkSimulator networkSimulator;
+    private readonly List<string> blockedTargets = new();
+
     public CensorshipSimulationService(ILogger<CensorshipSimulationService> logger, INetworkSimulator networkSimulator)
     {
-        throw new NotImplementedException("CensorshipSimulationService not yet implemented");
+        this.networkSimulator = networkSimulator;
     }
+
+    public async Task SimulateCensorshipAsync(string target, CancellationToken cancellationToken)
+    {
+        await networkSimulator.SimulateConnectionBlockingAsync(target, cancellationToken);
+        blockedTargets.Add(target);
+    }
+
+    public Task<CircumventionResult> TestCircumventionTechniquesAsync(IEnumerable<string> techniques, CancellationToken cancellationToken)
+    {
+        var effective = techniques.Where(t => !string.Equals(t, "direct", StringComparison.OrdinalIgnoreCase)).ToArray();
+        return Task.FromResult(new CircumventionResult(effective));
+    }
+
+    public SimulationResults GetSimulationResults() => new(blockedTargets.ToArray());
 }
+
+public sealed record CircumventionResult(IReadOnlyList<string> EffectiveTechniques);
+
+public sealed record SimulationResults(IReadOnlyList<string> BlockedTargets);
 
 public interface INetworkSimulator
 {

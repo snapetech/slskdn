@@ -1,3 +1,10 @@
+## 2026-04-30 18:45Z - Completed browser storage hardening across older UI paths
+
+- Converted the remaining production direct `localStorage` / `sessionStorage` access outside the safe storage helper to shared storage wrappers.
+- Covered App theme/VPN/room activity state, Search collapsible/default-filter/page-size state, Discovery Graph saved branches, Browse/Chat/Rooms tab persistence, Browse session cache, Users selected profile state, DHT exposure consent, footer karma display, blocked-user storage, and user context chat routing.
+- Verified the remaining direct storage API calls in production code are isolated to `src/web/src/lib/storage.js`.
+- Validation: focused App/Search/System/player tests (`41/41`), `npm run lint`, `npm run build`, and `git diff --check` passed.
+
 ## 2026-04-30 18:42Z - Added native MilkDrop compatibility matrix reporting
 
 - Added a native MilkDrop compatibility matrix module that summarizes supported files, scanned preset bodies, unsupported functions/shader sections, and maximum shape/wave/sprite counts.

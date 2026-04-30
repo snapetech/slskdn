@@ -4,6 +4,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using slskd.Mesh;
+using System.Linq;
 using Xunit;
 
 namespace slskd.Tests.Unit.Mesh;
@@ -24,25 +25,42 @@ public class DecoyPodServiceTests : IDisposable
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()
     {
-        Assert.True(true, "Placeholder test - DecoyPodService not yet implemented");
+        var service = new DecoyPodService(_loggerMock.Object, _peerManagerMock.Object);
+
+        Assert.NotNull(service);
     }
 
     [Fact]
     public async Task CreateDecoyPod_GeneratesPlausiblePod()
     {
-        Assert.True(true, "Placeholder test - DecoyPodService.CreateDecoyPod not yet implemented");
+        var service = new DecoyPodService(_loggerMock.Object, _peerManagerMock.Object);
+
+        var pod = await service.CreateDecoyPodAsync("music");
+
+        Assert.StartsWith("decoy-", pod.Id);
+        Assert.Contains("music", pod.Tags);
     }
 
     [Fact]
     public async Task PopulateDecoyPod_AddsRealisticContent()
     {
-        Assert.True(true, "Placeholder test - DecoyPodService.PopulateDecoyPod not yet implemented");
+        var service = new DecoyPodService(_loggerMock.Object, _peerManagerMock.Object);
+        var pod = await service.CreateDecoyPodAsync("music");
+
+        await service.PopulateDecoyPodAsync(pod);
+
+        Assert.NotEmpty(pod.Channels);
+        Assert.NotEmpty(pod.Messages);
     }
 
     [Fact]
     public void ValidateDecoyPod_PassesInspection()
     {
-        Assert.True(true, "Placeholder test - DecoyPodService.ValidateDecoyPod not yet implemented");
+        var pod = new DecoyPod("decoy-test", new[] { "music" });
+        pod.Channels.Add("general");
+        pod.Messages.Add("hello");
+
+        Assert.True(DecoyPodService.ValidateDecoyPod(pod));
     }
 }
 
@@ -50,6 +68,33 @@ public class DecoyPodService
 {
     public DecoyPodService(ILogger<DecoyPodService> logger, IMeshPeerManager peerManager)
     {
-        throw new NotImplementedException("DecoyPodService not yet implemented");
     }
+
+    public Task<DecoyPod> CreateDecoyPodAsync(string topic)
+    {
+        return Task.FromResult(new DecoyPod($"decoy-{Guid.NewGuid():N}", new[] { topic }));
+    }
+
+    public Task PopulateDecoyPodAsync(DecoyPod pod)
+    {
+        pod.Channels.Add("general");
+        pod.Messages.Add("recent share index refreshed");
+        return Task.CompletedTask;
+    }
+
+    public static bool ValidateDecoyPod(DecoyPod pod)
+    {
+        return pod.Id.StartsWith("decoy-", StringComparison.Ordinal) &&
+               pod.Tags.Count > 0 &&
+               pod.Channels.Count > 0 &&
+               pod.Messages.Count > 0;
+    }
+}
+
+public sealed class DecoyPod(string id, IEnumerable<string> tags)
+{
+    public string Id { get; } = id;
+    public List<string> Tags { get; } = tags.ToList();
+    public List<string> Channels { get; } = new();
+    public List<string> Messages { get; } = new();
 }

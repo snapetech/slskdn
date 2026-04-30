@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z208. Test-Local Helper Types Still Need Real Framework Imports
+
+**The Bug**: Test-local helper implementations used `HttpRequestMessage`, `Enumerable`, `ToList`, and LINQ extension methods without importing `System.Net.Http` / `System.Linq`, causing the touched test project to fail compilation even though the helpers existed only inside unit test files. One test also passed an `IEnumerable<byte>` sequence to `Assert.DoesNotContain` where the string overload made the intended assertion explicit.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/Mesh/DomainFrontedTransportTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/ImageSteganographyTests.cs`
+- `tests/slskd.Tests.Unit/Mesh/DecoyPodServiceTests.cs`
+
+**Wrong**:
+```csharp
+using Xunit;
+
+public Task<HttpRequestMessage> BuildRequestAsync(string path)
+```
+
+**Correct**:
+```csharp
+using System.Net.Http;
+using System.Linq;
+using Xunit;
+
+public Task<HttpRequestMessage> BuildRequestAsync(string path)
+```
+
+**Why This Keeps Happening**: Test-local stubs and helpers feel informal, but they compile under the same project rules as production code. When adding concrete helper behavior in tests, run the focused test immediately and import every framework namespace explicitly instead of assuming implicit usings cover it.
+
 ### 0z207. Browser Storage Access Can Throw In Privacy-Locked Contexts
 
 **The Bug**: Player, visualizer, ListenBrainz, and token helpers used `window.localStorage`, `window.sessionStorage`, or bare storage globals directly, which can throw in locked-down privacy browsers, private contexts, or embedded webviews and crash UI initialization.

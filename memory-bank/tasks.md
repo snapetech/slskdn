@@ -1595,3 +1595,7 @@
 - [x] Harden browser-local player preference storage
   - Status: completed (2026-04-30)
   - Notes: Added shared safe local/session storage helpers and moved ListenBrainz token storage, auth token helpers, player toggles, equalizer state, and native MilkDrop preference/library persistence away from direct storage API calls so privacy-locked browsers fall back to defaults instead of throwing.
+
+- [x] Harden remaining browser-local UI storage
+  - Status: completed (2026-04-30)
+  - Notes: Converted remaining production direct local/session storage access to the shared safe storage helpers across App, Search, Discovery Graph, Browse, Chat, Rooms, Users, System Network, Footer, blocked-user storage, and user-context chat routing. Production direct storage API calls are now isolated to `src/web/src/lib/storage.js`.
