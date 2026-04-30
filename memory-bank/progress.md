@@ -1,3 +1,11 @@
+## 2026-04-30 21:17:09Z - Added Watchlist schedule and cooldown policy
+
+- Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
+- Added browser-local watchlist schedule choices, bounded cooldown days, and acquisition profile policy selection.
+- Surfaced each watchlist's schedule enablement, cooldown, profile policy, and explicit no-execution network impact in Discovery Inbox.
+- Kept the slice local-only: no scheduler, metadata provider lookup, Soulseek search, peer browse, download, automation execution, or file mutation is started.
+- Validation: focused Watchlists and Discovery Inbox component tests passed.
+
 ## 2026-04-30 21:09:16Z - Added Watchlist release filters
 
 - Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
@@ -8339,6 +8347,22 @@ Code quality improvements were completed as part of Option A:
 - Extended the source-provider catalog with per-acquisition-profile provider priority policies.
 - Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
 - Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+## 2026-04-30 21:19:35Z
+
+- Continued Epic E13 Discovery Shelf with exportable policy review.
+- Added a copyable text policy report that includes expiry window, consensus requirement, promote/archive/expire/review counts, consensus-gated count, and item-level planned actions.
+- Surfaced Copy Report in the player Discovery Shelf modal.
+- Kept the report review-only: it does not apply, move, delete, download, publish, queue, or mutate files.
+- Validation: broader player-focused tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 21:16:27Z
+
+- Continued Epic E13 Discovery Shelf with local policy previews.
+- Added a reusable shelf policy preview helper for promote, archive, expiry, review, and shared-library consensus-gated counts.
+- Added visible expiry-window and consensus controls in the player Discovery Shelf modal.
+- Kept policy preview informational only: there is still no file move, delete, queue mutation, download, publish, or backend apply action.
+- Validation: broader player-focused tests, frontend lint, frontend production build, and whitespace checks passed.
+
 ## 2026-04-30 21:12:20Z
 
 - Continued the tail-side burn-down into Epic E13 Discovery Shelf.
@@ -8371,6 +8395,13 @@ Code quality improvements were completed as part of Option A:
 - Added subject-index proposal models, pending/accepted/rejected status tracking, and trusted review records.
 - `RealmSubjectIndexService` now records proposal and review governance documents when a realm governance client is available, keeps proposed revisions out of resolution while pending or rejected, and publishes accepted revisions into the existing recording-MBID resolver only after a trusted governance-root review.
 - Validation: focused `RealmSubjectIndexServiceTests` passed (`10/10`).
+
+## 2026-04-30 21:20:12Z
+
+- Continued center-lane work with T-937 Discography Concierge graph-density prioritization.
+- Added optional Discovery Graph priority metadata to Discography Coverage results: graph node/edge counts, neighborhood density score, evidence score, ranked release ids, and per-release gap/evidence/density priority reasons.
+- Kept the priority pass local to existing coverage and Discovery Graph evidence; it does not browse peers, search Soulseek, start downloads, or publish graph data.
+- Validation: focused `DiscographyCoverageServiceTests` passed (`3/3`).
 
 ## 2026-04-30 19:36:05Z
 
@@ -8460,3 +8491,12 @@ Code quality improvements were completed as part of Option A:
 - Added the first concrete redesign slice by introducing a unified Messages workspace for direct chats and rooms.
 - Messages now supports multiple open chat/room panels, per-panel collapse/close controls, collapse-all, a restore dock, compact saved-chat and joined-room sidebars, and compatibility routing from `/chat` and `/rooms`.
 - Validation: focused Messages/App/System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-04-30 21:20:39Z
+
+- Continued the Web UI surface audit follow-up with the first admin settings gap.
+- Added System Integrations controls for Pushbullet, Ntfy, and Pushover notification providers.
+- Notification settings now expose provider enablement, private-message and room-mention triggers, redacted secret replacement, required-setting warnings, runtime apply, YAML save, reset, and tooltip-backed actions.
+- Extended the runtime options overlay so those notification settings can apply to the running daemon when remote configuration is enabled.
+- Updated the example config, changelog, audit, task list, and active context for the notification settings slice.
+- Validation: focused System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.

@@ -3,6 +3,11 @@
 // </copyright>
 
 import { getLocalStorageItem, setLocalStorageItem } from './storage';
+import {
+  acquisitionProfiles,
+  defaultAcquisitionProfileId,
+  getAcquisitionProfile,
+} from './acquisitionProfiles';
 import { v4 as uuidv4 } from 'uuid';
 
 export const watchlistStorageKey = 'slskdn.watchlists.items';
@@ -19,6 +24,7 @@ const allowedReleaseTypes = [
 ];
 const allowedCountries = ['Any', 'US', 'GB', 'CA', 'JP', 'DE', 'FR', 'BR', 'AU'];
 const allowedFormats = ['Any', 'Digital', 'CD', 'Vinyl', 'Cassette'];
+const allowedSchedules = ['Manual only', 'Daily', 'Weekly', 'Monthly'];
 
 const toDropdownOptions = (values) =>
   values.map((value) => ({
@@ -31,6 +37,12 @@ export const watchlistKindOptions = toDropdownOptions(allowedKinds);
 export const watchlistReleaseTypeOptions = toDropdownOptions(allowedReleaseTypes);
 export const watchlistCountryOptions = toDropdownOptions(allowedCountries);
 export const watchlistFormatOptions = toDropdownOptions(allowedFormats);
+export const watchlistScheduleOptions = toDropdownOptions(allowedSchedules);
+export const watchlistAcquisitionProfileOptions = acquisitionProfiles.map((profile) => ({
+  key: profile.id,
+  text: profile.label,
+  value: profile.id,
+}));
 
 const now = () => new Date().toISOString();
 
@@ -42,12 +54,26 @@ const normalizeCountry = (country) =>
 
 const normalizeFormat = (format) => (allowedFormats.includes(format) ? format : 'Any');
 
+const normalizeSchedule = (schedule) =>
+  allowedSchedules.includes(schedule) ? schedule : 'Manual only';
+
+const normalizeCooldownDays = (cooldownDays) => {
+  const parsed = Number(cooldownDays);
+
+  if (!Number.isFinite(parsed)) {
+    return 7;
+  }
+
+  return Math.min(Math.max(Math.round(parsed), 1), 30);
+};
+
 const normalizeWatchlist = (item = {}) => {
   const timestamp = now();
 
   return {
-    acquisitionProfile: item.acquisitionProfile || 'lossless-exact',
-    cooldownDays: Number.isFinite(item.cooldownDays) ? item.cooldownDays : 7,
+    acquisitionProfile:
+      getAcquisitionProfile(item.acquisitionProfile)?.id ?? defaultAcquisitionProfileId,
+    cooldownDays: normalizeCooldownDays(item.cooldownDays),
     country: normalizeCountry(item.country),
     createdAt: item.createdAt || timestamp,
     destination: item.destination || 'Discovery Inbox',
@@ -60,7 +86,7 @@ const normalizeWatchlist = (item = {}) => {
       normalizeReleaseTypes(item.releaseTypes).length > 0
         ? normalizeReleaseTypes(item.releaseTypes)
         : ['Album', 'EP', 'Single'],
-    schedule: item.schedule || 'Manual only',
+    schedule: normalizeSchedule(item.schedule),
     target: item.target || 'Untitled watch',
     updatedAt: item.updatedAt || timestamp,
   };
@@ -155,3 +181,18 @@ export const buildWatchlistDiscoverySeed = (item) => ({
   sourceId: item.id,
   title: item.target,
 });
+
+export const buildWatchlistSchedulePreview = (item) => {
+  const profile = getAcquisitionProfile(item.acquisitionProfile);
+  const enabled = item.schedule !== 'Manual only';
+
+  return {
+    cooldown: `${item.cooldownDays} day${item.cooldownDays === 1 ? '' : 's'}`,
+    enabled,
+    label: enabled ? `${item.schedule} schedule visible` : 'Manual scans only',
+    networkImpact: enabled
+      ? 'Scheduled watchlist scans are enabled in the plan, but this local preview does not execute provider lookups or peer searches.'
+      : 'Manual scan previews only; no scheduled provider lookup, peer search, or download is enabled.',
+    profileLabel: profile.label,
+  };
+};

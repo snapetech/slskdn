@@ -1047,6 +1047,46 @@
   margin-top: 0.16rem;
 }
 
+.player-shelf-policy {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(164, 116, 255, 0.2);
+  border-radius: 6px;
+  margin-bottom: 0.9rem;
+  padding: 0.72rem;
+}
+
+.player-shelf-policy-controls,
+.player-shelf-policy-preview {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.62rem;
+}
+
+.player-shelf-policy-controls {
+  margin-bottom: 0.62rem;
+}
+
+.player-shelf-policy-controls label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.78rem;
+}
+
+.player-shelf-policy-controls .ui.input {
+  width: 5rem;
+}
+
+.player-shelf-policy-preview span {
+  background: rgba(164, 116, 255, 0.13);
+  border: 1px solid rgba(164, 116, 255, 0.22);
+  border-radius: 999px;
+  color: #dac7ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.24rem 0.5rem;
+}
+
 .player-shelf-list {
   display: grid;
   gap: 0.48rem;

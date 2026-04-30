@@ -97,6 +97,24 @@ namespace slskd
             public LastFmOptionsPatch? LastFm { get; init; }
 
             /// <summary>
+            ///     Gets Pushbullet notification options.
+            /// </summary>
+            [Validate]
+            public PushbulletOptionsPatch? Pushbullet { get; init; }
+
+            /// <summary>
+            ///     Gets Ntfy notification options.
+            /// </summary>
+            [Validate]
+            public NtfyOptionsPatch? Ntfy { get; init; }
+
+            /// <summary>
+            ///     Gets Pushover notification options.
+            /// </summary>
+            [Validate]
+            public PushoverOptionsPatch? Pushover { get; init; }
+
+            /// <summary>
             ///     Spotify source-feed import options.
             /// </summary>
             public record SpotifyOptionsPatch
@@ -136,6 +154,68 @@ namespace slskd
                 public bool? Enabled { get; init; }
 
                 public string? ApiKey { get; init; }
+            }
+
+            /// <summary>
+            ///     Pushbullet notification options.
+            /// </summary>
+            public record PushbulletOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                [Secret]
+                public string? AccessToken { get; init; }
+
+                public string? NotificationPrefix { get; init; }
+
+                public bool? NotifyOnPrivateMessage { get; init; }
+
+                public bool? NotifyOnRoomMention { get; init; }
+
+                [Range(0, 5)]
+                public int? RetryAttempts { get; init; }
+
+                [Range(0, int.MaxValue)]
+                public int? CooldownTime { get; init; }
+            }
+
+            /// <summary>
+            ///     Ntfy notification options.
+            /// </summary>
+            public record NtfyOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                public string? Url { get; init; }
+
+                [Secret]
+                public string? AccessToken { get; init; }
+
+                public string? NotificationPrefix { get; init; }
+
+                public bool? NotifyOnPrivateMessage { get; init; }
+
+                public bool? NotifyOnRoomMention { get; init; }
+            }
+
+            /// <summary>
+            ///     Pushover notification options.
+            /// </summary>
+            public record PushoverOptionsPatch
+            {
+                public bool? Enabled { get; init; }
+
+                [Secret]
+                public string? UserKey { get; init; }
+
+                [Secret]
+                public string? Token { get; init; }
+
+                public string? NotificationPrefix { get; init; }
+
+                public bool? NotifyOnPrivateMessage { get; init; }
+
+                public bool? NotifyOnRoomMention { get; init; }
             }
         }
     }

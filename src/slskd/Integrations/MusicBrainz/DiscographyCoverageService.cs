@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using slskd.DiscoveryGraph;
 using slskd.HashDb;
 using slskd.Integrations.MusicBrainz.API.DTO;
 using slskd.Integrations.MusicBrainz.Models;
@@ -33,6 +34,7 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
     private readonly IHashDbService hashDb;
     private readonly IWishlistService wishlistService;
     private readonly ILogger<DiscographyCoverageService> logger;
+    private readonly IDiscoveryGraphService? discoveryGraphService;
 
     public DiscographyCoverageService(
         IArtistReleaseGraphService releaseGraphService,
@@ -40,7 +42,8 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
         IMusicBrainzClient musicBrainzClient,
         IHashDbService hashDb,
         IWishlistService wishlistService,
-        ILogger<DiscographyCoverageService> logger)
+        ILogger<DiscographyCoverageService> logger,
+        IDiscoveryGraphService? discoveryGraphService = null)
     {
         this.releaseGraphService = releaseGraphService;
         this.profileService = profileService;
@@ -48,6 +51,7 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
         this.hashDb = hashDb;
         this.wishlistService = wishlistService;
         this.logger = logger;
+        this.discoveryGraphService = discoveryGraphService;
     }
 
     public async Task<DiscographyCoverageResult?> GetCoverageAsync(
@@ -131,6 +135,11 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
         result.CompleteReleases = result.Releases.Count(release => release.Complete);
         result.TotalTracks = result.Releases.Sum(release => release.TotalTracks);
         result.CoveredTracks = result.Releases.Sum(release => release.CoveredTracks);
+
+        if (request.IncludeDiscoveryGraphPriority)
+        {
+            await ApplyDiscoveryGraphPriorityAsync(result, cancellationToken).ConfigureAwait(false);
+        }
 
         return result;
     }
@@ -278,6 +287,134 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
         return result;
     }
 
+    private async Task ApplyDiscoveryGraphPriorityAsync(
+        DiscographyCoverageResult result,
+        CancellationToken cancellationToken)
+    {
+        if (discoveryGraphService == null || result.Releases.Count == 0)
+        {
+            ApplyFallbackPriority(result);
+            return;
+        }
+
+        try
+        {
+            var graph = await discoveryGraphService.BuildAsync(
+                new DiscoveryGraphRequest
+                {
+                    Scope = "artist",
+                    ArtistId = result.ArtistId,
+                    Artist = result.ArtistName,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            ApplyGraphPriority(result, graph);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogDebug(ex, "[DiscographyCoverage] Discovery Graph priority unavailable for artist {ArtistId}", result.ArtistId);
+            ApplyFallbackPriority(result);
+        }
+    }
+
+    private static void ApplyGraphPriority(DiscographyCoverageResult result, DiscoveryGraphResult graph)
+    {
+        var incidentEdges = graph.Edges
+            .GroupBy(edge => edge.SourceNodeId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var release in result.Releases)
+        {
+            var graphNodeId = $"release-group:{release.ReleaseGroupId}";
+            var node = graph.Nodes.FirstOrDefault(node => string.Equals(node.NodeId, graphNodeId, StringComparison.OrdinalIgnoreCase));
+            var edges = incidentEdges.TryGetValue(graph.SeedNodeId, out var sourceEdges)
+                ? sourceEdges.Where(edge => string.Equals(edge.TargetNodeId, graphNodeId, StringComparison.OrdinalIgnoreCase)).ToList()
+                : new List<DiscoveryGraphEdge>();
+            var densityScore = node == null
+                ? 0
+                : Clamp((node.Weight + edges.Sum(edge => edge.Weight) + Math.Min(graph.Nodes.Count, 12) / 12.0) / 3.0);
+
+            ApplyReleasePriority(release, densityScore);
+        }
+
+        result.GraphPriority = BuildPrioritySummary(result, graph.Nodes.Count, graph.Edges.Count);
+        result.GraphPriority.Reasons.Add("Discovery Graph artist neighborhood density included in release priority.");
+    }
+
+    private static void ApplyFallbackPriority(DiscographyCoverageResult result)
+    {
+        var releaseGroupCount = Math.Max(result.Releases.Select(release => release.ReleaseGroupId).Distinct(StringComparer.OrdinalIgnoreCase).Count(), 1);
+        foreach (var release in result.Releases)
+        {
+            ApplyReleasePriority(release, Clamp(1.0 / releaseGroupCount));
+        }
+
+        result.GraphPriority = BuildPrioritySummary(result, result.Releases.Count, 0);
+        result.GraphPriority.Reasons.Add("Fallback release-group density used because Discovery Graph priority was unavailable.");
+    }
+
+    private static void ApplyReleasePriority(DiscographyCoverageRelease release, double graphDensityScore)
+    {
+        release.GraphDensityScore = graphDensityScore;
+        release.GapScore = release.TotalTracks == 0 ? 0 : Clamp((double)(release.TotalTracks - release.CoveredTracks) / release.TotalTracks);
+        release.EvidenceScore = CalculateEvidenceScore(release);
+        release.PriorityScore = Clamp((release.GapScore * 0.45) + (release.GraphDensityScore * 0.35) + (release.EvidenceScore * 0.20));
+        release.PriorityReasons.Clear();
+
+        if (release.GapScore > 0)
+        {
+            release.PriorityReasons.Add($"{release.TotalTracks - release.CoveredTracks} missing track(s) remain in this release.");
+        }
+
+        if (release.GraphDensityScore >= 0.50)
+        {
+            release.PriorityReasons.Add("Release sits in a dense Discovery Graph artist neighborhood.");
+        }
+
+        if (release.EvidenceScore >= 0.50)
+        {
+            release.PriorityReasons.Add("Existing HashDb or Wishlist evidence makes completion lower risk.");
+        }
+    }
+
+    private static DiscographyGraphPrioritySummary BuildPrioritySummary(
+        DiscographyCoverageResult result,
+        int nodeCount,
+        int edgeCount)
+    {
+        var prioritized = result.Releases
+            .Where(release => release.PriorityScore > 0 && !release.Complete)
+            .OrderByDescending(release => release.PriorityScore)
+            .ThenBy(release => release.ReleaseDate, StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToList();
+
+        return new DiscographyGraphPrioritySummary
+        {
+            NodeCount = nodeCount,
+            EdgeCount = edgeCount,
+            NeighborhoodDensityScore = result.Releases.Count == 0 ? 0 : Clamp(result.Releases.Average(release => release.GraphDensityScore)),
+            EvidenceScore = result.Releases.Count == 0 ? 0 : Clamp(result.Releases.Average(release => release.EvidenceScore)),
+            RecommendedReleaseIds = prioritized.Select(release => release.ReleaseId).ToList(),
+        };
+    }
+
+    private static double CalculateEvidenceScore(DiscographyCoverageRelease release)
+    {
+        if (release.TotalTracks == 0)
+        {
+            return 0;
+        }
+
+        var covered = release.Tracks.Count(track => track.Status == DiscographyCoverageStatus.MeshAvailable);
+        var wishlist = release.Tracks.Count(track => track.Status == DiscographyCoverageStatus.WishlistSeeded);
+        var useCount = release.Tracks
+            .SelectMany(track => track.Matches)
+            .Sum(match => Math.Min(match.UseCount, 5));
+
+        return Clamp(((covered + (wishlist * 0.5)) / release.TotalTracks) + Math.Min(useCount, 10) / 20.0);
+    }
+
     private static string BuildSearchText(DiscographyCoverageTrack track)
     {
         var artist = string.IsNullOrWhiteSpace(track.Artist) ? string.Empty : track.Artist.Trim();
@@ -290,4 +427,6 @@ public sealed class DiscographyCoverageService : IDiscographyCoverageService
 
     private static string NormalizeSearchText(string searchText) =>
         (searchText ?? string.Empty).Trim();
+
+    private static double Clamp(double value) => Math.Max(0, Math.Min(1, value));
 }

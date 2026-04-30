@@ -1,5 +1,6 @@
 import {
   buildWatchlistDiscoverySeed,
+  buildWatchlistSchedulePreview,
   buildWatchlistSummary,
   getWatchlists,
   recordWatchlistManualScan,
@@ -14,26 +15,60 @@ describe('watchlists', () => {
   it('saves normalized watchlist targets without duplicating kind and target', () => {
     saveWatchlist({
       country: 'US',
+      cooldownDays: 90,
       format: 'Vinyl',
       kind: 'Artist',
       releaseTypes: ['Album', 'Bogus'],
+      schedule: 'Hourly',
       target: 'Stereolab',
     });
     saveWatchlist({
       country: 'Atlantis',
+      cooldownDays: 0,
       format: 'Wax Cylinder',
       kind: 'Artist',
       releaseTypes: ['EP'],
+      schedule: 'Daily',
       target: 'stereolab',
     });
 
     expect(getWatchlists()).toHaveLength(1);
     expect(getWatchlists()[0]).toMatchObject({
       country: 'Any',
+      cooldownDays: 1,
       format: 'Any',
       kind: 'Artist',
       releaseTypes: ['EP'],
+      schedule: 'Daily',
       target: 'stereolab',
+    });
+  });
+
+  it('builds visible schedule previews without executing scans', () => {
+    expect(
+      buildWatchlistSchedulePreview({
+        acquisitionProfile: 'mesh-preferred',
+        cooldownDays: 3,
+        schedule: 'Weekly',
+      }),
+    ).toMatchObject({
+      cooldown: '3 days',
+      enabled: true,
+      label: 'Weekly schedule visible',
+      profileLabel: 'Mesh Preferred',
+    });
+
+    expect(
+      buildWatchlistSchedulePreview({
+        acquisitionProfile: 'lossless-exact',
+        cooldownDays: 1,
+        schedule: 'Manual only',
+      }),
+    ).toMatchObject({
+      cooldown: '1 day',
+      enabled: false,
+      label: 'Manual scans only',
+      profileLabel: 'Lossless Exact',
     });
   });
 

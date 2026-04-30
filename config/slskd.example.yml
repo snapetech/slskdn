@@ -497,6 +497,20 @@
 #     notify_on_room_mention: true
 #     retry_attempts: 3
 #     cooldown_time: 900000
+#   ntfy:
+#     enabled: false
+#     url: ""
+#     access_token: ""
+#     notification_prefix: "slskd"
+#     notify_on_private_message: true
+#     notify_on_room_mention: true
+#   pushover:
+#     enabled: false
+#     user_key: ""
+#     token: ""
+#     notification_prefix: "slskd"
+#     notify_on_private_message: true
+#     notify_on_room_mention: true
 # Mesh.Security (PR-01, §8). Binds to Mesh:Security when Mesh section is used.
 # mesh:
 #   enabled: true

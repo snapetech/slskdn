@@ -15,6 +15,10 @@ status signalling, and safe knobs/levers.
 - Added source-feed provider settings in System Integrations for Spotify,
   YouTube, and Last.fm with toggles, masked secrets, warnings, runtime apply,
   YAML save, reset, and tooltips.
+- Added notification provider settings in System Integrations for Pushbullet,
+  Ntfy, and Pushover with delivery toggles, private-message and room-mention
+  triggers, masked secret replacement, warnings, runtime apply, YAML save,
+  reset, and tooltips.
 
 ## Strongly Surfaced Already
 
@@ -28,9 +32,9 @@ status signalling, and safe knobs/levers.
 
 ## High-Value Missing Admin Knobs
 
-- Notification integrations: Pushbullet, Ntfy, Pushover, webhooks, scripts, and
-  FTP are configured in YAML but lack a guided admin UI for enablement, secrets,
-  event selection, test-send, retry/cooldown, and failure state.
+- Remaining notification/action integrations: webhooks, scripts, and FTP are
+  configured in YAML but lack a guided admin UI for enablement, event selection,
+  test-send/dry-run, retry policy, remote target visibility, and failure state.
 - Identity and access: API keys, JWT TTL/key status, passthrough auth, HTTPS
   certificate settings, force HTTPS, and rate limits are mostly YAML/raw-options
   surfaces. These need a security admin editor with redacted secret replacement
@@ -66,9 +70,8 @@ status signalling, and safe knobs/levers.
 
 ## Recommended Follow-Up Order
 
-1. Build a System Notifications panel for Pushbullet, Ntfy, Pushover, webhooks,
-   scripts, and FTP because these are operator-facing, testable, and currently
-   fragmented.
+1. Extend System Notifications/Actions to cover webhooks, scripts, and FTP
+   because these are operator-facing, testable, and still fragmented.
 2. Build a Transfer Policy panel for global/group speed, slot, retry, scheduled,
    and auto-replace controls because these directly affect network citizenship.
 3. Build a Security/Auth settings panel for API keys, JWT, HTTPS, passthrough,

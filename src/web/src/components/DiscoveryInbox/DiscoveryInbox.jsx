@@ -17,14 +17,17 @@ import {
 } from '../../lib/discoveryInboxReview';
 import {
   buildWatchlistDiscoverySeed,
+  buildWatchlistSchedulePreview,
   buildWatchlistSummary,
   getWatchlists,
   recordWatchlistManualScan,
   saveWatchlist,
+  watchlistAcquisitionProfileOptions,
   watchlistCountryOptions,
   watchlistFormatOptions,
   watchlistKindOptions,
   watchlistReleaseTypeOptions,
+  watchlistScheduleOptions,
 } from '../../lib/watchlists';
 import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -69,6 +72,10 @@ const DiscoveryInbox = () => {
   ]);
   const [watchCountry, setWatchCountry] = useState('Any');
   const [watchFormat, setWatchFormat] = useState('Any');
+  const [watchSchedule, setWatchSchedule] = useState('Manual only');
+  const [watchCooldownDays, setWatchCooldownDays] = useState(7);
+  const [watchAcquisitionProfile, setWatchAcquisitionProfile] =
+    useState('lossless-exact');
 
   const refreshItems = () => {
     setItems(getDiscoveryInboxItems());
@@ -146,10 +153,13 @@ const DiscoveryInbox = () => {
 
     setWatchlists(
       saveWatchlist({
+        acquisitionProfile: watchAcquisitionProfile,
+        cooldownDays: watchCooldownDays,
         country: watchCountry,
         format: watchFormat,
         kind: watchKind,
         releaseTypes: watchReleaseTypes,
+        schedule: watchSchedule,
         target,
       }),
     );
@@ -345,6 +355,39 @@ const DiscoveryInbox = () => {
               />
             </Form.Field>
           </Form.Group>
+          <Form.Group widths="equal">
+            <Form.Field>
+              <label>Schedule</label>
+              <Dropdown
+                aria-label="Watchlist schedule"
+                onChange={(_event, data) => setWatchSchedule(data.value)}
+                options={watchlistScheduleOptions}
+                selection
+                value={watchSchedule}
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>Cooldown days</label>
+              <Input
+                aria-label="Watchlist cooldown days"
+                min={1}
+                max={30}
+                onChange={(event) => setWatchCooldownDays(event.target.value)}
+                type="number"
+                value={watchCooldownDays}
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>Profile policy</label>
+              <Dropdown
+                aria-label="Watchlist acquisition profile"
+                onChange={(_event, data) => setWatchAcquisitionProfile(data.value)}
+                options={watchlistAcquisitionProfileOptions}
+                selection
+                value={watchAcquisitionProfile}
+              />
+            </Form.Field>
+          </Form.Group>
           <Popup
             content="Add this target to the browser-local watchlist. This does not contact metadata providers or scan Soulseek."
             position="top center"
@@ -382,63 +425,89 @@ const DiscoveryInbox = () => {
         </div>
         {watchlists.length > 0 && (
           <div className="discovery-inbox-watchlist-grid">
-            {watchlists.map((watchlist) => (
-              <div
-                className="discovery-inbox-watchlist"
-                key={watchlist.id}
-              >
-                <div>
-                  <strong>{watchlist.target}</strong>
-                  <div className="discovery-inbox-meta">
-                    <Icon name="tag" />
-                    {watchlist.kind}
-                    <span> · </span>
-                    <Icon name="filter" />
-                    {watchlist.releaseTypes.join(', ')}
-                    <span> · </span>
-                    <Icon name="world" />
-                    {watchlist.country}
-                    <span> · </span>
-                    <Icon name="music" />
-                    {watchlist.format}
-                    <span> · </span>
-                    <Icon name="clock" />
-                    {watchlist.schedule}
-                  </div>
-                  {watchlist.lastScanPreview && (
-                    <div className="discovery-inbox-impact">
-                      {watchlist.lastScanPreview}
+            {watchlists.map((watchlist) => {
+              const schedulePreview = buildWatchlistSchedulePreview(watchlist);
+
+              return (
+                <div
+                  className="discovery-inbox-watchlist"
+                  key={watchlist.id}
+                >
+                  <div>
+                    <strong>{watchlist.target}</strong>
+                    <div className="discovery-inbox-meta">
+                      <Icon name="tag" />
+                      {watchlist.kind}
+                      <span> · </span>
+                      <Icon name="filter" />
+                      {watchlist.releaseTypes.join(', ')}
+                      <span> · </span>
+                      <Icon name="world" />
+                      {watchlist.country}
+                      <span> · </span>
+                      <Icon name="music" />
+                      {watchlist.format}
+                      <span> · </span>
+                      <Icon name="clock" />
+                      {watchlist.schedule}
                     </div>
-                  )}
+                    <div className="discovery-inbox-impact-labels">
+                      <Label
+                        basic
+                        color={schedulePreview.enabled ? 'orange' : 'grey'}
+                      >
+                        <Icon
+                          name={schedulePreview.enabled ? 'calendar check' : 'lock'}
+                        />
+                        {schedulePreview.label}
+                      </Label>
+                      <Label basic>
+                        <Icon name="hourglass half" />
+                        Cooldown {schedulePreview.cooldown}
+                      </Label>
+                      <Label basic>
+                        <Icon name="gem outline" />
+                        {schedulePreview.profileLabel}
+                      </Label>
+                    </div>
+                    <div className="discovery-inbox-impact">
+                      {schedulePreview.networkImpact}
+                    </div>
+                    {watchlist.lastScanPreview && (
+                      <div className="discovery-inbox-impact">
+                        {watchlist.lastScanPreview}
+                      </div>
+                    )}
+                  </div>
+                  <div className="discovery-inbox-watchlist-actions">
+                    <Popup
+                      content="Record a local manual scan preview for this watchlist. This does not fetch metadata or contact peers."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Preview scan ${watchlist.target}`}
+                          icon="search"
+                          onClick={() => previewWatchlistScan(watchlist)}
+                          size="small"
+                        />
+                      }
+                    />
+                    <Popup
+                      content="Create a Discovery Inbox review seed from this watchlist target without starting a provider lookup, search, or download."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Send ${watchlist.target} to Discovery Inbox`}
+                          icon="inbox"
+                          onClick={() => seedWatchlistReview(watchlist)}
+                          size="small"
+                        />
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="discovery-inbox-watchlist-actions">
-                  <Popup
-                    content="Record a local manual scan preview for this watchlist. This does not fetch metadata or contact peers."
-                    position="top center"
-                    trigger={
-                      <Button
-                        aria-label={`Preview scan ${watchlist.target}`}
-                        icon="search"
-                        onClick={() => previewWatchlistScan(watchlist)}
-                        size="small"
-                      />
-                    }
-                  />
-                  <Popup
-                    content="Create a Discovery Inbox review seed from this watchlist target without starting a provider lookup, search, or download."
-                    position="top center"
-                    trigger={
-                      <Button
-                        aria-label={`Send ${watchlist.target} to Discovery Inbox`}
-                        icon="inbox"
-                        onClick={() => seedWatchlistReview(watchlist)}
-                        size="small"
-                      />
-                    }
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Segment>

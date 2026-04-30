@@ -32,6 +32,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   safe peers, with dispatch history and no automatic publication.
 - Added realm subject-index governance proposals and trusted review decisions
   so proposed revisions publish to resolution only after explicit acceptance.
+- Added Discography Concierge priority metadata from Discovery Graph density,
+  release gaps, and existing HashDb/Wishlist evidence without starting network
+  discovery.
 - Added browser-local listening history and player listening stats for recent
   plays, top artists, and top tracks.
 - Added listening stats time-range filters and browser-local forgotten-favorite
@@ -43,6 +46,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added browser-local Discovery Shelf action previews from player ratings.
 - Fixed Discovery Shelf expiry-watch summary counts to use the same action key
   across shelf storage and player display.
+- Added Discovery Shelf policy previews for promote, archive, expiry, review,
+  and shared-library consensus gating.
+- Added copyable Discovery Shelf policy reports for offline review before any
+  promote/archive/expiry action exists.
 - Added browser-local Watchlist release, country, and format filters in
   Discovery Inbox.
 - Added browser-local listening history import/export for media-server CSV/JSON
@@ -81,6 +88,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added System Integrations controls for source-feed provider settings,
   including Spotify, YouTube, and Last.fm on/off toggles, masked credential
   inputs, validation warnings, and tooltip-backed apply/reset actions.
+- Added System Integrations controls for Pushbullet, Ntfy, and Pushover
+  notification settings, including on/off toggles, private-message and
+  room-mention triggers, masked secret replacement, validation warnings,
+  runtime apply, YAML save, reset, and tooltips.
 - Added a combined Messages workspace for direct chats and rooms with
   multi-panel windows, compact sizing, collapse/restore dock behavior, and
   compatibility routes from the old Chat and Rooms pages.

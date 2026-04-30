@@ -15,6 +15,8 @@ public sealed class DiscographyCoverageRequest
     public DiscographyProfile Profile { get; set; } = DiscographyProfile.CoreDiscography;
 
     public bool ForceRefresh { get; set; }
+
+    public bool IncludeDiscoveryGraphPriority { get; set; } = true;
 }
 
 public sealed class DiscographyCoverageResult
@@ -37,6 +39,8 @@ public sealed class DiscographyCoverageResult
 
     public bool PromotionSuggested => TotalTracks > 0 && CoverageRatio >= 0.70 && CoveredTracks < TotalTracks;
 
+    public DiscographyGraphPrioritySummary? GraphPriority { get; set; }
+
     public List<DiscographyCoverageRelease> Releases { get; set; } = new();
 }
 
@@ -58,7 +62,32 @@ public sealed class DiscographyCoverageRelease
 
     public bool Complete => TotalTracks > 0 && CoveredTracks == TotalTracks;
 
+    public double PriorityScore { get; set; }
+
+    public double GraphDensityScore { get; set; }
+
+    public double EvidenceScore { get; set; }
+
+    public double GapScore { get; set; }
+
+    public List<string> PriorityReasons { get; set; } = new();
+
     public List<DiscographyCoverageTrack> Tracks { get; set; } = new();
+}
+
+public sealed class DiscographyGraphPrioritySummary
+{
+    public int NodeCount { get; set; }
+
+    public int EdgeCount { get; set; }
+
+    public double NeighborhoodDensityScore { get; set; }
+
+    public double EvidenceScore { get; set; }
+
+    public List<string> RecommendedReleaseIds { get; set; } = new();
+
+    public List<string> Reasons { get; set; } = new();
 }
 
 public sealed class DiscographyCoverageTrack

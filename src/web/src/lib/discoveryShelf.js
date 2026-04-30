@@ -10,6 +10,11 @@ const maxShelfItems = 200;
 
 const normalizeText = (value = '') => String(value).trim();
 
+const normalizePositiveInteger = (value, fallback) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+};
+
 const readShelf = () => {
   try {
     const parsed = JSON.parse(getLocalStorageItem(discoveryShelfStorageKey, '[]'));
@@ -94,4 +99,97 @@ export const getDiscoveryShelfSummary = () => {
     'promote-preview': 0,
     total: 0,
   });
+};
+
+export const getDiscoveryShelfPolicyPreview = ({
+  expiryDays = 14,
+  items = getDiscoveryShelf(),
+  now = new Date(),
+  requireConsensus = true,
+} = {}) => {
+  const normalizedExpiryDays = normalizePositiveInteger(expiryDays, 14);
+  const nowTime = Date.parse(now instanceof Date ? now.toISOString() : now);
+  const cutoff = Number.isFinite(nowTime)
+    ? nowTime - normalizedExpiryDays * 24 * 60 * 60 * 1000
+    : null;
+
+  return items.reduce((preview, item) => {
+    const reviewedAt = Date.parse(item.reviewedAt || '');
+    const expired = item.action === 'expiry-watch'
+      && cutoff !== null
+      && Number.isFinite(reviewedAt)
+      && reviewedAt < cutoff;
+
+    if (item.action === 'promote-preview') {
+      return {
+        ...preview,
+        promote: preview.promote + 1,
+      };
+    }
+
+    if (item.action === 'archive-preview') {
+      return {
+        ...preview,
+        archive: preview.archive + 1,
+        blockedByConsensus: preview.blockedByConsensus + (requireConsensus ? 1 : 0),
+      };
+    }
+
+    if (expired) {
+      return {
+        ...preview,
+        blockedByConsensus: preview.blockedByConsensus + (requireConsensus ? 1 : 0),
+        expire: preview.expire + 1,
+      };
+    }
+
+    return {
+      ...preview,
+      review: preview.review + 1,
+    };
+  }, {
+    archive: 0,
+    blockedByConsensus: 0,
+    canApply: false,
+    expire: 0,
+    expiryDays: normalizedExpiryDays,
+    promote: 0,
+    requireConsensus,
+    review: 0,
+  });
+};
+
+export const exportDiscoveryShelfPolicyReport = ({
+  expiryDays = 14,
+  items = getDiscoveryShelf(),
+  now = new Date(),
+  requireConsensus = true,
+} = {}) => {
+  const preview = getDiscoveryShelfPolicyPreview({
+    expiryDays,
+    items,
+    now,
+    requireConsensus,
+  });
+  const lines = [
+    'Discovery Shelf Policy Preview',
+    `Generated: ${now instanceof Date ? now.toISOString() : now}`,
+    `Expiry window: ${preview.expiryDays} days`,
+    `Consensus required for destructive actions: ${preview.requireConsensus ? 'yes' : 'no'}`,
+    `Promote candidates: ${preview.promote}`,
+    `Archive candidates: ${preview.archive}`,
+    `Expire candidates: ${preview.expire}`,
+    `Review candidates: ${preview.review}`,
+    `Consensus gated: ${preview.blockedByConsensus}`,
+    '',
+    'Items:',
+    ...items.map((item) => [
+      `- ${getDiscoveryShelfActionLabel(item.action)}: ${item.title}`,
+      item.artist ? ` by ${item.artist}` : '',
+      item.album ? ` (${item.album})` : '',
+      ` [rating ${item.rating || 'unrated'}]`,
+    ].join('')),
+  ];
+
+  return lines.join('\n');
 };

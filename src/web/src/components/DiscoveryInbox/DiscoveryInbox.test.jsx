@@ -4,7 +4,7 @@ import {
   addDiscoveryInboxItem,
   discoveryInboxStorageKey,
 } from '../../lib/discoveryInbox';
-import { watchlistStorageKey } from '../../lib/watchlists';
+import { saveWatchlist, watchlistStorageKey } from '../../lib/watchlists';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
@@ -168,10 +168,13 @@ describe('DiscoveryInbox', () => {
     );
     expect(persistedWatchlists).toHaveLength(1);
     expect(persistedWatchlists[0]).toMatchObject({
+      acquisitionProfile: 'lossless-exact',
+      cooldownDays: 7,
       country: 'Any',
       format: 'Any',
       kind: 'Artist',
       releaseTypes: ['Album', 'EP', 'Single'],
+      schedule: 'Manual only',
       target: 'Stereolab',
     });
     expect(
@@ -179,6 +182,8 @@ describe('DiscoveryInbox', () => {
         node.textContent.includes('Album, EP, Single'),
       ).length,
     ).toBeGreaterThan(0);
+    expect(screen.getByText('Manual scans only')).toBeInTheDocument();
+    expect(screen.getByText('Cooldown 7 days')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview scan Stereolab' }));
     expect(
@@ -195,5 +200,21 @@ describe('DiscoveryInbox', () => {
       source: 'Watchlist',
       title: 'Stereolab',
     });
+  });
+
+  it('shows scheduled watchlist enablement and cooldown policy', () => {
+    saveWatchlist({
+      acquisitionProfile: 'mesh-preferred',
+      cooldownDays: 3,
+      schedule: 'Weekly',
+      target: 'Broadcast',
+    });
+
+    render(<DiscoveryInbox />);
+
+    expect(screen.getByText('Weekly schedule visible')).toBeInTheDocument();
+    expect(screen.getByText('Cooldown 3 days')).toBeInTheDocument();
+    expect(screen.getAllByText('Mesh Preferred').length).toBeGreaterThan(0);
+    expect(screen.getByText(/does not execute provider lookups/)).toBeInTheDocument();
   });
 });

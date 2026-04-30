@@ -76,6 +76,16 @@
  - Priority: P3
  - Notes: Player ratings now update a browser-local Discovery Shelf with promote-preview, archive-preview, keep-reviewing, and expiry-watch classifications. The shelf modal shows policy counts, review rows, action previews, remove, and clear controls; every promote/archive/expiry action is preview-only and does not move, delete, share, download, or publish files.
 
+- [x] **feature**: Add Discovery Shelf policy previews.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Discovery Shelf now previews promote, archive, expiry, review, and consensus-gated counts from a configurable unrated expiry window and shared-library consensus toggle. The preview is informational only; apply remains disabled until backend preview/confirmation contracts exist.
+
+- [x] **feature**: Add Discovery Shelf policy report export.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Discovery Shelf can now copy a text policy report with expiry window, consensus requirement, promote/archive/expire/review counts, and item-level planned actions. The report is review-only and does not apply, move, delete, download, publish, or mutate files.
+
 - [x] **feature**: Add visible acquisition profiles to Search.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -170,6 +180,11 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Watchlists now persist and display release-type, country, and format filters when adding targets from Discovery Inbox. Filter normalization remains browser-local and no metadata provider lookup, Soulseek search, peer browse, download, scheduled automation, or file mutation is started.
+
+- [x] **feature**: Add visible Watchlist schedule and cooldown policy.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Watchlists now persist manual/daily/weekly/monthly schedule intent, bounded cooldown days, and acquisition profile policy, and show enabled schedule status on each row. This is a local planning surface only; no scheduler, metadata provider lookup, Soulseek search, peer browse, download, or file mutation is started.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)
@@ -317,11 +332,11 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added a conservative coverage API, MusicBrainz release-detail caching, HashDb/Wishlist evidence cells, manual missing-track Wishlist promotion, focused backend coverage tests, and a Search-page Discography Concierge panel with tooltipped actions. No Soulseek peer browsing, immediate searches, downloads, backup, mirroring, or file duplication.
 
-- [ ] **T-937**: Discography Concierge graph-density prioritization.
- - Status: planned
+- [x] **T-937**: Discography Concierge graph-density prioritization.
+ - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Follow up T-930 by feeding Discovery Graph neighborhood density and stronger local-vs-mesh evidence into artist prioritization. Keep this separate from the first coverage/Wishlist implementation.
+ - Notes: Added optional Discovery Graph priority metadata to Discography Coverage results, including node/edge density, release gap scores, HashDb/Wishlist evidence scores, ranked release recommendations, and per-release priority reasons. The scoring is deterministic and local to existing graph/coverage evidence; it does not browse peers, search Soulseek, start downloads, or publish graph data.
 
 - [ ] **T-931**: Bloom-filter library diff.
  - Status: planned
@@ -1885,10 +1900,14 @@
   - Status: completed (2026-04-30)
   - Notes: Added a unified Messages route/workspace for direct chats and rooms. The old `/chat` and `/rooms` routes now enter the same workspace in the matching mode. Users can keep multiple chat/room panels open at once, collapse panels into a dock, restore them, and use compact sidebar affordances for saved chats and joined rooms.
 
+- [x] Add guided Web UI controls for push notification providers
+  - Status: completed (2026-04-30)
+  - Notes: System Integrations now exposes Pushbullet, Ntfy, and Pushover settings with enable toggles, private-message and room-mention triggers, masked secret replacement, validation warnings, runtime apply, YAML save, reset, and tooltip-backed actions. Runtime overlays were extended for these notification options.
+
 - [ ] Add guided admin settings for remaining YAML-only integrations and policies
   - Status: planned
   - Priority: P2
-  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: notification integrations, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
+  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: webhooks/scripts/FTP, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
 
 - [x] Fix dark-mode inner surfaces and surface VPN/Lidarr admin status
   - Status: completed (2026-04-30)

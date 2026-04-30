@@ -1,3 +1,52 @@
+## Update 2026-04-30 21:20:12Z
+
+- Current task: T-937 Discography Concierge graph-density prioritization is implemented locally.
+- Last activity:
+  - added optional Discovery Graph priority metadata to Discography Coverage responses
+  - ranked releases by missing-track gap, graph neighborhood density, and existing HashDb/Wishlist evidence
+  - kept the scoring local-only with no peer browse, Soulseek search, download, or graph publication
+  - validated focused `DiscographyCoverageServiceTests`
+- Next steps:
+  1. Continue center-lane backend work with Bloom-filter library diff or artist radar persistence if it avoids active frontend/options lanes.
+  2. Leave concurrent Discovery Inbox, Player, Watchlist, Discovery Shelf, and Options edits untouched unless asked to integrate.
+
+## Update 2026-04-30 21:19:35Z
+
+- Current task: Epic E13 Discovery Shelf policy report export is implemented locally.
+- Last activity:
+  - added copyable shelf policy reports with expiry window, consensus requirement, policy counts, and item-level planned actions
+  - surfaced Copy Report in the player Discovery Shelf modal
+  - kept report generation review-only with no apply, file mutation, queue, download, publish, or backend call
+  - validated broader player-focused tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Move into Epic E12 Library Health only if the next slice can be read-only/report-first and avoid active System ownership.
+  2. Keep Discovery Shelf apply actions disabled until backend preview, confirmation, and shared-owner consensus contracts exist.
+
+## Update 2026-04-30 21:17:09Z
+
+- Current task: Epic E6 visible Watchlist schedule and cooldown policy is implemented locally.
+- Last activity:
+  - added manual/daily/weekly/monthly schedule choices to watchlist creation
+  - persisted bounded cooldown days and acquisition profile policy with watchlist targets
+  - displayed schedule enablement, cooldown, profile policy, and no-execution network impact on each watchlist row
+  - kept the slice local-only with no scheduler, metadata provider lookup, Soulseek search, peer browse, download, automation execution, or file mutation
+  - validated focused Watchlists and Discovery Inbox component tests
+- Next steps:
+  1. Continue beginning-lane E6 with similar-artist expansion approval if it can stay review-only and avoid active middle/end lanes.
+  2. Defer provider-backed release radar scans until credentials, cooldown enforcement, and network-impact policy are explicit.
+
+## Update 2026-04-30 21:16:27Z
+
+- Current task: Epic E13 Discovery Shelf policy previews are implemented locally.
+- Last activity:
+  - added local promote/archive/expiry/review/consensus-gated policy preview counts
+  - added configurable unrated expiry window and shared-library consensus toggle to the player shelf modal
+  - kept policy preview informational only with no backend apply or file mutation action
+  - validated broader player-focused tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue E13 only if the next slice can remain explicit-preview-first and avoid DiscoveryInbox ownership.
+  2. Keep apply/delete/archive disabled until backend preview, confirmation, and shared-owner consensus contracts exist.
+
 ## Update 2026-04-30 21:09:16Z
 
 - Current task: Epic E6 browser-local Watchlist release filters are implemented locally.
@@ -3312,3 +3361,15 @@ dotnet test
 - Next steps:
   1. Validate focused Messages/App tests, frontend lint/build, whitespace, and relevant backend gates.
   2. Start the next admin settings surface with Notifications or Transfer Policy.
+
+## Update 2026-04-30 21:20:39Z
+
+- Current task: Web UI notification provider settings are implemented locally.
+- Last activity:
+  - added System Integrations controls for Pushbullet, Ntfy, and Pushover
+  - exposed enable toggles, private-message and room-mention trigger toggles, masked secret replacement, validation warnings, runtime apply, YAML save, and reset actions
+  - extended `OptionsOverlay` so notification provider settings can be applied at runtime when remote configuration is enabled
+  - updated `config/slskd.example.yml`, changelog, the Web UI audit, task list, and progress notes
+- Next steps:
+  1. Continue the audit burn-down into webhooks/scripts/FTP or Transfer Policy.
+  2. Keep additional admin settings surfaces redacted, tooltip-backed, and explicit about runtime versus YAML persistence.

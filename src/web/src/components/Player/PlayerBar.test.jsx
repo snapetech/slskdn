@@ -390,6 +390,14 @@ describe('PlayerBar', () => {
     expect(screen.getByTestId('player-shelf-row-content:sha256:test')).toHaveTextContent(
       'Promote preview',
     );
+    expect(screen.getByTestId('player-shelf-policy-preview')).toHaveTextContent(
+      '1 promote',
+    );
+    expect(screen.getByTestId('player-shelf-policy-preview')).toHaveTextContent(
+      '0 consensus gated',
+    );
+    fireEvent.click(screen.getByTestId('player-shelf-copy-policy-report'));
+    expect(screen.getByText('Policy report prepared for 1 shelf items.')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('player-shelf-preview-content:sha256:test'));
     expect(screen.getByText('Promote preview prepared for Local stream. No files were moved or deleted.')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('player-close-discovery-shelf'));

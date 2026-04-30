@@ -1,7 +1,9 @@
 import {
   clearDiscoveryShelf,
   discoveryShelfStorageKey,
+  exportDiscoveryShelfPolicyReport,
   getDiscoveryShelfAction,
+  getDiscoveryShelfPolicyPreview,
   getDiscoveryShelfSummary,
   removeDiscoveryShelfItem,
   upsertDiscoveryShelfItem,
@@ -62,5 +64,58 @@ describe('discoveryShelf', () => {
     clearDiscoveryShelf();
 
     expect(getDiscoveryShelfSummary().total).toBe(0);
+  });
+
+  it('previews promote archive and expiry policy without enabling file actions', () => {
+    upsertDiscoveryShelfItem({
+      contentId: 'sha256:promote',
+      title: 'Promote Track',
+    }, 5, '2026-04-30T00:00:00.000Z');
+    upsertDiscoveryShelfItem({
+      contentId: 'sha256:archive',
+      title: 'Archive Track',
+    }, 1, '2026-04-30T00:00:00.000Z');
+    upsertDiscoveryShelfItem({
+      contentId: 'sha256:expire',
+      title: 'Expire Track',
+    }, 0, '2026-04-01T00:00:00.000Z');
+    upsertDiscoveryShelfItem({
+      contentId: 'sha256:review',
+      title: 'Review Track',
+    }, 3, '2026-04-30T00:00:00.000Z');
+
+    expect(getDiscoveryShelfPolicyPreview({
+      expiryDays: 14,
+      now: '2026-04-30T00:00:00.000Z',
+      requireConsensus: true,
+    })).toEqual({
+      archive: 1,
+      blockedByConsensus: 2,
+      canApply: false,
+      expire: 1,
+      expiryDays: 14,
+      promote: 1,
+      requireConsensus: true,
+      review: 1,
+    });
+  });
+
+  it('exports a copyable policy report for review', () => {
+    upsertDiscoveryShelfItem({
+      album: 'Fixture Album',
+      artist: 'Fixture Artist',
+      contentId: 'sha256:report',
+      title: 'Report Track',
+    }, 5, '2026-04-30T00:00:00.000Z');
+
+    const report = exportDiscoveryShelfPolicyReport({
+      now: '2026-04-30T21:20:00.000Z',
+      requireConsensus: true,
+    });
+
+    expect(report).toContain('Discovery Shelf Policy Preview');
+    expect(report).toContain('Promote candidates: 1');
+    expect(report).toContain('Consensus required for destructive actions: yes');
+    expect(report).toContain('Promote preview: Report Track by Fixture Artist (Fixture Album) [rating 5]');
   });
 });

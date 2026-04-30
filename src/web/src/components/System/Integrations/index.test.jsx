@@ -4,7 +4,7 @@ import * as optionsApi from '../../../lib/options';
 import Integrations from './index';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../lib/lidarr', () => ({
   getStatus: vi.fn(),
@@ -20,6 +20,10 @@ vi.mock('../../../lib/options', () => ({
 }));
 
 describe('Integrations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('surfaces VPN and Lidarr settings without exposing secrets', () => {
     render(
       <Integrations
@@ -183,7 +187,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('Last.fm API key'), {
       target: { value: 'lastfm-key' },
     });
-    fireEvent.click(screen.getByText('Apply Runtime'));
+    fireEvent.click(screen.getAllByText('Apply Runtime')[1]);
 
     await waitFor(() => {
       expect(optionsApi.applyOverlay).toHaveBeenCalledWith({
@@ -233,7 +237,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('YouTube Data API key'), {
       target: { value: 'youtube-key' },
     });
-    fireEvent.click(screen.getByText('Save YAML'));
+    fireEvent.click(screen.getAllByText('Save YAML')[1]);
 
     await waitFor(() => {
       expect(optionsApi.updateYaml).toHaveBeenCalled();
@@ -242,6 +246,121 @@ describe('Integrations', () => {
     expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain('api_key: youtube-key');
     expect(
       screen.getByText('Source-feed integration settings saved to YAML.'),
+    ).toBeInTheDocument();
+  });
+
+  it('applies notification integration settings without exposing secrets', async () => {
+    optionsApi.applyOverlay.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            ntfy: {
+              enabled: false,
+              notificationPrefix: 'slskd',
+            },
+            pushbullet: {
+              accessToken: '*****',
+              cooldownTime: 900000,
+              enabled: false,
+              notificationPrefix: 'From slskd:',
+              retryAttempts: 3,
+            },
+            pushover: {
+              token: '*****',
+              userKey: '*****',
+            },
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
+    expect(screen.getByText('Pushbullet Token Configured')).toBeInTheDocument();
+    expect(screen.getByText('Pushover Secrets Configured')).toBeInTheDocument();
+    expect(screen.queryByText('*****')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Enable Pushbullet notifications'));
+    fireEvent.click(screen.getByLabelText('Enable Ntfy notifications'));
+    fireEvent.change(screen.getByLabelText('Ntfy topic URL'), {
+      target: { value: 'https://ntfy.sh/slskdn' },
+    });
+    fireEvent.click(screen.getAllByText('Apply Runtime')[0]);
+
+    await waitFor(() => {
+      expect(optionsApi.applyOverlay).toHaveBeenCalledWith({
+        integration: {
+          ntfy: {
+            enabled: true,
+            notificationPrefix: 'slskd',
+            notifyOnPrivateMessage: true,
+            notifyOnRoomMention: true,
+            url: 'https://ntfy.sh/slskdn',
+          },
+          pushbullet: {
+            cooldownTime: 900000,
+            enabled: true,
+            notificationPrefix: 'From slskd:',
+            notifyOnPrivateMessage: true,
+            notifyOnRoomMention: true,
+            retryAttempts: 3,
+          },
+          pushover: {
+            enabled: false,
+            notificationPrefix: 'slskd',
+            notifyOnPrivateMessage: true,
+            notifyOnRoomMention: true,
+          },
+        },
+      });
+    });
+    expect(
+      screen.getByText(
+        'Notification integration settings applied for this running daemon.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('persists notification settings to YAML from the web UI', async () => {
+    optionsApi.getYaml.mockResolvedValue('integrations: {}\n');
+    optionsApi.updateYaml.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            ntfy: {},
+            pushbullet: {},
+            pushover: {},
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Enable Pushover notifications'));
+    fireEvent.change(screen.getByLabelText('Pushover user key'), {
+      target: { value: 'pushover-user' },
+    });
+    fireEvent.change(screen.getByLabelText('Pushover API token'), {
+      target: { value: 'pushover-token' },
+    });
+    fireEvent.click(screen.getAllByText('Save YAML')[0]);
+
+    await waitFor(() => {
+      expect(optionsApi.updateYaml).toHaveBeenCalled();
+    });
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain('pushover');
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain(
+      'user_key: pushover-user',
+    );
+    expect(optionsApi.updateYaml.mock.calls[0][0].yaml).toContain(
+      'token: pushover-token',
+    );
+    expect(
+      screen.getByText('Notification integration settings saved to YAML.'),
     ).toBeInTheDocument();
   });
 });
