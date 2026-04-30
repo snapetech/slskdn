@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z223. Factory HttpClient Timeout Must Not Be Mutated Per Request
+
+**The Bug**: A source-feed provider client set `HttpClient.Timeout` inside the send helper. Focused tests reused the same factory client for token and API requests, and the second request threw because `HttpClient` properties cannot be changed after the first send.
+
+**Files Affected**:
+- `src/slskd/SourceFeeds/SourceFeedImportService.cs`
+
+**Wrong**:
+```csharp
+var client = HttpClientFactory.CreateClient(nameof(SourceFeedImportService));
+client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+var response = await client.SendAsync(request, cancellationToken);
+```
+
+**Correct**:
+```csharp
+var client = HttpClientFactory.CreateClient(nameof(SourceFeedImportService));
+using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+timeout.CancelAfter(TimeSpan.FromSeconds(options.TimeoutSeconds));
+var response = await client.SendAsync(request, timeout.Token);
+```
+
+**Why This Keeps Happening**: `IHttpClientFactory` usually returns a usable client per call, but tests and typed/named-client wiring can legally reuse instances. Per-request timeouts belong in cancellation tokens or client registration, not in mutable `HttpClient` properties during request execution.
+
 ### 0z222. Tests Must Qualify Root Options When Microsoft Options Is Imported
 
 **The Bug**: A unit test imported `Microsoft.Extensions.Options` for `IOptionsMonitor<T>` and then used unqualified `Options`, which resolved to the framework static helper instead of the root `slskd.Options` configuration model.
