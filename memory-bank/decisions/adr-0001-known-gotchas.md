@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z185. Do Not Put Full App JWTs In Browser Media URLs
+
+**The Bug**: Browser `<audio>` playback was fixed by appending the normal session JWT as `?access_token=` on `/api/v0/streams/{contentId}`. That made media playback work, but exposed the full app bearer token through URL history, logs, screenshots, browser extensions, and diagnostics.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/lib/streaming.js`
+- `src/slskd/Streaming/StreamsController.cs`
+- `src/slskd/Streaming/StreamTicketService.cs`
+- `src/slskd/Program.cs`
+
+**Wrong**:
+```js
+const streamUrl = `${urlBase}/api/v0/streams/${contentId}?access_token=${token}`;
+```
+
+**Correct**:
+```js
+const { ticket } = await api.post(`/streams/${encodeURIComponent(contentId)}/ticket`);
+const streamUrl = `${urlBase}/api/v0/streams/${contentId}?ticket=${ticket}`;
+```
+
+**Why This Keeps Happening**: Browser-managed media requests cannot use Axios authorization headers, so query strings look like the easiest fix. Use short-lived, content-bound opaque media tickets instead of putting long-lived session or API tokens in URLs.
+
 ### 0z184. Canvas Overlays Can Block Their Own Controls
 
 **The Bug**: The MilkDrop visualizer canvas and hidden overlay occupied the same absolute area as the preset/control buttons. In headless and some pointer paths, the canvas/container intercepted clicks intended for the visible buttons.
