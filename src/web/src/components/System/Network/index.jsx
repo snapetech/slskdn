@@ -1,4 +1,5 @@
 import * as slskdnAPI from '../../../lib/slskdn';
+import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/storage';
 import { LoaderSegment, ShrinkableButton } from '../../Shared';
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -83,12 +84,7 @@ const Network = ({ theme }) => {
   const [backfilling, setBackfilling] = useState(false);
   const [backfillProgress, setBackfillProgress] = useState(null);
   const [dhtExposureAcknowledged, setDhtExposureAcknowledged] = useState(() => {
-    try {
-      return window.localStorage.getItem(DHT_EXPOSURE_CONSENT_KEY) === 'acknowledged';
-    }
-    catch {
-      return false;
-    }
+    return getLocalStorageItem(DHT_EXPOSURE_CONSENT_KEY) === 'acknowledged';
   });
 
   const fetchData = useCallback(async () => {
@@ -111,13 +107,7 @@ const Network = ({ theme }) => {
   }, []);
 
   const dismissDhtExposureConsent = () => {
-    try {
-      window.localStorage.setItem(DHT_EXPOSURE_CONSENT_KEY, 'acknowledged');
-    }
-    catch {
-      // LocalStorage may be unavailable in unusual browser modes; still close the notice.
-    }
-
+    setLocalStorageItem(DHT_EXPOSURE_CONSENT_KEY, 'acknowledged');
     setDhtExposureAcknowledged(true);
   };
 

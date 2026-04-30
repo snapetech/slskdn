@@ -28,6 +28,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   contexts fall back cleanly instead of crashing player initialization.
 - Routed additional browser-local search and Discovery Graph storage reads
   through safe storage helpers for privacy-locked browser contexts.
+- Routed the Network DHT exposure acknowledgement through safe browser storage
+  helpers.
 - Prepared the `2026042900-slskdn.204` stable release metadata.
 - Made Winget release-version metadata validation opt-in so stable releases
   that intentionally skip Winget are not blocked by stale Winget URLs.

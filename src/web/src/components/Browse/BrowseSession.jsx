@@ -1,6 +1,12 @@
 /* eslint-disable promise/prefer-await-to-then */
 import './Browse.css';
 import * as transfers from '../../lib/transfers';
+import {
+  getLocalStorageItem,
+  getLocalStorageKeys,
+  removeLocalStorageItem,
+  setLocalStorageItem,
+} from '../../lib/storage';
 import * as userNotes from '../../lib/userNotes';
 import * as users from '../../lib/users';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
@@ -37,14 +43,12 @@ const BROWSE_CACHE_PREFIX = 'slskd-browse-state-';
 // Cleanup old browse cache entries using LRU strategy
 const cleanupBrowseCache = () => {
   try {
-    const cacheEntries = [];
-    for (let index = 0; index < localStorage.length; index++) {
-      const key = localStorage.key(index);
-      if (key && key.startsWith(BROWSE_CACHE_PREFIX)) {
-        const data = localStorage.getItem(key);
-        cacheEntries.push({ key, size: data ? data.length : 0 });
-      }
-    }
+    const cacheEntries = getLocalStorageKeys()
+      .filter((key) => key.startsWith(BROWSE_CACHE_PREFIX))
+      .map((key) => {
+        const data = getLocalStorageItem(key, '');
+        return { key, size: data ? data.length : 0 };
+      });
 
     if (cacheEntries.length > MAX_BROWSE_CACHE_ENTRIES) {
       // Sort by size (larger = older/more complete browses, keep those)
@@ -55,7 +59,7 @@ const cleanupBrowseCache = () => {
         cacheEntries.length - MAX_BROWSE_CACHE_ENTRIES,
       );
       for (const entry of toRemove) {
-        localStorage.removeItem(entry.key);
+        removeLocalStorageItem(entry.key);
       }
     }
   } catch (error) {
@@ -245,7 +249,7 @@ class BrowseSession extends Component {
     // Only save if we have actual browse data
     if (this.state.username && this.state.tree.length > 0) {
       try {
-        localStorage.setItem(
+        setLocalStorageItem(
           this.getStorageKey(),
           lzString.compress(JSON.stringify(this.state)),
         );
@@ -265,7 +269,7 @@ class BrowseSession extends Component {
       try {
         const key = `slskd-browse-state-${username}`;
         const savedState = JSON.parse(
-          lzString.decompress(localStorage.getItem(key) || ''),
+          lzString.decompress(getLocalStorageItem(key, '') || ''),
         );
 
         if (savedState && savedState.tree && savedState.tree.length > 0) {
@@ -365,7 +369,7 @@ class BrowseSession extends Component {
     if (username) {
       // Clear the cached state for this user
       try {
-        localStorage.removeItem(`slskd-browse-state-${username}`);
+        removeLocalStorageItem(`slskd-browse-state-${username}`);
       } catch {
         // ignore
       }
