@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z215. API Controllers Must Fully Qualify Root Options In Nested Namespaces
+
+**The Bug**: A native API controller declared `IOptionsSnapshot<Options>` inside `slskd.API.Native`, so C# resolved `Options` to a static API helper type instead of the root `slskd.Options` model and the server project failed to compile.
+
+**Files Affected**:
+- `src/slskd/API/Native/SourceProvidersController.cs`
+
+**Wrong**:
+```csharp
+private readonly IOptionsSnapshot<Options> options;
+
+public SourceProvidersController(
+    IEnumerable<IContentBackend> contentBackends,
+    IOptionsSnapshot<Options> options)
+```
+
+**Correct**:
+```csharp
+private readonly IOptionsSnapshot<slskd.Options> options;
+
+public SourceProvidersController(
+    IEnumerable<IContentBackend> contentBackends,
+    IOptionsSnapshot<slskd.Options> options)
+```
+
+**Why This Keeps Happening**: Controllers live under nested namespaces that can contain local `Options` helper/static types. Root configuration injection should use `slskd.Options` explicitly unless the file already has a clear alias, especially in newer API folders with many provider-specific option models.
+
 ### 0z214. Player File Pickers Need Path-Aware Browsing And Duplicate Collapse
 
 **The Bug**: The player file picker used a flat library search with a tiny result limit and rendered every returned file row directly, so large multi-folder libraries looked like repeated copies of the same track and could not be browsed like a real file tree.
