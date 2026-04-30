@@ -52,12 +52,13 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
-### 0z209. Fixed Bottom Chrome Heights Cause Scroll Overlap
+### 0z209. Fixed Chrome Heights Cause Scroll Overlap
 
-**The Bug**: The main app scroll area reserved hard-coded player/footer heights, so responsive footer wrapping, safe-area padding, and player collapse/expand state could leave page content hidden behind the fixed player or footer.
+**The Bug**: The main app scroll area reserved hard-coded nav/player/footer heights, so responsive nav wrapping, footer wrapping, safe-area padding, and player collapse/expand state could leave page content hidden behind fixed chrome.
 
 **Files Affected**:
 - `src/web/src/components/App.css`
+- `src/web/src/components/App.jsx`
 - `src/web/src/components/Player/PlayerBar.jsx`
 - `src/web/src/components/Player/Player.css`
 - `src/web/src/components/Shared/Footer.jsx`
@@ -81,7 +82,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 }
 ```
 
-**Why This Keeps Happening**: The player and footer are fixed-position chrome, but their real heights change with responsive wrapping, safe-area insets, and player expansion state. Reserve space from measured CSS variables instead of constants so every route scrolls only inside the unobscured viewport.
+**Why This Keeps Happening**: The nav, player, and footer are fixed-position chrome, but their real heights change with responsive wrapping, safe-area insets, and player expansion state. Reserve space from measured CSS variables instead of constants so every route scrolls only inside the unobscured viewport.
 
 ### 0z208. Test-Local Helper Types Still Need Real Framework Imports
 
@@ -11168,7 +11169,7 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 
 ### 0z50. Full-Instance Runner Must Pass `--app-dir`, Not Just `APP_DIR`, To Avoid Colliding With A Live User Install
 
-**What went wrong:** The new two-instance mesh smoke started real `slskd` processes with a temporary config file and `APP_DIR` set in the child environment, but the process still exited immediately with `An instance of slskd is already running in app directory: /home/keith/.local/share/slskd`. The runtime singleton guard was checking the default app directory because the harness never passed the explicit `--app-dir` CLI argument.
+**What went wrong:** The new two-instance mesh smoke started real `slskd` processes with a temporary config file and `APP_DIR` set in the child environment, but the process still exited immediately with `An instance of slskd is already running in app directory: <app-data-dir>`. The runtime singleton guard was checking the default app directory because the harness never passed the explicit `--app-dir` CLI argument.
 
 **Why it happened:** The harness assumed the environment variable alone would override the app directory early enough in startup. In practice, the running process resolved the default appdir before the test harness intent took effect, so the test collided with the developer's live install instead of the temporary sandbox.
 
