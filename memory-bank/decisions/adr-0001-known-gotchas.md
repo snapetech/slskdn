@@ -965,6 +965,43 @@ const renderLoop = () => {
 
 **Why This Keeps Happening**: MilkDrop presets can parse before all runtime equation paths are exercised. Any visualizer engine that runs user/imported preset code per frame must treat render as a failure boundary, not just initialization/import.
 
+### 0z199a. DOM Factory Spies Must Be Restored In Download Tests
+
+**The Bug**: Visualizer export tests spied on `document.createElement` to replace anchor `.click()`, but the spy was left active. The next test captured the already-spied function as its "original" factory, causing recursive `createElement` calls and widespread `Maximum call stack size exceeded` failures.
+
+**Files Affected**:
+- `src/web/src/components/Player/Visualizer.test.jsx`
+
+**Wrong**:
+```javascript
+const createElement = document.createElement.bind(document);
+vi.spyOn(document, 'createElement').mockImplementation((name) => {
+  const element = createElement(name);
+  element.click = click;
+  return element;
+});
+```
+
+**Correct**:
+```javascript
+const createElement = document.createElement.bind(document);
+const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((name) => {
+  const element = createElement(name);
+  if (name === 'a') {
+    Object.defineProperty(element, 'click', {
+      configurable: true,
+      value: click,
+    });
+  }
+  return element;
+});
+
+// assertions...
+createElementSpy.mockRestore();
+```
+
+**Why This Keeps Happening**: Browser download tests often patch DOM factories instead of clicking real anchors. Any test that spies on global DOM creation must restore the spy before the next render, and anchor click replacement should use `Object.defineProperty` so JSDOM does not attempt navigation.
+
 ### 0z199. Reject Soulseek Upload Requests From Our Own Username
 
 **The Bug**: The incoming upload enqueue path accepted requests where the requesting Soulseek username matched the daemon's own logged-in username, so the Uploads page could show a file being uploaded to yourself.
