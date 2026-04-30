@@ -52,9 +52,9 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
-### 0z178. Fixed API v0 Routes Still Need ApiVersion Metadata
+### 0z178. Versioned Controllers Must Bind The URL Version Segment
 
-**The Bug**: PodCore controllers used literal routes like `api/v0/podcore/dht`, but did not declare `[ApiVersion("0")]`. ASP.NET API versioning still inspected those actions and returned `ApiVersionUnspecified` or `UnsupportedApiVersion` for live `/api/v0/podcore/...` requests.
+**The Bug**: PodCore controllers used literal routes like `api/v0/podcore/dht`. ASP.NET API versioning still inspected those actions and returned `ApiVersionUnspecified` or `UnsupportedApiVersion` for live `/api/v0/podcore/...` requests, even after adding `[ApiVersion("0")]`.
 
 **Files Affected**:
 - `src/slskd/PodCore/API/Controllers/*Controller.cs`
@@ -70,11 +70,11 @@ public class PodDhtController : ControllerBase
 ```csharp
 [ApiController]
 [ApiVersion("0")]
-[Route("api/v0/podcore/dht")]
+[Route("api/v{version:apiVersion}/podcore/dht")]
 public class PodDhtController : ControllerBase
 ```
 
-**Why This Keeps Happening**: A literal `v0` route segment is not enough once ASP.NET API versioning is enabled globally. Every versioned controller must either use `api/v{version:apiVersion}/...` or declare the matching `[ApiVersion]` metadata when the route is fixed.
+**Why This Keeps Happening**: A literal `v0` route segment is not enough once ASP.NET API versioning is enabled globally. Every versioned controller should use `api/v{version:apiVersion}/...` and declare the matching `[ApiVersion]` metadata so URL-segment versioning can bind the requested version.
 
 ### 0z179. Stream Bearer Tokens Are Not Always Share Tokens
 
