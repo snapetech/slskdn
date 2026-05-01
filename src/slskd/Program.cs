@@ -2281,19 +2281,27 @@ namespace slskd
                 var keyStore = sp.GetRequiredService<Mesh.Overlay.IKeyStore>();
                 return keyStore.Current;
             });
-            services.AddHostedService(p =>
-            {
-                Log.Debug("[DI] Constructing UdpOverlayServer hosted service...");
-                var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
-                Log.Debug("[DI] UdpOverlayServer constructed");
-                return service;
-            });
             var overlayOptionsAtStartup = Configuration.GetSlskdSection("Overlay").Get<Mesh.Overlay.OverlayOptions>() ?? new Mesh.Overlay.OverlayOptions();
             var dataOverlayOptionsAtStartup = Configuration.GetSlskdSection("OverlayData").Get<Mesh.Overlay.DataOverlayOptions>() ?? new Mesh.Overlay.DataOverlayOptions();
             var quicPlatformSupported = OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
             var quicRuntimeAvailable = quicPlatformSupported && Mesh.QuicRuntime.IsAvailable();
             var quicOverlayRequested = overlayOptionsAtStartup.Enable && overlayOptionsAtStartup.EnableQuic;
             var quicDataRequested = dataOverlayOptionsAtStartup.Enable;
+
+            if (ShouldRunUdpOverlayServer(overlayOptionsAtStartup.Enable, quicOverlayRequested, quicRuntimeAvailable))
+            {
+                services.AddHostedService(p =>
+                {
+                    Log.Debug("[DI] Constructing UdpOverlayServer hosted service...");
+                    var service = ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
+                    Log.Debug("[DI] UdpOverlayServer constructed");
+                    return service;
+                });
+            }
+            else
+            {
+                Log.Debug("[DI] Legacy UDP overlay server skipped because QUIC overlay owns direct mesh transport");
+            }
 
             if (quicOverlayRequested && quicRuntimeAvailable)
             {
@@ -4399,6 +4407,11 @@ namespace slskd
         private static Mesh.Overlay.QuicOverlayServer CreateQuicOverlayServer(IServiceProvider serviceProvider)
         {
             return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
+        }
+
+        internal static bool ShouldRunUdpOverlayServer(bool overlayEnabled, bool quicOverlayRequested, bool quicRuntimeAvailable)
+        {
+            return overlayEnabled && !(quicOverlayRequested && quicRuntimeAvailable);
         }
 
         internal static bool IsExpectedSoulseekNetworkException(Exception exception)

@@ -424,6 +424,20 @@ public class ProgramPathNormalizationTests
         Assert.False(dataOverlay.Enable);
     }
 
+    [Theory]
+    [InlineData(true, true, true, false)]
+    [InlineData(true, true, false, true)]
+    [InlineData(true, false, true, true)]
+    [InlineData(false, false, true, false)]
+    public void ShouldRunUdpOverlayServer_OnlyUsesLegacyUdpWhenQuicIsNotActive(
+        bool overlayEnabled,
+        bool quicOverlayRequested,
+        bool quicRuntimeAvailable,
+        bool expected)
+    {
+        Assert.Equal(expected, Program.ShouldRunUdpOverlayServer(overlayEnabled, quicOverlayRequested, quicRuntimeAvailable));
+    }
+
     [Fact]
     public void IsStaleAntiforgeryTokenException_ReturnsTrue_ForKeyRingMismatch()
     {

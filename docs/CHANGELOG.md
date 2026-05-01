@@ -48,6 +48,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   setup.
 - Quieted normal QUIC probe disconnects so successful handshake-only checks no
   longer log warning stack traces when the peer closes before opening a stream.
+- Stopped the legacy UDP overlay listener from binding `50400/udp` when the
+  active direct mesh transport is QUIC on the shared DHT/overlay port.
 - Switched slskdN to the private `slskNet.Runtime` Soulseek.NET-derived
   runtime fork for local builds, vendored the runtime source under
   `vendor/slskNet.Runtime`, activated Soulseek type-1 peer-message
