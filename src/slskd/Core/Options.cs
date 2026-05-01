@@ -63,6 +63,27 @@ namespace slskd
     }
 
     /// <summary>
+    ///     Soulseek type-1 peer-message obfuscation posture.
+    /// </summary>
+    public enum SoulseekObfuscationMode
+    {
+        /// <summary>
+        ///     Advertise regular and obfuscated peer-message reachability when runtime support is available.
+        /// </summary>
+        Compatibility,
+
+        /// <summary>
+        ///     Prefer obfuscated peer-message connections when peers advertise compatible metadata.
+        /// </summary>
+        Prefer,
+
+        /// <summary>
+        ///     Advertise obfuscated peer-message reachability only when runtime support is available.
+        /// </summary>
+        Only,
+    }
+
+    /// <summary>
     ///     Application options.
     /// </summary>
     /// <remarks>
@@ -517,9 +538,19 @@ namespace slskd
                     [nameof(DhtRendezvous)]));
             }
 
+            if (Soulseek.Obfuscation.Enabled &&
+                Soulseek.Obfuscation.ListenPort > 0 &&
+                Soulseek.Obfuscation.ListenPort == Soulseek.ListenPort)
+            {
+                results.Add(new ValidationResult(
+                    "Soulseek obfuscation requires a dedicated listen port different from soulseek.listen_port.",
+                    [nameof(Soulseek)]));
+            }
+
             // Validate realm configuration (T-REALM-01, T-REALM-02)
             results.AddRange(Realm.Validate());
             results.AddRange(MultiRealm.Validate());
+            results.AddRange(Soulseek.Obfuscation.Validate(new ValidationContext(Soulseek.Obfuscation)));
 
             return results;
         }
@@ -2335,6 +2366,12 @@ namespace slskd
             public int ListenPort { get; init; } = 50300;
 
             /// <summary>
+            ///     Gets Soulseek type-1 peer-message obfuscation options.
+            /// </summary>
+            [Validate]
+            public ObfuscationOptions Obfuscation { get; init; } = new ObfuscationOptions();
+
+            /// <summary>
             ///     Gets the minimum diagnostic level.
             /// </summary>
             [Argument(default, "slsk-diag-level")]
@@ -2361,6 +2398,101 @@ namespace slskd
             /// </summary>
             [Validate]
             public SafetyOptions Safety { get; init; } = new SafetyOptions();
+
+            /// <summary>
+            ///     Soulseek type-1 peer-message obfuscation options.
+            /// </summary>
+            public class ObfuscationOptions : IValidatableObject
+            {
+                /// <summary>
+                ///     Gets a value indicating whether type-1 peer-message obfuscation is enabled.
+                /// </summary>
+                [Argument(default, "slsk-obfuscation")]
+                [EnvironmentVariable("SLSK_OBFUSCATION")]
+                [Description("enable Soulseek type-1 peer-message obfuscation options")]
+                [RequiresReconnect]
+                public bool Enabled { get; init; } = false;
+
+                /// <summary>
+                ///     Gets the obfuscation posture.
+                /// </summary>
+                [Argument(default, "slsk-obfuscation-mode")]
+                [EnvironmentVariable("SLSK_OBFUSCATION_MODE")]
+                [Description("Soulseek type-1 obfuscation posture (Compatibility, Prefer, Only)")]
+                [Enum(typeof(SoulseekObfuscationMode))]
+                [RequiresReconnect]
+                public string Mode { get; init; } = SoulseekObfuscationMode.Compatibility.ToString().ToLowerInvariant();
+
+                /// <summary>
+                ///     Gets the dedicated type-1 obfuscated peer-message listen port.
+                /// </summary>
+                [Argument(default, "slsk-obfuscation-listen-port")]
+                [EnvironmentVariable("SLSK_OBFUSCATION_LISTEN_PORT")]
+                [Description("dedicated type-1 obfuscated peer-message listen port (0 = derive from regular listen port when runtime support exists)")]
+                [Range(0, 65535)]
+                [RequiresReconnect]
+                public int ListenPort { get; init; } = 0;
+
+                /// <summary>
+                ///     Gets a value indicating whether to advertise the regular peer-message port alongside obfuscation metadata.
+                /// </summary>
+                [Argument(default, "slsk-obfuscation-advertise-regular-port")]
+                [EnvironmentVariable("SLSK_OBFUSCATION_ADVERTISE_REGULAR_PORT")]
+                [Description("advertise the regular peer-message port alongside type-1 obfuscation metadata")]
+                [RequiresReconnect]
+                public bool AdvertiseRegularPort { get; init; } = true;
+
+                /// <summary>
+                ///     Gets a value indicating whether outbound peer-message dials should prefer compatible obfuscated metadata.
+                /// </summary>
+                [Argument(default, "slsk-obfuscation-prefer-outbound")]
+                [EnvironmentVariable("SLSK_OBFUSCATION_PREFER_OUTBOUND")]
+                [Description("prefer type-1 obfuscated outbound peer-message connections when peer metadata supports them")]
+                [RequiresReconnect]
+                public bool PreferOutbound { get; init; } = true;
+
+                /// <summary>
+                ///     Extended validation.
+                /// </summary>
+                /// <param name="validationContext"></param>
+                /// <returns></returns>
+                public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+                {
+                    var results = new List<ValidationResult>();
+
+                    if (!System.Enum.TryParse<SoulseekObfuscationMode>(Mode, ignoreCase: true, out var mode))
+                    {
+                        results.Add(new ValidationResult(
+                            "Soulseek obfuscation mode must be one of Compatibility, Prefer, or Only.",
+                            [nameof(Mode)]));
+
+                        return results;
+                    }
+
+                    if (ListenPort is > 0 and < 1024)
+                    {
+                        results.Add(new ValidationResult(
+                            "Soulseek obfuscation listen port must be 0 or a non-privileged port between 1024 and 65535.",
+                            [nameof(ListenPort)]));
+                    }
+
+                    if (Enabled && mode == SoulseekObfuscationMode.Only && ListenPort == 0)
+                    {
+                        results.Add(new ValidationResult(
+                            "Soulseek obfuscation only mode requires an explicit obfuscated listen port.",
+                            [nameof(ListenPort)]));
+                    }
+
+                    if (Enabled && mode == SoulseekObfuscationMode.Only && AdvertiseRegularPort)
+                    {
+                        results.Add(new ValidationResult(
+                            "Soulseek obfuscation only mode requires advertise_regular_port to be false.",
+                            [nameof(AdvertiseRegularPort)]));
+                    }
+
+                    return results;
+                }
+            }
 
             /// <summary>
             ///     Connection options.

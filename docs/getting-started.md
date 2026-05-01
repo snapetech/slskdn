@@ -12,10 +12,11 @@ Welcome to slskdN! This guide will help you get up and running quickly.
 - **Wishlist / Background Search**: Save searches that run automatically in the background
 - **Multiple Download Destinations**: Configure multiple download folders
 - **Smart Search Result Ranking**: Intelligent sorting that considers multiple factors
-- **Swarm Downloads**: Multi-source parallel downloads for faster transfers
-- **Scene ↔ Pod Bridging**: Unified search across Pod/Mesh and Soulseek Scene networks
+- **Conservative Multi-Source Rescue**: Optional verified multi-source and failover paths with network-health guardrails
+- **Scene ↔ Pod Bridging**: Optional unified review surfaces across Pod/Mesh and Soulseek Scene networks
 - **Collections & Sharing**: Share collections with other users
-- **Streaming**: Stream content while downloading
+- **Integrated Player**: Stream shared/downloaded local audio and collection items from the Web UI
+- **System Admin Surfaces**: Guided panels for integrations, policies, source providers, diagnostics, mesh, and security
 - **And much more!**
 
 ## Installation
@@ -86,7 +87,7 @@ scoop install slskdn
 docker pull ghcr.io/snapetech/slskdn:latest
 docker run -d \
   --name slskdn \
-  -p 5000:5000 \
+  -p 5030:5030 \
   -v /path/to/config:/app/config \
   -v /path/to/downloads:/app/downloads \
   -v /path/to/shares:/app/shares \
@@ -110,37 +111,42 @@ See [Building from Source](build.md) for detailed instructions.
 ### First Run
 
 1. **Start slskdN** using your preferred installation method
-2. **Open your web browser** and navigate to `http://localhost:5000` (default port)
+2. **Open your web browser** and navigate to `http://localhost:5030` (default port)
 3. **Log in** with the default credentials:
-   - Username: `admin`
-   - Password: `admin` (⚠️ **Change this immediately!**)
+   - Username: `slskd`
+   - Password: `slskd` (change this immediately)
+
+### First-Run Ports
+
+| Purpose | Default | Notes |
+|---------|---------|-------|
+| Web UI / API | `5030/tcp` | Keep local or behind your own reverse proxy unless intentionally exposed. |
+| HTTPS Web UI | `5031/tcp` | Configure certificate settings before forcing HTTPS. |
+| Soulseek listen | `50300/tcp` | Forward or allow-list this when accepting inbound Soulseek transfers. |
+| DHT rendezvous | `50305/udp` | Optional slskdN mesh rendezvous; set `dht.lan_only: true` to avoid public bootstrap. |
+| Mesh overlay | `50305/tcp` | Optional slskdN overlay listener. |
 
 ### Essential Settings
 
 #### 1. Change Default Password
 
-**Settings → Security → Authentication:**
-- Click "Change Password"
-- Enter a strong password
-- Save changes
+Use **System -> Policies** or edit `web.authentication` in YAML. If remote
+configuration is disabled, edit the configuration file directly and restart.
 
 #### 2. Configure Download Directory
 
-**Settings → Downloads:**
-- Set your download directory
-- Optionally configure multiple download destinations
+Use **System -> Options** for raw YAML or edit `directories.downloads`,
+`directories.incomplete`, and `destinations.folders`.
 
 #### 3. Configure Share Directories
 
-**Settings → Shares:**
-- Add directories you want to share
-- Set share options (public/private, etc.)
+Use **System -> Shares** for scan/status work and `shares.directories` in YAML
+for roots you want to share.
 
 #### 4. Configure Soulseek Credentials
 
-**Settings → Soulseek:**
-- Enter your Soulseek username and password
-- Configure connection options
+Set `soulseek.username` and `soulseek.password` in YAML, then restart or
+reconnect as indicated by the System status page.
 
 ### Configuration File
 
@@ -155,7 +161,9 @@ soulseek:
 directories:
   downloads: "/path/to/downloads"
   incomplete: "/path/to/incomplete"
-  shares:
+
+shares:
+  directories:
     - "/path/to/shares"
 ```
 
@@ -164,12 +172,13 @@ directories:
 ### Searching for Files
 
 1. **Navigate to Search** in the sidebar
-2. **Enter your search query** (e.g., "artist album")
-3. **Select search sources**:
-   - ☑ Pod/Mesh (for mesh network content)
-   - ☑ Soulseek Scene (for Soulseek network content)
-4. **Click Search** or press Enter
-5. **Browse results** and click **Download** on desired files
+2. **Enter your search query** (for example, `artist album`)
+3. **Click Search** or press Enter
+4. **Browse results** and click **Download** on desired files
+
+Manual Search is direct user intent. It is not routed through Acquisition
+Review. Use **Acquisition Review** for passive, imported, or generated
+candidates that need approval before later acquisition work.
 
 ### Advanced Search Filters
 
@@ -190,13 +199,16 @@ Click the **⚙️ Advanced Filters** button to access:
 - Enable the **"Auto-Replace"** toggle in Downloads header
 - slskdN will automatically find alternatives for stuck downloads
 
-### Swarm Downloads
+### Multi-Source Rescue
 
-For files with multiple sources, slskdN can download from multiple peers simultaneously:
+For files with verified compatible sources, slskdN can use conservative
+multi-source rescue paths:
 
-1. **Start a swarm download** (automatic when multiple sources available)
-2. **Monitor progress** in Downloads or System → Jobs
-3. **View detailed visualization** by clicking "View Details" on active swarm jobs
+1. Keep normal Soulseek downloads as the default path.
+2. Enable accelerated/rescue behavior only where appropriate.
+3. Monitor progress in Downloads, System -> Jobs, and System -> Swarm Analytics.
+4. Mesh-overlay peers can support parallel chunks; public Soulseek peers use
+   conservative failover to avoid noisy cancellation behavior.
 
 ### Wishlist / Background Search
 
@@ -250,6 +262,31 @@ Monitor all background jobs:
 3. **Filter and sort** by type, status, date
 4. **View swarm visualizations** for active downloads
 
+### System Administration Surfaces
+
+Use **System** for operator work:
+
+- **Info**: daemon status, setup health, restart/reconnect cues, diagnostic bundles.
+- **Network**: Soulseek, DHT, mesh, and public exposure health.
+- **Security**: security dashboard and adversarial/privacy settings.
+- **Policies**: guided YAML for webhooks/scripts, transfer policy, auth/API keys,
+  HTTPS, rate limits, DHT, rescue mode, retention, and share scan pressure.
+- **Experience**: browser-local Search, Acquisition Review, Player, and Messages
+  preferences for page-specific behavior.
+- **Integrations**: VPN, Lidarr, metadata providers, notifications, source feeds,
+  FTP, Servarr readiness, and media-server execution contracts.
+- **Source Providers**: read-only acquisition provider capability catalog.
+- **Automations**: visible automation recipes and dry-run review.
+- **Library Health**: scan results, reports, and review-first action exports.
+
+### Pods, Rooms, And Messages
+
+Use **Messages** as the unified conversation workspace. Direct messages, joined
+rooms, and pod room channels can be opened as panels. Pod direct channels are
+hidden from the normal list so they do not duplicate Soulseek DMs. Gold Star
+Club membership is surfaced through pod/room workflows; leaving is intentionally
+irreversible for local Gold Star status.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -260,7 +297,7 @@ Monitor all background jobs:
 
 **Solutions:**
 1. **Check credentials**: Verify username and password in Settings → Soulseek
-2. **Check firewall**: Ensure port 2234 (Soulseek) is not blocked
+2. **Check firewall**: Ensure port `50300/tcp` (Soulseek listen) is not blocked
 3. **Check network**: Verify internet connectivity
 4. **Check Soulseek status**: Soulseek servers may be down
 
@@ -276,12 +313,12 @@ Monitor all background jobs:
 
 #### Web Interface Not Loading
 
-**Symptoms:** Can't access web UI at `http://localhost:5000`
+**Symptoms:** Can't access web UI at `http://localhost:5030`
 
 **Solutions:**
 1. **Check if service is running**: `ps aux | grep slskdn` (Linux/macOS) or check Task Manager (Windows)
-2. **Check port**: Verify port 5000 is not in use by another service
-3. **Check firewall**: Ensure port 5000 is not blocked
+2. **Check port**: Verify port `5030` is not in use by another service
+3. **Check firewall**: Ensure port `5030/tcp` is not blocked
 4. **Check logs**: Look for error messages in log files
 
 #### High CPU or Memory Usage

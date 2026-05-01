@@ -22,6 +22,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added Soulseek type-1 peer-message obfuscation configuration options and
+  validation, including explicit mode and dedicated obfuscated listen-port
+  checks.
+- Updated the Getting Started guide around current default ports, direct manual
+  Search behavior, Acquisition Review, Multi-Source Rescue, Messages, and
+  System administration surfaces.
+- Added player visual-tile regression coverage for cycling back to album art
+  and opening the native visualizer full-window view from spectrum mode.
 - Fixed the startup mesh transport registration build break by reading the
   separately bound `Mesh:Transport` section directly instead of assuming it is
   present on `OptionsAtStartup`.
@@ -33,6 +41,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   artist, and album, including share-manifest output and Playlist Intake
   collection-item labels so player and playlist rows can avoid raw content ids
   when metadata is known.
+- Added an explicit direct mesh transport runtime gate: `DirectQuicDialer` is
+  only registered when QUIC connection/listener support is available, and
+  startup warns when direct mesh transport is configured on a host that cannot
+  support direct QUIC circuits.
 - Added a browser-local System -> Network health score with local DHT, mesh,
   HashDb, backfill, and security-signal findings plus a copyable report for
   operations review.

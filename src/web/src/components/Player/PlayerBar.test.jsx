@@ -339,6 +339,31 @@ describe('PlayerBar', () => {
     await waitFor(() =>
       expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('scope'));
     expect(within(tile).getByLabelText('Oscilloscope')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-visual-tile-cycle'));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('art'));
+  });
+
+  it('shows tile-level visualizer maximize controls even while analyzer bars are active', async () => {
+    renderPlayer();
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native-webgl2');
+
+    const tile = screen.getByTestId('player-visual-tile');
+    fireEvent.click(tile);
+    fireEvent.click(tile);
+    fireEvent.click(tile);
+    fireEvent.click(tile);
+
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('spectrum'));
+
+    fireEvent.click(screen.getByTestId('player-visual-tile-fullwindow'));
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('native-webgl2');
+    });
+    expect(document.querySelector('.player-visualizer-fullwindow')).toBeInTheDocument();
   });
 
   it('does not repeat the currently playing track in the queue preview', () => {
