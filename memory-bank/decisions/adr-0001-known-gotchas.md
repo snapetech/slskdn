@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z257. PPA FTP Uploads Must Pin Launchpad To Reachable IPv4
+
+**The Bug**: GitHub-hosted PPA uploads can fail with `Connection failed, aborting. Check your network` and `[Errno 101] Network is unreachable` when `dput` chooses Launchpad's IPv6 FTP endpoint on a runner without IPv6 egress.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```ini
+[slskdn-ppa]
+fqdn = ppa.launchpad.net
+method = ftp
+incoming = ~keefshape/ubuntu/slskdn/
+login = anonymous
+passive_ftp = 1
+```
+
+**Correct**:
+```bash
+LAUNCHPAD_PPA_FTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
+echo "$LAUNCHPAD_PPA_FTP_IPV4 ppa.launchpad.net" | sudo tee -a /etc/hosts
+timeout 15 bash -c 'exec 3<>/dev/tcp/ppa.launchpad.net/21; IFS= read -r banner <&3; [[ "$banner" == 220* ]]'
+```
+
+**Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address and preflight port 21 so the logs separate runner reachability from package signing or Launchpad rejection.
+
 ### 0z256. VPN Forwarded Ports Are Not Local Soulseek Listen Ports
 
 **The Bug**: Gluetun/VPN status polling copied the provider's public forwarded port into `soulseek.listen_port`, causing Soulseek.NET to rebind the local listener to the public/NAT port and log `Failed to start listening on 0.0.0.0:<forwarded-port>`.
