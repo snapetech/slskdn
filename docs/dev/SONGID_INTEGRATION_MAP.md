@@ -399,9 +399,18 @@ This is where `slskdn` can do better than `ytdlpchopid` instead of merely matchi
 
 ### P4: Future MIR parity
 
-- [ ] Add deeper Essentia-backed MIR features where they materially improve identification
-- [ ] Explore melody / cover-similarity matching for transformed or reused material
-- [ ] Explore embedding-based local family clustering for repeated channel-original or synthetic families
+These are intentionally future research lanes, not open implementation
+placeholders in the current SongID pipeline. The production baseline remains
+bounded to review-first identity/canonical/synthetic evidence until a concrete
+runtime dependency and measurement corpus justify expanding MIR scope.
+
+- Deeper Essentia-backed MIR features should be added only where measured
+  identification quality improves enough to justify the dependency and CPU cost.
+- Melody / cover-similarity matching for transformed or reused material remains
+  a research lane until there is a tested local matcher and corpus.
+- Embedding-based local family clustering for repeated channel-original or
+  synthetic families remains a research lane until there is a bounded local
+  index and privacy review.
 
 - local filesystem report folders
   - replace with API results plus optional export
