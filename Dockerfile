@@ -26,6 +26,7 @@ COPY bin bin/.
 COPY config config/.
 COPY src/slskd src/slskd/.
 COPY tests tests/.
+COPY vendor vendor/.
 
 COPY --from=web /slskd/src/web/build /slskd/src/slskd/wwwroot/.
 
