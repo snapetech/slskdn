@@ -143,6 +143,18 @@
   1. Remaining unchecked items are not immediate feature-expansion implementation work: T-938 is active in another visualizer lane, packaging tasks require real published artifacts, and broad future backlog items need separate prioritization before changing product scope.
   2. If continuing in this lane, prefer small integration migrations to `IBrainzClient` only where they reduce duplicate MusicBrainz/AcoustID orchestration without changing existing API behavior.
 
+## Update 2026-05-01 02:43:28Z
+
+- Current task: Tiny display visualizer controls are moved out of the tile.
+- Last activity:
+  - removed visualizer mode/maximize controls from inside the square visual surface
+  - added an external control strip under the tile with explicit spectrum, signal, Butterchurn, native WebGL2, native WebGPU, browser-window, and fullscreen buttons
+  - fullscreen now requests browser fullscreen on the tile before switching layout
+  - validated focused PlayerBar/Visualizer tests, frontend lint, native browser smoke, frontend production build, and touched-file whitespace checks
+- Next steps:
+  1. In-browser screenshot validation is the remaining UI-confidence check.
+  2. Keep renderer selection explicit; do not reintroduce hidden cycling as the only route to Butterchurn/native MilkDrop.
+
 ## Update 2026-05-01 02:33:43Z
 
 - Current task: Tile-level visualizer controls are implemented locally.
