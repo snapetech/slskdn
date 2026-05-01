@@ -64,14 +64,8 @@ vi.mock('./Collections/Collections', () => ({
   default: () => <div>Collections</div>,
 }));
 vi.mock('./Contacts/Contacts', () => ({ default: () => <div>Contacts</div> }));
-vi.mock('./DiscoveryInbox/DiscoveryInbox', () => ({
-  default: () => <div>Discovery Inbox</div>,
-}));
 vi.mock('./Search/DiscoveryGraphAtlasPage', () => ({
   default: () => <div>Discovery Graph</div>,
-}));
-vi.mock('./ImportStaging/ImportStaging', () => ({
-  default: () => <div>Import Staging</div>,
 }));
 vi.mock('./LoginForm', () => ({ default: () => <div>Login Form</div> }));
 vi.mock('./Messaging/Messaging', () => ({ default: () => <div>Messages</div> }));

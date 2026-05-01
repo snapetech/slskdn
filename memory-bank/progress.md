@@ -9278,3 +9278,20 @@ Code quality improvements were completed as part of Option A:
 - Keyed the visualizer canvas by active engine type and dispose partially initialized native engines on setup failure, preventing a failed WebGPU/WebGL setup from pinning the canvas for the next WebGL2 retry.
 - Deployed the rebuilt bundle to `kspls0`; the live service is serving `index-BGGUa318.js` and `index-DwvOKuMB.css` on `0.0.0.0:5030`.
 - Validation: focused Player visualizer tests, frontend lint, native MilkDrop smoke test, frontend production build, and touched-file whitespace checks passed.
+
+## 2026-05-01 03:20:30Z
+
+- Verified and corrected the deployed MilkDrop/Butterchurn player tile bundle on `kspls0`; the live service is serving `index-B9qp0NHC.js` and `index-DwvOKuMB.css` from `/usr/lib/slskd/current/wwwroot`.
+- Added native MilkDrop WebGPU fallback behavior so the WebGPU button uses native WebGL2 when the browser lacks `navigator.gpu`, instead of dropping to analyzer fallback bars.
+- Confirmed the live systemd process is active as `/usr/lib/slskd/current/slskd --config /etc/slskd/slskd.yml` and listens on `0.0.0.0:5030`.
+- Ran headless Playwright against `http://kspls0:5030/playlist-intake`: Butterchurn, MilkDrop3 WebGL2, MilkDrop3 WebGPU, and WebGL2 retry all showed visible visualizer canvases with no fallback, no error text, and a single-row 112x18 px control strip.
+- Captured Playwright tile screenshots for Butterchurn, native WebGL2, and native WebGPU; ImageMagick confirmed nonblank images with 250, 1190, and 1446 colors respectively.
+- Documented the WebGPU fallback gotcha in ADR-0001 and committed it as `dd7f0143a`.
+- Validation: focused Player visualizer tests passed (`61` tests), frontend lint passed, live bundle/hash check passed, and live Playwright visualizer smoke passed.
+
+## 2026-05-01 03:30:00Z
+
+- Finished the remaining completion pass after concurrent commits: production placeholder scan is clean except allowed `FeatureNotImplementedException` infrastructure, MeshSync wording/test expectations are aligned, and docs/tasks reflect completed QR, DHT, T-938, analyzer, SongID parity, and placeholder burn-down work.
+- Confirmed the only still-open checkbox is blocked external release work: `slskdn-dev` flake re-enable requires a real published `build-dev-*` release and must not be faked or tag-triggered automatically.
+- Removed stale `/tmp/slskd_*.dmp` crash dumps to restore tmpfs capacity for integration fixtures.
+- Validation: Contacts QR Vitest, frontend lint, repo lint, analyzer format verification, focused MeshSync test, and broad non-live `.NET` tests all passed.

@@ -16,11 +16,11 @@ describe('ExperienceSettings', () => {
     });
   });
 
-  it('surfaces Search, Discovery, Player, and Messages preferences', () => {
+  it('surfaces Search, Player, and Messages preferences', () => {
     render(<ExperienceSettings />);
 
     expect(screen.getByText('Search')).toBeInTheDocument();
-    expect(screen.getByText('Discovery Inbox')).toBeInTheDocument();
+    expect(screen.queryByText('Discovery Inbox')).not.toBeInTheDocument();
     expect(screen.getByText('Player')).toBeInTheDocument();
     expect(screen.getByText('Messages')).toBeInTheDocument();
     expect(

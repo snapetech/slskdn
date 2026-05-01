@@ -1,3 +1,39 @@
+## Update 2026-05-01 03:30:00Z
+
+- Current task: Remaining middle/backlog and production placeholder burn-down is complete locally.
+- Last activity:
+  - reconciled completed QR invite display/scanning, DHT adaptive bootstrap diagnostics, native MilkDrop3 T-938, SongID parity notes, analyzer cleanup, and production placeholder burn-down tasks
+  - left `slskdn-dev` flake re-enable blocked because no published `build-dev-*` release tag exists and repo policy forbids creating tags without explicit instruction
+  - reduced the production placeholder scan to the allowed `FeatureNotImplementedException` gate infrastructure
+  - cleared stale MeshSync test wording after the unavailable-transport message cleanup
+  - restored `/tmp` test capacity by deleting generated `/tmp/slskd_*.dmp` files before rerunning the broad suite
+- Validation:
+  - `npm test -- Contacts.test.jsx`
+  - `npm run lint`
+  - `bash ./bin/lint`
+  - `dotnet format --verify-no-changes --no-restore --verbosity minimal`
+  - `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh" --no-restore`
+- Next steps:
+  1. Re-enable `slskdn-dev` only after a real `build-dev-*` release exists and asset hashes are populated from that release.
+  2. Preserve concurrent player/docs changes in the dirty tree; do not revert them during follow-up cleanup.
+
+## Update 2026-05-01 03:20:30Z
+
+- Current task: MilkDrop/Butterchurn compact player tile is deployed and live-smoke verified on `kspls0`.
+- Last activity:
+  - confirmed the live app serves `index-B9qp0NHC.js` and `index-DwvOKuMB.css`
+  - added native MilkDrop WebGPU-to-WebGL2 fallback behavior for browsers without `navigator.gpu`
+  - verified the live systemd process uses `/etc/slskd/slskd.yml` and listens on `0.0.0.0:5030`
+  - ran headless Playwright against `http://kspls0:5030/playlist-intake`
+  - confirmed Butterchurn, MilkDrop3 WebGL2, MilkDrop3 WebGPU, and WebGL2 retry all show visible visualizer canvases without analyzer fallback or error text
+  - confirmed the compact visualizer controls remain a single 112x18 px row
+  - captured nonblank tile screenshots for Butterchurn, native WebGL2, and native WebGPU
+  - documented and committed the WebGPU fallback gotcha as `dd7f0143a`
+  - validated focused Player visualizer tests and frontend lint
+- Next steps:
+  1. Hard refresh `/playlist-intake` if a browser tab is holding an older service-worker cache.
+  2. Continue unrelated production placeholder burn-down only after preserving the current visualizer state.
+
 ## Update 2026-05-01 03:22:00Z
 
 - Current task: Production placeholder burn-down is in progress.

@@ -9,7 +9,6 @@ This guide covers advanced features and how to use them effectively.
 - [Collections & Sharing](#collections--sharing)
 - [Streaming](#streaming)
 - [Integrated Web Player](#integrated-web-player)
-- [Acquisition Review](#acquisition-review)
 - [System Admin Surfaces](#system-admin-surfaces)
 - [Pods, Rooms, And Messages](#pods-rooms-and-messages)
 - [Wishlist & Background Search](#wishlist--background-search)
@@ -218,21 +217,6 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 - ListenBrainz is opt-in and only submits when a token is present.
 - These player features do not browse remote Soulseek peers or add background network scanning.
 
-## Acquisition Review
-
-Acquisition Review is the review-first queue for candidates that came from
-passive, imported, or generated sources.
-
-### Appropriate Inputs
-
-- Source-feed imports such as Spotify, YouTube, and Last.fm.
-- Watchlist or release-radar seeds.
-- Listening-history and forgotten-favorites handoffs.
-- SongID candidate fan-out.
-- Discovery Graph nearby recommendations.
-
-Manual Search is different: when a user types a query and presses Search, that
-is already explicit intent and should open results directly.
 
 ### Review States
 
@@ -272,7 +256,6 @@ credentials, contact peers, restart the daemon, or mutate files.
 **System -> Experience** stores browser-local preferences for:
 
 - Search ranking, preferred conditions, duplicate folding, and action previews.
-- Acquisition Review filters, stale age, confidence floor, and evidence detail.
 - Player queue/radio/rating/history/scrobble/visualizer/keyboard behavior.
 - Messages dense mode, pinned restore, unread badges, user filtering, and local
   search posture.

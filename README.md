@@ -278,17 +278,12 @@ Install slskdN as an app on your phone.
 - Add to Home Screen on iOS/Android, standalone mode
 - The integrated player uses inline browser audio, safe-area-aware footer spacing, and Media Session controls where supported.
 
-### 🧭 Acquisition Review & Discovery Surfaces
-Review passive, imported, and generated acquisition candidates before any
-network-impacting action.
-- **Acquisition Review** queue for generated/imported candidates with suggested,
-  approved, snoozed, and rejected states
-- **Discovery Inbox / Watchlists** for release, playlist, provider, and local
-  evidence seeds
-- **Browser-local review state** for confidence, stale age, provider/profile
-  filters, impact summaries, community-quality overrides, and mobile review
-  trays
-- Manual Search stays direct and does not require approval through this queue
+### 🧭 Discovery Surfaces
+Discovery surfaces are direct tools, not approval queues.
+- **Manual Search** opens results directly.
+- **SongID** produces ranked song, album, and discography actions from evidence.
+- **Discovery Graph** exposes related tracks, albums, and artists without
+  requiring a separate approval tab.
 
 ### 🛠️ System Admin Surfaces
 The System area now contains guided operator panels instead of forcing every
@@ -296,8 +291,7 @@ advanced setting through raw YAML.
 - **Policies** — webhooks/scripts, transfer slots/speed/retry/schedules,
   auto-replace, auth/API keys/JWT/HTTPS/rate limits, DHT, rescue mode,
   retention, and share-cache/media-probe settings
-- **Experience** — browser-local preferences for Search, Acquisition Review,
-  Player, and Messages
+- **Experience** — browser-local preferences for Search, Player, and Messages
 - **Integrations** — VPN, Lidarr, metadata providers, notifications, source
   feeds, FTP, Servarr readiness, and media-server execution contracts
 - **Source Providers** — read-only provider capability and acquisition-profile
@@ -750,7 +744,7 @@ Detailed documentation for configuration options can be found in [docs/config.md
 | [VPN Agent](src/slskdN.VpnAgent/README.md) | Fail-closed VPN routing, port forwarding, WireGuard/OpenVPN/Tailscale modes |
 | [System Admin Surfaces](docs/system-surfaces.md) | Guided System UI for policies, integrations, diagnostics, provider catalog, and local experience preferences |
 | [Pods, Rooms, and Messages](docs/pods-and-rooms.md) | User-facing path for Gold Star, pods, rooms, unified messages, and listen-along |
-| [SongID and Discovery](docs/songid-discovery.md) | Native identification, evidence review, Acquisition Review, Discovery Graph, and remaining research scope |
+| [SongID and Discovery](docs/songid-discovery.md) | Native identification, evidence review, Discovery Graph, and remaining research scope |
 | [Security Specs](docs/SECURITY_IMPLEMENTATION_SPECS.md) | Security feature details |
 | [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Development status |
 | [Configuration](docs/config.md) | All configuration options |
@@ -785,7 +779,6 @@ Features in the `master` branch:
 | **Library Health Scanner** | ✅ Stable | Quality detection and remediation |
 | **SongID** | 🟡 Experimental | Native source identification, ranked song/album/discography handoff |
 | **Discovery Graph / Constellation** | 🟡 Experimental | Navigable similarity topology across SongID, MusicBrainz, and search |
-| **Acquisition Review** | 🟡 Beta | Review queue for passive/imported/generated candidates; manual Search remains direct |
 | **System Policies / Experience** | 🟡 Beta | Guided configuration and browser-local preferences; live execution backfills vary by feature |
 | **Native MilkDrop3 WebGL/WebGPU** | 🟡 Experimental | Explicit selectable backend; WebGL2/WebGPU parity depends on device and preset-pack validation |
 | **PodCore** | 🟡 Experimental | Functional, API may evolve |

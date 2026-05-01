@@ -44,8 +44,8 @@ It covers:
 
 - Search ranking profile, preferred condition, duplicate folding, and action
   preview density.
-- Acquisition Review/Discovery filters, confidence floor, stale age, and
-  evidence-detail preference.
+- Discovery filters, confidence floor, stale age, and evidence-detail
+  preference.
 - Player queue, radio, ratings, history, scrobble, visualizer, and keyboard
   posture.
 - Messages dense mode, pinned restore, unread badges, user filtering, and local

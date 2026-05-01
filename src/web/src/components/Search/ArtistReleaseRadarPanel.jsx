@@ -2,7 +2,6 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import {
   fetchArtistReleaseRadarNotifications,
   fetchArtistReleaseRadarSubscriptions,
@@ -36,26 +35,6 @@ const getWorkArtist = (notification = {}) =>
   notification.workRef?.creator ||
   notification.workRef?.Creator ||
   '';
-
-const buildRadarDiscoverySeed = (notification = {}) => {
-  const title = getWorkTitle(notification);
-  const artist = getWorkArtist(notification);
-
-  return {
-    acquisitionProfile: 'rare-hunt',
-    evidenceKey: `release-radar:${notification.id || notification.recordingId}`,
-    networkImpact:
-      'Release Radar review seed only; approval and explicit acquisition execution are required before any search, peer browse, or download.',
-    reason:
-      `Observed via ${notification.sourceRealm || 'trusted radar'} with ${
-        Math.round((notification.confidence || 0) * 100)
-      }% confidence.`,
-    searchText: [artist, title].filter(Boolean).join(' ') || title,
-    source: 'Release Radar',
-    sourceId: notification.id || '',
-    title: [artist, title].filter(Boolean).join(' - ') || title,
-  };
-};
 
 const parseList = (value = '') =>
   value
@@ -126,11 +105,6 @@ const ArtistReleaseRadarPanel = ({ disabled }) => {
           'Unable to save release radar subscription.',
       );
     }
-  };
-
-  const sendToDiscoveryInbox = (notification) => {
-    const item = addDiscoveryInboxItem(buildRadarDiscoverySeed(notification));
-    setStatus(`Sent ${item.title} to Discovery Inbox.`);
   };
 
   const routeNotification = async (notification) => {
@@ -294,21 +268,6 @@ const ArtistReleaseRadarPanel = ({ disabled }) => {
                 <List.Description>
                   {notification.sourceRealm || 'unknown realm'} · {Math.round((notification.confidence || 0) * 100)}%
                 </List.Description>
-                <Popup
-                  content="Send this radar hit to Discovery Inbox for review and acquisition planning. No search or download starts here."
-                  position="top center"
-                  trigger={
-                    <Button
-                      aria-label={`Send ${title} radar hit to Discovery Inbox`}
-                      onClick={() => sendToDiscoveryInbox(notification)}
-                      size="mini"
-                      type="button"
-                    >
-                      <Icon name="inbox" />
-                      Inbox
-                    </Button>
-                  }
-                />
                 <Popup
                   content="Route this radar notification to explicitly listed trusted peers through the backend route service."
                   position="top center"

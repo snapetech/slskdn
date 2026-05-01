@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Removed the standalone Discovery Inbox and Import Staging surfaces from the
+  active Web UI path, folded the intake/review wording into current docs and
+  settings, and kept the player visualizer deployment notes current after live
+  `kspls0` Playwright verification.
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
   links, with focused UI coverage, constructor-compatible scanner tests, and
   browser capability checks.

@@ -53,15 +53,6 @@
 - **Ranked acquisition & mix planning** — track/album/discography plans rely on identity-first scoring, mix decomposition generates `Split Into Track Plans`, and `Search Top Candidates` fan-outs handle ambiguous segments while ranking by quality/Byzantine consensus
 - Keeps synthetic / AI-origin signals informational rather than letting them override strong identity matches
 
-### Acquisition Review
-- Review queue for passive, imported, and generated acquisition candidates
-- Suggested, approved, snoozed, and rejected states with local review history
-- Watchlists, provider/source-feed suggestions, listening-history handoffs, and
-  Discovery Graph/SongID candidates can create review seeds
-- Impact summaries label local/manual, provider, network, or unknown work before
-  approval
-- Manual Search remains direct and does not route through Acquisition Review
-
 ### Discovery Graph / Constellation
 - Navigable similarity topology rather than flat related-artist lists
 - Typed, weighted, explainable edges with provenance and score components
@@ -89,8 +80,7 @@
 ### System Admin Surfaces
 - **Policies**: guided YAML for webhooks/scripts, transfer policy, security and
   access, search/network/DHT/rescue settings, retention, and share scan pressure
-- **Experience**: browser-local preferences for Search, Acquisition Review,
-  Player, and Messages
+- **Experience**: browser-local preferences for Search, Player, and Messages
 - **Integrations**: VPN, Lidarr, metadata providers, notifications, source feeds,
   FTP, Servarr readiness, and media-server execution contracts
 - **Source Providers**: read-only acquisition provider capabilities and

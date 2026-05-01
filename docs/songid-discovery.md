@@ -1,7 +1,6 @@
 # SongID And Discovery
 
-SongID, Acquisition Review, and Discovery Graph form the current review-first
-music discovery workflow.
+SongID and Discovery Graph form the current music discovery workflow.
 
 ## SongID
 
@@ -38,21 +37,8 @@ SongID surfaces:
 Synthetic or AI-origin signals are contextual. They should not override strong
 catalog identity when ordering download actions.
 
-## Acquisition Review
-
-Acquisition Review is for passive, imported, and generated candidates. It is not
-part of the normal manual Search path.
-
-Use it for:
-
-- Source-feed suggestions.
-- Watchlist/release radar seeds.
-- Listening-history handoffs.
-- Library/discovery recommendations.
-- Generated SongID or graph candidates that need human review.
-
-Manual Search stays direct: typing a query and pressing Search should open
-results without asking the user to approve the same query first.
+Manual Search stays direct: typing a query and pressing Search opens results
+without asking the user to approve the same query first.
 
 ## Discovery Graph
 

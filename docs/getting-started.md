@@ -176,9 +176,8 @@ shares:
 3. **Click Search** or press Enter
 4. **Browse results** and click **Download** on desired files
 
-Manual Search is direct user intent. It is not routed through Acquisition
-Review. Use **Acquisition Review** for passive, imported, or generated
-candidates that need approval before later acquisition work.
+Manual Search is direct user intent. It opens results without a separate
+approval queue.
 
 ### Advanced Search Filters
 
@@ -271,7 +270,7 @@ Use **System** for operator work:
 - **Security**: security dashboard and adversarial/privacy settings.
 - **Policies**: guided YAML for webhooks/scripts, transfer policy, auth/API keys,
   HTTPS, rate limits, DHT, rescue mode, retention, and share scan pressure.
-- **Experience**: browser-local Search, Acquisition Review, Player, and Messages
+- **Experience**: browser-local Search, Player, and Messages
   preferences for page-specific behavior.
 - **Integrations**: VPN, Lidarr, metadata providers, notifications, source feeds,
   FTP, Servarr readiness, and media-server execution contracts.

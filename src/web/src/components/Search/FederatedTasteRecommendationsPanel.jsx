@@ -2,7 +2,6 @@
 // Copyright (c) slskdN Team. All rights reserved.
 // </copyright>
 
-import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import {
   fetchTasteRecommendations,
   previewTasteRecommendationGraph,
@@ -30,24 +29,6 @@ const getTitle = (workRef = {}) => workRef.title || workRef.Title || 'Untitled r
 
 const getSearchText = (workRef = {}) =>
   [getCreator(workRef), getTitle(workRef)].filter(Boolean).join(' ') || getTitle(workRef);
-
-const buildTasteDiscoverySeed = (recommendation = {}) => ({
-  acquisitionProfile: 'mesh-preferred',
-  evidenceKey:
-    `taste:${recommendation.workRef?.id || getSearchText(recommendation.workRef)}`.toLowerCase(),
-  networkImpact:
-    'Federated taste review seed only; approval and explicit acquisition execution are required before any search, peer browse, or download.',
-  reason:
-    `${recommendation.trustedSourceCount || 0} trusted source${
-      recommendation.trustedSourceCount === 1 ? '' : 's'
-    } recommended this WorkRef.`,
-  searchText: getSearchText(recommendation.workRef),
-  source: 'Federated Taste',
-  sourceId: recommendation.workRef?.id || '',
-  title: [getCreator(recommendation.workRef), getTitle(recommendation.workRef)]
-    .filter(Boolean)
-    .join(' - ') || getTitle(recommendation.workRef),
-});
 
 const FederatedTasteRecommendationsPanel = ({ disabled }) => {
   const [error, setError] = useState('');
@@ -85,11 +66,6 @@ const FederatedTasteRecommendationsPanel = ({ disabled }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const sendToDiscoveryInbox = (recommendation) => {
-    const item = addDiscoveryInboxItem(buildTasteDiscoverySeed(recommendation));
-    setStatus(`Sent ${item.title} to Discovery Inbox.`);
   };
 
   const promoteToWishlist = async (recommendation) => {
@@ -230,21 +206,6 @@ const FederatedTasteRecommendationsPanel = ({ disabled }) => {
                     {recommendation.sourceActors.join(', ')}
                   </div>
                 )}
-                <Popup
-                  content="Send this privacy-filtered recommendation to Discovery Inbox for review. No search or download starts here."
-                  position="top center"
-                  trigger={
-                    <Button
-                      aria-label={`Send ${title} taste recommendation to Discovery Inbox`}
-                      onClick={() => sendToDiscoveryInbox(recommendation)}
-                      size="mini"
-                      type="button"
-                    >
-                      <Icon name="inbox" />
-                      Inbox
-                    </Button>
-                  }
-                />
                 <Popup
                   content="Promote this WorkRef to Wishlist through the backend review handoff without starting a download."
                   position="top center"

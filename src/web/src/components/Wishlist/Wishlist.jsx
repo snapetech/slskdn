@@ -1,17 +1,12 @@
 import './Wishlist.css';
 import { urlBase } from '../../config';
 import {
-  addWishlistItemToDiscoveryInbox,
   buildWishlistRequestReviewPacket,
   buildWishlistRequestSummary,
   formatWishlistRequestReviewPacket,
   getWishlistRequestState,
   getRunnableWishlistRequests,
 } from '../../lib/acquisitionRequests';
-import {
-  addDiscoveryInboxItem,
-  getDiscoveryInboxItems,
-} from '../../lib/discoveryInbox';
 import * as sourceFeedImportsAPI from '../../lib/sourceFeedImports';
 import * as spotifyIntegrationAPI from '../../lib/spotifyIntegration';
 import * as wishlistAPI from '../../lib/wishlist';
@@ -39,16 +34,14 @@ const formatDate = (dateString) => {
 };
 
 const WishlistItemRow = ({
-  inboxItems,
   item,
   onDelete,
   onEdit,
-  onReview,
   onRunSearch,
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [running, setRunning] = useState(false);
-  const requestState = getWishlistRequestState(item, inboxItems);
+  const requestState = getWishlistRequestState(item, []);
 
   const handleRunSearch = async () => {
     setRunning(true);
@@ -120,20 +113,6 @@ const WishlistItemRow = ({
           primary
           size="tiny"
           title="Run search now"
-        />
-        <Popup
-          content="Send this wishlist request to the Discovery Inbox for approval, rejection, or snoozing before any acquisition job is started."
-          position="top center"
-          trigger={
-            <Button
-              aria-label={`Send ${item.searchText} to Discovery Inbox review`}
-              compact
-              icon="inbox"
-              onClick={() => onReview(item)}
-              size="tiny"
-              title="Send to Discovery Inbox review"
-            />
-          }
         />
         <Button
           compact
@@ -391,357 +370,6 @@ const CsvImportModal = ({ onClose, onImport }) => {
               primary
             >
               Import
-            </Button>
-          }
-        />
-      </Modal.Actions>
-    </Modal>
-  );
-};
-
-const sourceKindOptions = [
-  { key: 'auto', text: 'Auto detect', value: 'auto' },
-  { key: 'spotify', text: 'Spotify URL/token feed', value: 'spotify' },
-  { key: 'apple', text: 'Apple Music URL', value: 'apple' },
-  { key: 'youtube', text: 'YouTube URL', value: 'youtube' },
-  { key: 'bandcamp', text: 'Bandcamp URL', value: 'bandcamp' },
-  { key: 'listenbrainz', text: 'ListenBrainz profile', value: 'listenbrainz' },
-  { key: 'lastfm', text: 'Last.fm URL', value: 'lastfm' },
-  { key: 'csv', text: 'CSV export', value: 'csv' },
-  { key: 'text', text: 'Pasted tracklist', value: 'text' },
-  { key: 'm3u', text: 'M3U/PLS playlist', value: 'm3u' },
-  { key: 'rss', text: 'RSS/OPML feed', value: 'rss' },
-];
-
-const buildInboxItemFromSourceSuggestion = (suggestion) => ({
-  evidenceKey: suggestion.evidenceKey,
-  networkImpact:
-    'Review only; importing this source feed item does not start Soulseek search, peer browse, or download work.',
-  reason: suggestion.reason,
-  searchText: suggestion.searchText,
-  source: suggestion.source || 'Source Feed',
-  sourceId: suggestion.sourceId || suggestion.providerUrl || '',
-  title: suggestion.searchText || suggestion.title,
-});
-
-const SourceFeedImportModal = ({ onClose, onImported }) => {
-  const [sourceText, setSourceText] = useState('');
-  const [sourceKind, setSourceKind] = useState('auto');
-  const [providerAccessToken, setProviderAccessToken] = useState('');
-  const [includeAlbum, setIncludeAlbum] = useState(false);
-  const [fetchProviderUrls, setFetchProviderUrls] = useState(true);
-  const [limit, setLimit] = useState(500);
-  const [preview, setPreview] = useState(null);
-  const [previewing, setPreviewing] = useState(false);
-  const [spotifyStatus, setSpotifyStatus] = useState(null);
-  const [spotifyConnecting, setSpotifyConnecting] = useState(false);
-
-  const loadSpotifyStatus = useCallback(async () => {
-    try {
-      setSpotifyStatus(await spotifyIntegrationAPI.getSpotifyStatus());
-    } catch {
-      setSpotifyStatus(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadSpotifyStatus();
-  }, [loadSpotifyStatus]);
-
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (
-        event.origin === window.location.origin &&
-        event.data?.type === 'slskdn:spotify-connected'
-      ) {
-        setSpotifyConnecting(false);
-        loadSpotifyStatus();
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [loadSpotifyStatus]);
-
-  const handleFile = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setSourceText(await file.text());
-  };
-
-  const handlePreview = async () => {
-    if (!sourceText.trim()) {
-      toast.error('Source text or URL is required');
-      return;
-    }
-
-    setPreviewing(true);
-    try {
-      const result = await sourceFeedImportsAPI.previewSourceFeedImport({
-        fetchProviderUrls,
-        includeAlbum,
-        limit,
-        providerAccessToken,
-        sourceKind,
-        sourceText,
-      });
-      setPreview(result);
-      if (result.requiresAccessToken) {
-        toast.warn(`Provider token required: ${result.requiredScopeHint}`);
-      } else {
-        toast.success(`Previewed ${result.suggestionCount} source items`);
-      }
-    } catch (error) {
-      toast.error(`Source import preview failed: ${error.message}`);
-    } finally {
-      setPreviewing(false);
-    }
-  };
-
-  const handleConnectSpotify = async () => {
-    setSpotifyConnecting(true);
-    try {
-      const authorization = await spotifyIntegrationAPI.startSpotifyAuthorization();
-      const popup = window.open(
-        authorization.authorizationUrl,
-        'slskdn-spotify-connect',
-        'popup=yes,width=520,height=720',
-      );
-      if (!popup) {
-        window.location.href = authorization.authorizationUrl;
-        return;
-      }
-
-      const interval = window.setInterval(() => {
-        if (popup.closed) {
-          window.clearInterval(interval);
-          loadSpotifyStatus();
-          setSpotifyConnecting(false);
-        }
-      }, 750);
-    } catch (error) {
-      setSpotifyConnecting(false);
-      toast.error(`Spotify connection failed: ${error.message}`);
-    }
-  };
-
-  const handleDisconnectSpotify = async () => {
-    try {
-      await spotifyIntegrationAPI.disconnectSpotify();
-      await loadSpotifyStatus();
-      toast.success('Disconnected Spotify account');
-    } catch (error) {
-      toast.error(`Spotify disconnect failed: ${error.message}`);
-    }
-  };
-
-  const handleAddToInbox = () => {
-    if (!preview?.suggestions?.length) {
-      toast.error('Preview has no suggestions to import');
-      return;
-    }
-
-    let added = 0;
-    preview.suggestions.forEach((suggestion) => {
-      const item = addDiscoveryInboxItem(
-        buildInboxItemFromSourceSuggestion(suggestion),
-      );
-      if (item.evidenceKey === suggestion.evidenceKey) {
-        added += 1;
-      }
-    });
-    onImported();
-    toast.success(`Added ${added} source suggestions to Discovery Inbox`);
-    onClose();
-  };
-
-  return (
-    <Modal
-      onClose={onClose}
-      open
-      size="large"
-    >
-      <Modal.Header>
-        <Icon name="rss" />
-        Import Source Feed
-      </Modal.Header>
-      <Modal.Content scrolling>
-        <Form>
-          <Form.Select
-            label="Source Type"
-            onChange={(_, data) => setSourceKind(data.value)}
-            options={sourceKindOptions}
-            value={sourceKind}
-          />
-          <Form.Input
-            accept=".csv,.m3u,.m3u8,.pls,.opml,.xml,.rss,text/*"
-            label="Source File"
-            onChange={handleFile}
-            type="file"
-          />
-          <Form.TextArea
-            label="Source URL or Text"
-            onChange={(event) => setSourceText(event.target.value)}
-            placeholder="Paste a provider URL, spotify:liked, ListenBrainz profile, CSV export, M3U playlist, RSS/OPML, or one track per line."
-            rows={7}
-            value={sourceText}
-          />
-          <Segment>
-            <Header as="h4">
-              <Icon name="spotify" />
-              Spotify Account
-            </Header>
-            <div className="wishlist-source-feed-account-row">
-              <Label color={spotifyStatus?.connected ? 'green' : 'grey'}>
-                <Icon name={spotifyStatus?.connected ? 'check circle' : 'minus circle'} />
-                {spotifyStatus?.connected
-                  ? `Connected${spotifyStatus.displayName ? `: ${spotifyStatus.displayName}` : ''}`
-                  : spotifyStatus?.configured
-                    ? 'Ready to connect'
-                    : 'Not configured'}
-              </Label>
-              <Popup
-                content="Open Spotify authorization so liked songs, saved albums, followed artists, and private playlists can be imported without pasting a temporary bearer token."
-                trigger={
-                  <Button
-                    disabled={!spotifyStatus?.configured}
-                    icon
-                    labelPosition="left"
-                    loading={spotifyConnecting}
-                    onClick={handleConnectSpotify}
-                    size="small"
-                  >
-                    <Icon name="plug" />
-                    Connect
-                  </Button>
-                }
-              />
-              <Popup
-                content="Remove the stored Spotify refresh token from this slskdN instance."
-                trigger={
-                  <Button
-                    disabled={!spotifyStatus?.connected}
-                    icon
-                    labelPosition="left"
-                    onClick={handleDisconnectSpotify}
-                    size="small"
-                  >
-                    <Icon name="unlinkify" />
-                    Disconnect
-                  </Button>
-                }
-              />
-            </div>
-          </Segment>
-          <Form.Input
-            label="Provider Bearer Token (optional override)"
-            onChange={(event) => setProviderAccessToken(event.target.value)}
-            placeholder="Only needed when you do not want to use the connected Spotify account"
-            type="password"
-            value={providerAccessToken}
-          />
-          <Form.Group widths="equal">
-            <Form.Input
-              label="Limit"
-              max={5_000}
-              min={1}
-              onChange={(event) =>
-                setLimit(Number.parseInt(event.target.value, 10) || 500)
-              }
-              type="number"
-              value={limit}
-            />
-            <Form.Field>
-              <Checkbox
-                checked={includeAlbum}
-                label="Include album in searches"
-                onChange={(_, data) => setIncludeAlbum(data.checked)}
-                toggle
-              />
-            </Form.Field>
-            <Form.Field>
-              <Checkbox
-                checked={fetchProviderUrls}
-                label="Fetch provider URLs"
-                onChange={(_, data) => setFetchProviderUrls(data.checked)}
-                toggle
-              />
-            </Form.Field>
-          </Form.Group>
-        </Form>
-
-        {preview && (
-          <Segment>
-            <Header as="h4">
-              <Icon name="list" />
-              <Header.Content>
-                Preview
-                <Header.Subheader>
-                  {preview.suggestionCount} suggestions,{' '}
-                  {preview.duplicateCount} duplicates, {preview.skippedCount}{' '}
-                  skipped, {preview.networkRequestCount} provider requests
-                </Header.Subheader>
-              </Header.Content>
-            </Header>
-            {preview.requiresAccessToken && (
-              <Label color="yellow">
-                Token required: {preview.requiredScopeHint}
-              </Label>
-            )}
-            {preview.suggestions?.length > 0 && (
-              <Table
-                celled
-                compact
-              >
-                <Table.Header>
-                  <Table.Row>
-                    <Table.HeaderCell>Search</Table.HeaderCell>
-                    <Table.HeaderCell>Source</Table.HeaderCell>
-                    <Table.HeaderCell>Album</Table.HeaderCell>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {preview.suggestions.slice(0, 25).map((suggestion) => (
-                    <Table.Row key={suggestion.evidenceKey}>
-                      <Table.Cell>{suggestion.searchText}</Table.Cell>
-                      <Table.Cell>{suggestion.source}</Table.Cell>
-                      <Table.Cell>{suggestion.album || '-'}</Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table>
-            )}
-          </Segment>
-        )}
-      </Modal.Content>
-      <Modal.Actions>
-        <Popup
-          content="Close the source importer without adding anything to Discovery Inbox."
-          trigger={<Button onClick={onClose}>Cancel</Button>}
-        />
-        <Popup
-          content="Fetch and parse the source feed into a local preview. This does not start Soulseek searches or downloads."
-          trigger={
-            <Button
-              loading={previewing}
-              onClick={handlePreview}
-              primary
-            >
-              Preview
-            </Button>
-          }
-        />
-        <Popup
-          content="Add the previewed items to Discovery Inbox for approval before any acquisition work can start."
-          trigger={
-            <Button
-              disabled={!preview?.suggestions?.length}
-              icon
-              labelPosition="left"
-              onClick={handleAddToInbox}
-            >
-              <Icon name="inbox" />
-              Add to Inbox
             </Button>
           }
         />

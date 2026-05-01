@@ -16,7 +16,7 @@ Complete guide to all slskdn documentation.
 
 ## 📘 User Guides
 
-- [SongID and Discovery](songid-discovery.md) - Native identification, Acquisition Review, and Discovery Graph workflows
+- [SongID and Discovery](songid-discovery.md) - Native identification and Discovery Graph workflows
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI for policies, integrations, diagnostics, source providers, and local preferences
 - [Pods, Rooms, and Messages](pods-and-rooms.md) - Gold Star, pod rooms, unified messages, and listen-along boundaries
 - [Soulseek Type-1 Obfuscation](soulseek-type1-obfuscation.md) - Default-on compatibility posture, mode semantics, runtime status, and safety caveats

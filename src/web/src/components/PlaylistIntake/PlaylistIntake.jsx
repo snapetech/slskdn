@@ -1,37 +1,26 @@
 import './PlaylistIntake.css';
 import * as collectionsAPI from '../../lib/collections';
-import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import {
   addPlaylistIntake,
-  applyPlaylistIntakeRefresh,
   approvePlaylistTagOrganizationPlan,
   buildPlaylistCollectionItems,
-  buildPlaylistDiscoverySeed,
-  buildPlaylistDiscoverySeeds,
   buildPlaylistCompletionSummary,
   buildPlaylistIntakeSummary,
-  buildPlaylistProviderRefreshContent,
   buildSlskdPlaylistPreview,
   clearPlaylistTagOrganizationApproval,
   coverArtPolicies,
   formatPlaylistTagOrganizationReport,
-  getDuePlaylistRefreshes,
   getPlaylistIntakes,
   markPlaylistCollectionCreated,
   multiArtistTagPolicies,
   organizationPathTemplates,
-  playlistRefreshCadences,
   previewPlaylistTagOrganizationPlan,
-  previewPlaylistIntakeRefresh,
   replayGainPolicies,
   updatePlaylistIntakeTrackState,
-  updatePlaylistRefreshAutomation,
 } from '../../lib/playlistIntake';
-import * as sourceFeedImportsAPI from '../../lib/sourceFeedImports';
 import React, { useMemo, useState } from 'react';
 import {
   Button,
-  Checkbox,
   Form,
   Header,
   Icon,
@@ -48,28 +37,18 @@ const PlaylistIntake = () => {
   const [name, setName] = useState('');
   const [source, setSource] = useState('');
   const [content, setContent] = useState('');
-  const [mirrorEnabled, setMirrorEnabled] = useState(false);
-  const [refreshCadence, setRefreshCadence] = useState('Manual review');
-  const [refreshCooldownDays, setRefreshCooldownDays] = useState(7);
-  const [providerAccessToken, setProviderAccessToken] = useState('');
-  const [refreshInputs, setRefreshInputs] = useState({});
   const [playlistPreviews, setPlaylistPreviews] = useState({});
   const [organizationInputs, setOrganizationInputs] = useState({});
-  const [bulkSent, setBulkSent] = useState({});
   const [status, setStatus] = useState('');
   const [busyPlaylistId, setBusyPlaylistId] = useState('');
 
   const summary = useMemo(() => buildPlaylistIntakeSummary(items), [items]);
-  const dueRefreshes = useMemo(() => getDuePlaylistRefreshes(items), [items]);
 
   const importPlaylist = () => {
     const sourceName = source.trim() || name.trim() || 'Pasted playlist';
     const nextItems = addPlaylistIntake({
       content,
-      mirrorEnabled,
       name: name.trim() || sourceName,
-      refreshCadence,
-      refreshCooldownDays,
       source: sourceName,
     });
 
@@ -77,22 +56,6 @@ const PlaylistIntake = () => {
     setName('');
     setSource('');
     setContent('');
-    setMirrorEnabled(false);
-    setRefreshCadence('Manual review');
-    setRefreshCooldownDays(7);
-  };
-
-  const sendTrackToInbox = (playlist, track) => {
-    addDiscoveryInboxItem(buildPlaylistDiscoverySeed(playlist, track));
-  };
-
-  const sendPlaylistRowsToInbox = (playlist) => {
-    const seeds = buildPlaylistDiscoverySeeds(playlist);
-    seeds.forEach((seed) => addDiscoveryInboxItem(seed));
-    setBulkSent((current) => ({
-      ...current,
-      [playlist.id]: seeds.length,
-    }));
   };
 
   const previewSlskdPlaylist = (playlist) => {
@@ -165,86 +128,6 @@ const PlaylistIntake = () => {
 
   const setTrackState = (playlist, track, state) => {
     setItems(updatePlaylistIntakeTrackState(playlist.id, track.id, state));
-  };
-
-  const setRefreshInput = (playlist, value) => {
-    setRefreshInputs((current) => ({
-      ...current,
-      [playlist.id]: value,
-    }));
-  };
-
-  const previewRefresh = (playlist) => {
-    setItems(previewPlaylistIntakeRefresh(playlist.id, refreshInputs[playlist.id] || ''));
-  };
-
-  const applyManualRefresh = (playlist) => {
-    setItems(
-      applyPlaylistIntakeRefresh(playlist.id, refreshInputs[playlist.id] || '', {
-        sourceLabel: 'manual pasted refresh',
-      }),
-    );
-    setStatus(`Applied refresh for ${playlist.name}`);
-  };
-
-  const setAutomation = (playlist, enabled) => {
-    setItems(
-      updatePlaylistRefreshAutomation(playlist.id, {
-        enabled,
-        cadence: playlist.refreshCadence,
-        cooldownDays: playlist.refreshCooldownDays,
-        providerRefreshLimit: playlist.providerRefreshLimit,
-      }),
-    );
-  };
-
-  const fetchProviderRefresh = async (playlist, { apply = false } = {}) => {
-    setBusyPlaylistId(playlist.id);
-    try {
-      const result = await sourceFeedImportsAPI.previewSourceFeedImport({
-        fetchProviderUrls: true,
-        limit: playlist.providerRefreshLimit,
-        providerAccessToken,
-        sourceKind: 'auto',
-        sourceText: playlist.source,
-      });
-      const content = buildPlaylistProviderRefreshContent(result);
-      if (!content.trim()) {
-        setStatus(`Provider refresh for ${playlist.name} returned no rows`);
-        return;
-      }
-
-      setItems(
-        apply
-          ? applyPlaylistIntakeRefresh(playlist.id, content, {
-              sourceLabel: `${result.provider || playlist.provider} provider refresh`,
-            })
-          : previewPlaylistIntakeRefresh(playlist.id, content),
-      );
-      setStatus(
-        `${apply ? 'Applied' : 'Previewed'} ${result.suggestionCount || 0} provider rows for ${playlist.name} with ${result.networkRequestCount || 0} provider requests`,
-      );
-    } catch (error) {
-      setStatus(`Provider refresh failed for ${playlist.name}: ${error.message}`);
-    } finally {
-      setBusyPlaylistId('');
-    }
-  };
-
-  const runDueRefreshes = async () => {
-    if (dueRefreshes.length === 0) {
-      setStatus('No mirrored playlist refreshes are due');
-      return;
-    }
-
-    let applied = 0;
-    for (const playlist of dueRefreshes) {
-      // Sequential execution keeps provider request bursts bounded.
-      // eslint-disable-next-line no-await-in-loop
-      await fetchProviderRefresh(playlist, { apply: true });
-      applied += 1;
-    }
-    setStatus(`Ran ${applied} due mirrored playlist refreshes`);
   };
 
   const createSlskdPlaylist = async (playlist) => {
@@ -326,50 +209,8 @@ const PlaylistIntake = () => {
             value={content}
           />
         </Form.Field>
-        <Form.Field>
-          <Checkbox
-            aria-label="Mirror playlist for refresh review"
-            checked={mirrorEnabled}
-            label="Mirror for refresh review"
-            onChange={(_event, data) => setMirrorEnabled(data.checked)}
-          />
-        </Form.Field>
-        {mirrorEnabled && (
-          <Form.Group widths="equal">
-            <Form.Select
-              aria-label="Refresh cadence"
-              label="Refresh cadence"
-              onChange={(_event, data) => setRefreshCadence(data.value)}
-              options={playlistRefreshCadences.map((cadence) => ({
-                key: cadence,
-                text: cadence,
-                value: cadence,
-              }))}
-              value={refreshCadence}
-            />
-          <Form.Input
-            aria-label="Refresh cooldown days"
-            label="Cooldown days"
-              min={1}
-              max={90}
-              onChange={(event) => setRefreshCooldownDays(event.target.value)}
-              type="number"
-              value={refreshCooldownDays}
-            />
-          </Form.Group>
-        )}
-        {mirrorEnabled && (
-          <Form.Input
-            aria-label="Provider bearer token"
-            label="Provider bearer token"
-            onChange={(event) => setProviderAccessToken(event.target.value)}
-            placeholder="Optional; used for provider-backed refresh previews that require a token"
-            type="password"
-            value={providerAccessToken}
-          />
-        )}
         <Popup
-          content="Stage this playlist in browser-local review. This does not fetch provider URLs, search Soulseek, browse peers, download, or create slskdN playlists."
+          content="Import these playlist rows for matching and playlist creation. This does not search Soulseek, browse peers, download, or track provider playlists."
           position="top center"
           trigger={
             <Button
@@ -399,31 +240,6 @@ const PlaylistIntake = () => {
           Unmatched
           <Label.Detail>{summary.unmatched}</Label.Detail>
         </Label>
-        <Label color="teal">
-          Mirrored
-          <Label.Detail>{summary.mirrored}</Label.Detail>
-        </Label>
-        <Label color={dueRefreshes.length > 0 ? 'orange' : 'grey'}>
-          Due Refreshes
-          <Label.Detail>{dueRefreshes.length}</Label.Detail>
-        </Label>
-        <Popup
-          content="Run every due mirrored playlist refresh with automation enabled. Provider refreshes are executed sequentially and update only browser-local playlist intake rows."
-          position="top center"
-          trigger={
-            <Button
-              aria-label="Run due mirrored playlist refreshes"
-              disabled={dueRefreshes.length === 0 || Boolean(busyPlaylistId)}
-              icon
-              onClick={runDueRefreshes}
-              size="small"
-              type="button"
-            >
-              <Icon name="calendar check" />
-              Run Due Refreshes
-            </Button>
-          }
-        />
       </div>
       {status && <div className="playlist-intake-status">{status}</div>}
 
@@ -448,13 +264,6 @@ const PlaylistIntake = () => {
                         <span> - </span>
                         <Icon name="plug" />
                         {playlist.provider}
-                        <span> - </span>
-                        <Icon
-                          name={playlist.mirrorEnabled ? 'sync alternate' : 'lock'}
-                        />
-                        {playlist.mirrorEnabled
-                          ? 'Mirror review enabled'
-                          : 'One-time import'}
                       </div>
                       <div className="playlist-intake-summary">
                         <Label basic>
@@ -478,184 +287,12 @@ const PlaylistIntake = () => {
                             : 'Ready for review'}
                         </Label>
                       </div>
-                      <div className="playlist-intake-impact">
-                        {playlist.refreshPreview}
-                      </div>
-                      <div className="playlist-intake-policy">
-                        <Label basic>
-                          <Icon name="clock outline" />
-                          Refresh cadence {playlist.refreshCadence}
-                        </Label>
-                        <Label basic>
-                          <Icon name="hourglass half" />
-                          Cooldown {playlist.refreshCooldownDays}d
-                        </Label>
-                        <Label
-                          basic
-                          color={playlist.refreshAutomationEnabled ? 'green' : 'grey'}
-                        >
-                          <Icon
-                            name={
-                              playlist.refreshAutomationEnabled ? 'power' : 'power off'
-                            }
-                          />
-                          Automation{' '}
-                          {playlist.refreshAutomationEnabled ? 'enabled' : 'disabled'}
-                        </Label>
-                        {playlist.refreshNextRunAt && (
-                          <Label basic>
-                            <Icon name="calendar alternate outline" />
-                            Next {playlist.refreshNextRunAt}
-                          </Label>
-                        )}
-                        {playlist.refreshCollectionId && (
-                          <Label
-                            basic
-                            color="green"
-                          >
-                            Collection {playlist.refreshCollectionId}
-                          </Label>
-                        )}
-                      </div>
                     </div>
-                    <Label color={playlist.mirrorEnabled ? 'teal' : 'grey'}>
+                    <Label color="grey">
                       {playlist.state}
                     </Label>
                   </div>
-                  {playlist.refreshDiff && (
-                    <div className="playlist-intake-summary">
-                      <Label color="green">
-                        Added
-                        <Label.Detail>{playlist.refreshDiff.addedCount}</Label.Detail>
-                      </Label>
-                      <Label color="orange">
-                        Removed
-                        <Label.Detail>{playlist.refreshDiff.removedCount}</Label.Detail>
-                      </Label>
-                      <Label color="yellow">
-                        Changed
-                        <Label.Detail>{playlist.refreshDiff.changedCount}</Label.Detail>
-                      </Label>
-                      <Label color="blue">
-                        Unchanged
-                        <Label.Detail>{playlist.refreshDiff.unchangedCount}</Label.Detail>
-                      </Label>
-                    </div>
-                  )}
-                  {playlist.mirrorEnabled && (
-                    <div className="playlist-intake-refresh">
-                      <Form>
-                        <Form.Field>
-                          <label>Refresh rows</label>
-                          <TextArea
-                            aria-label={`Refresh rows for ${playlist.name}`}
-                            onChange={(event) =>
-                              setRefreshInput(playlist, event.target.value)
-                            }
-                            placeholder="Paste the latest playlist rows to preview added and removed tracks"
-                            rows={3}
-                            value={refreshInputs[playlist.id] || ''}
-                          />
-                        </Form.Field>
-                        <Popup
-                          content="Preview added and removed rows for this mirrored playlist. This does not fetch providers, search, browse, download, or mutate the playlist."
-                          position="top center"
-                          trigger={
-                            <Button
-                              aria-label={`Preview refresh for ${playlist.name}`}
-                              disabled={!(refreshInputs[playlist.id] || '').trim()}
-                              icon
-                              onClick={() => previewRefresh(playlist)}
-                              size="small"
-                              type="button"
-                            >
-                              <Icon name="sync alternate" />
-                              Preview Refresh
-                            </Button>
-                          }
-                        />
-                        <Popup
-                          content="Apply these pasted refresh rows to the mirrored playlist intake state. This updates browser-local rows only and does not search, browse, or download."
-                          position="top center"
-                          trigger={
-                            <Button
-                              aria-label={`Apply refresh for ${playlist.name}`}
-                              disabled={!(refreshInputs[playlist.id] || '').trim()}
-                              icon
-                              onClick={() => applyManualRefresh(playlist)}
-                              size="small"
-                              type="button"
-                            >
-                              <Icon name="save" />
-                              Apply Refresh
-                            </Button>
-                          }
-                        />
-                        <Popup
-                          content="Fetch this playlist source through configured source-feed providers and preview the resulting refresh diff. This may contact the provider, but does not search Soulseek, browse peers, or download."
-                          position="top center"
-                          trigger={
-                            <Button
-                              aria-label={`Fetch provider refresh for ${playlist.name}`}
-                              disabled={Boolean(busyPlaylistId)}
-                              icon
-                              loading={busyPlaylistId === playlist.id}
-                              onClick={() => fetchProviderRefresh(playlist)}
-                              size="small"
-                              type="button"
-                            >
-                              <Icon name="cloud download" />
-                              Fetch Provider Refresh
-                            </Button>
-                          }
-                        />
-                        <Popup
-                          content="Enable or disable scheduled provider refresh for this mirrored playlist. Enabled refreshes run only when this Playlist Intake page runs due refreshes."
-                          position="top center"
-                          trigger={
-                            <Button
-                              aria-label={`${playlist.refreshAutomationEnabled ? 'Disable' : 'Enable'} scheduled refresh for ${playlist.name}`}
-                              icon
-                              onClick={() =>
-                                setAutomation(
-                                  playlist,
-                                  !playlist.refreshAutomationEnabled,
-                                )
-                              }
-                              size="small"
-                              type="button"
-                            >
-                              <Icon
-                                name={
-                                  playlist.refreshAutomationEnabled
-                                    ? 'toggle on'
-                                    : 'toggle off'
-                                }
-                              />
-                              Scheduled Refresh
-                            </Button>
-                          }
-                        />
-                      </Form>
-                    </div>
-                  )}
                   <div className="playlist-intake-actions">
-                    <Popup
-                      content="Send every non-rejected row from this playlist to Discovery Inbox review. This does not search, browse, download, or create a slskdN playlist."
-                      position="top center"
-                      trigger={
-                        <Button
-                          aria-label={`Send reviewable rows from ${playlist.name} to Discovery Inbox`}
-                          icon
-                          onClick={() => sendPlaylistRowsToInbox(playlist)}
-                          size="small"
-                          type="button"
-                        >
-                          <Icon name="inbox" />
-                          Send Reviewable Rows
-                        </Button>
-                      }
-                    />
                     <Popup
                       content="Preview the matched rows that will be used for a slskdN playlist Collection."
                       position="top center"
@@ -689,12 +326,6 @@ const PlaylistIntake = () => {
                         </Button>
                       }
                     />
-                    {bulkSent[playlist.id] && (
-                      <Label color="blue">
-                        Sent
-                        <Label.Detail>{bulkSent[playlist.id]}</Label.Detail>
-                      </Label>
-                    )}
                   </div>
                   {playlistPreviews[playlist.id] && (
                     <div className="playlist-intake-preview">
@@ -980,18 +611,6 @@ const PlaylistIntake = () => {
                                 icon="ban"
                                 negative
                                 onClick={() => setTrackState(playlist, track, 'Rejected')}
-                                size="small"
-                              />
-                            }
-                          />
-                          <Popup
-                            content="Send this playlist row to Discovery Inbox review. This does not start provider lookups, searches, peer browsing, or downloads."
-                            position="top center"
-                            trigger={
-                              <Button
-                                aria-label={`Send ${track.title} to Discovery Inbox`}
-                                icon="inbox"
-                                onClick={() => sendTrackToInbox(playlist, track)}
                                 size="small"
                               />
                             }

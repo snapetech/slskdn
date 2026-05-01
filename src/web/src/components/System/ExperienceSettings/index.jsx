@@ -137,8 +137,8 @@ const ExperienceSettings = () => {
           Experience Preferences
         </Header>
         <p>
-          Browser-local preference surface for Search, Discovery Inbox, Player,
-          and Messages behavior that can be consumed by page-specific backfill.
+          Browser-local preference surface for Search, Player, and Messages
+          behavior that can be consumed by page-specific backfill.
         </p>
       </Segment>
 
@@ -204,65 +204,6 @@ const ExperienceSettings = () => {
                   />
                 }
               />
-            </Form>
-          </Card.Content>
-        </Card>
-
-        <Card fluid>
-          <Card.Content>
-            <Card.Header>
-              <Icon name="inbox" />
-              Discovery Inbox
-            </Card.Header>
-            <Card.Meta>Review filters, stale age, confidence threshold, and evidence detail level.</Card.Meta>
-          </Card.Content>
-          <Card.Content>
-            <Form>
-              <Form.Group widths="equal">
-                <Form.Input
-                  aria-label="Discovery provider filter preference"
-                  label="Provider Filter"
-                  onChange={(_, { value }) => update('discoveryProviderFilter', value)}
-                  placeholder="spotify, lastfm, local"
-                  value={form.discoveryProviderFilter}
-                />
-                <Form.Select
-                  aria-label="Discovery approval filter preference"
-                  label="Approval Filter"
-                  onChange={(_, { value }) =>
-                    update('discoveryApprovalFilter', value)
-                  }
-                  options={options.approvalFilter}
-                  value={form.discoveryApprovalFilter}
-                />
-                <Form.Input
-                  aria-label="Discovery confidence floor preference"
-                  label="Confidence Floor"
-                  onChange={(_, { value }) =>
-                    update('discoveryConfidenceFloor', value)
-                  }
-                  type="number"
-                  value={form.discoveryConfidenceFloor}
-                />
-              </Form.Group>
-              <Form.Group widths="equal">
-                <Form.Input
-                  aria-label="Discovery stale days preference"
-                  label="Stale After Days"
-                  onChange={(_, { value }) => update('discoveryStaleDays', value)}
-                  type="number"
-                  value={form.discoveryStaleDays}
-                />
-                <Form.Select
-                  aria-label="Discovery explanation detail preference"
-                  label="Explanation Detail"
-                  onChange={(_, { value }) =>
-                    update('discoveryExplanationDetail', value)
-                  }
-                  options={options.explanationDetail}
-                  value={form.discoveryExplanationDetail}
-                />
-              </Form.Group>
             </Form>
           </Card.Content>
         </Card>
