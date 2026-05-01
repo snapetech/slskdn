@@ -27,6 +27,7 @@
 namespace Soulseek.Network.Tcp
 {
     using System;
+    using System.Buffers.Binary;
     using System.Security.Cryptography;
 
     /// <summary>
@@ -35,7 +36,8 @@ namespace Soulseek.Network.Tcp
     internal static class RotatedObfuscation
     {
         public const int Type = 1;
-        public const int MaxMessageLength = 256 * 1024 * 1024;
+        public const int MaxInitMessageLength = 1024;
+        public const int MaxMessageLength = 8 * 1024 * 1024;
 
         public static byte[] Encode(byte[] input)
         {
@@ -45,13 +47,13 @@ namespace Soulseek.Network.Tcp
                 rng.GetBytes(keyBytes);
             }
 
-            return Encode(input, BitConverter.ToUInt32(keyBytes, 0));
+            return Encode(input, BinaryPrimitives.ReadUInt32LittleEndian(keyBytes));
         }
 
         public static byte[] Encode(byte[] input, uint key)
         {
             var output = new byte[4 + input.Length];
-            Buffer.BlockCopy(BitConverter.GetBytes(key), 0, output, 0, 4);
+            BinaryPrimitives.WriteUInt32LittleEndian(output, key);
             Buffer.BlockCopy(input, 0, output, 4, input.Length);
             ApplyRotatedKeystream(output, 4, input.Length, key);
             return output;
@@ -64,7 +66,7 @@ namespace Soulseek.Network.Tcp
                 throw new ArgumentException("Obfuscated frame must include a four-byte key", nameof(input));
             }
 
-            var key = BitConverter.ToUInt32(input, 0);
+            var key = BinaryPrimitives.ReadUInt32LittleEndian(input);
             var output = new byte[input.Length - 4];
             Buffer.BlockCopy(input, 4, output, 0, output.Length);
             ApplyRotatedKeystream(output, 0, output.Length, key);
@@ -75,11 +77,12 @@ namespace Soulseek.Network.Tcp
         {
             var key = initialKey;
             var end = offset + count;
+            Span<byte> keyBytes = stackalloc byte[4];
 
             for (var position = offset; position < end; position += 4)
             {
                 key = RotateLeft(key, 1);
-                var keyBytes = BitConverter.GetBytes(key);
+                BinaryPrimitives.WriteUInt32LittleEndian(keyBytes, key);
                 var chunkLength = Math.Min(4, end - position);
 
                 for (var index = 0; index < chunkLength; index++)

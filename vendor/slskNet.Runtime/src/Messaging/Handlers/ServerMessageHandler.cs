@@ -387,17 +387,25 @@ namespace Soulseek.Messaging.Handlers
 
                     case MessageCode.Server.CannotJoinRoom:
                         var cannotJoinRoom = CannotJoinRoomNotification.FromByteArray(message);
-                        SoulseekClient.Waiter.Throw(
-                            new WaitKey(MessageCode.Server.JoinRoom, cannotJoinRoom.RoomName),
-                            new RoomJoinForbiddenException($"The server rejected the request to join room {cannotJoinRoom.RoomName}"));
+                        var cannotJoinRoomWaitKey = new WaitKey(MessageCode.Server.JoinRoom, cannotJoinRoom.RoomName);
+                        if (SoulseekClient.Waiter.HasWait(cannotJoinRoomWaitKey))
+                        {
+                            SoulseekClient.Waiter.Throw(
+                                cannotJoinRoomWaitKey,
+                                new RoomJoinForbiddenException($"The server rejected the request to join room {cannotJoinRoom.RoomName}"));
+                        }
 
                         break;
 
                     case MessageCode.Server.CannotCreateRoom:
                         var cannotCreateRoom = StringResponse.FromByteArray<MessageCode.Server>(message);
-                        SoulseekClient.Waiter.Throw(
-                            new WaitKey(MessageCode.Server.JoinRoom, cannotCreateRoom),
-                            new RoomException($"The server rejected the request to create room {cannotCreateRoom}"));
+                        var cannotCreateRoomWaitKey = new WaitKey(MessageCode.Server.JoinRoom, cannotCreateRoom);
+                        if (SoulseekClient.Waiter.HasWait(cannotCreateRoomWaitKey))
+                        {
+                            SoulseekClient.Waiter.Throw(
+                                cannotCreateRoomWaitKey,
+                                new RoomException($"The server rejected the request to create room {cannotCreateRoom}"));
+                        }
 
                         break;
 

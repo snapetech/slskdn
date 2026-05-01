@@ -27,6 +27,7 @@
 namespace Soulseek.Messaging.Messages
 {
     using System;
+    using System.Buffers.Binary;
     using System.Net;
 
     /// <summary>
@@ -133,7 +134,9 @@ namespace Soulseek.Messaging.Messages
             if (reader.HasMoreData)
             {
                 obfuscationType = reader.ReadInteger();
-                obfuscatedPort = BitConverter.ToUInt16(reader.ReadBytes(2), 0);
+
+                // GetPeerAddress uses a 16-bit obfuscated port, unlike ConnectToPeer's 32-bit port field.
+                obfuscatedPort = BinaryPrimitives.ReadUInt16LittleEndian(reader.ReadBytes(2));
             }
 
             return new UserAddressResponse(username, ipAddress, port, obfuscationType, obfuscatedPort);

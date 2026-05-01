@@ -121,10 +121,7 @@ namespace Soulseek.Network.Tcp
                 Task.Run(() =>
                 {
                     var endPoint = (IPEndPoint)client.Client.RemoteEndPoint;
-                    var eventArgs = new Connection(endPoint, ConnectionOptions, new TcpClientAdapter(client))
-                    {
-                        Obfuscated = Obfuscated,
-                    };
+                    var eventArgs = new Connection(endPoint, ConnectionOptions, new TcpClientAdapter(client), Obfuscated);
 
                     Accepted?.Invoke(this, eventArgs);
                 }).Forget();

@@ -1,3 +1,11 @@
+## 2026-05-01 18:55:00Z
+
+- Built and deployed current repo code to `kspls0` as `0.0.0-slskdn.manual.20260501184708.7c7e8df32` under `/usr/lib/slskd/releases/manual-20260501184708.7c7e8df32`.
+- Stopped the running `slskd.service`, published a fresh Linux x64 self-contained artifact, repointed `/usr/lib/slskd/current`, restored the stable launcher, and restarted the service.
+- Fixed stale obfuscation-only validation tests and documented the gotcha in ADR-0001; also documented the manual launcher `$@` forwarding gotcha after the first restart dropped `--config`.
+- Live validation: `/api/v0/application` reports executable path `/usr/lib/slskd/releases/manual-20260501184708.7c7e8df32/slskd`, configuration file `/etc/slskd/slskd.yml`, Soulseek `Connected, LoggedIn`, shares ready with 95 directories and 1032 files, DHT bootstrapped, HTTP `5030`, Soulseek `50300`, obfuscation `50301`, and mesh/DHT `50305` listeners active.
+- Validation: `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501184708.7c7e8df32` passed Web UI tests/build, backend Release build, unit tests, API tests, integration tests, and publish; `bash ./bin/lint` passed.
+
 ## 2026-05-01 18:19:00Z
 
 - Restored QUIC on the reduced ingress footprint by sharing public UDP `50305` between DHT rendezvous and QUIC overlay traffic, with MsQuic listening on loopback backend UDP `55305`.

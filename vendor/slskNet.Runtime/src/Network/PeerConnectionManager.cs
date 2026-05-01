@@ -27,6 +27,7 @@
 namespace Soulseek.Network
 {
     using System;
+    using System.Buffers.Binary;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
@@ -513,7 +514,15 @@ namespace Soulseek.Network
                 var isObfuscated = obfuscated != null && task == obfuscated;
 
                 Diagnostic.Debug($"{(isDirect ? "Direct" : "Indirect")} message connection to {username} ({ipEndPoint}) established first, attempting to cancel {(isDirect ? "indirect" : "direct")} connection.");
-                (isDirect ? indirectCts : directCts).Cancel();
+                if (isObfuscated)
+                {
+                    directCts.Cancel();
+                    indirectCts.Cancel();
+                }
+                else
+                {
+                    (isDirect ? indirectCts : directCts).Cancel();
+                }
 
                 try
                 {
@@ -692,7 +701,9 @@ namespace Soulseek.Network
                     await connection.WriteAsync(request, cancellationToken).ConfigureAwait(false);
                 }
 
-                await connection.WriteAsync(BitConverter.GetBytes(token), cancellationToken).ConfigureAwait(false);
+                var tokenBytes = new byte[4];
+                BinaryPrimitives.WriteInt32LittleEndian(tokenBytes, token);
+                await connection.WriteAsync(tokenBytes, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

@@ -27,6 +27,7 @@
 namespace Soulseek.Network
 {
     using System;
+    using System.Buffers.Binary;
     using System.Linq;
     using Soulseek.Diagnostics;
     using Soulseek.Messaging.Messages;
@@ -70,7 +71,10 @@ namespace Soulseek.Network
             var listenerPort = listener?.Port ?? SoulseekClient.Listener?.Port ?? 0;
             var listenerAddress = listener?.IPAddress ?? SoulseekClient.Listener?.IPAddress;
             var obfuscated = listener?.Obfuscated == true;
-            connection.Obfuscated = obfuscated;
+            if (obfuscated)
+            {
+                connection.MarkObfuscated();
+            }
 
             Diagnostic.Debug($"Accepted incoming connection from {connection.IPEndPoint.Address} on {listenerAddress}:{listenerPort} (id: {connection.Id})");
 
@@ -82,7 +86,7 @@ namespace Soulseek.Network
                 {
                     var firstBlock = await connection.ReadAsync(8).ConfigureAwait(false);
                     var decodedFirstBlock = RotatedObfuscation.Decode(firstBlock);
-                    var length = BitConverter.ToInt32(decodedFirstBlock, 0);
+                    var length = BinaryPrimitives.ReadInt32LittleEndian(decodedFirstBlock);
                     ValidateObfuscatedMessageLength(length);
 
                     var obfuscatedMessage = new byte[8 + length];
@@ -224,7 +228,7 @@ namespace Soulseek.Network
 
         private static void ValidateObfuscatedMessageLength(int length)
         {
-            if (length < 4 || length > RotatedObfuscation.MaxMessageLength)
+            if (length < 4 || length > RotatedObfuscation.MaxInitMessageLength)
             {
                 throw new MessageReadException($"Invalid obfuscated message length: {length}");
             }

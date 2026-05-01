@@ -611,10 +611,13 @@ namespace Soulseek
         private ITokenBucket DownloadTokenBucket { get; }
         private SemaphoreSlim SearchSemaphore { get; }
         private SemaphoreSlim GlobalDownloadSemaphore { get; }
+        private SemaphoreSlim GlobalRecommendationsSemaphore { get; } = new SemaphoreSlim(1, 1);
         private SemaphoreSlim GlobalUploadSemaphore { get; }
         private IIOAdapter IOAdapter { get; set; } = new IOAdapter();
         private ConcurrentDictionary<string, IPEndPoint> ObfuscatedPeerEndPointDictionary { get; } = new ConcurrentDictionary<string, IPEndPoint>();
+        private SemaphoreSlim RecommendationsSemaphore { get; } = new SemaphoreSlim(1, 1);
         private SemaphoreSlim StateSyncRoot { get; } = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim SimilarUsersSemaphore { get; } = new SemaphoreSlim(1, 1);
         private ITokenFactory TokenFactory { get; }
         private System.Timers.Timer UploadSemaphoreCleanupTimer { get; }
         private ConcurrentDictionary<string, SemaphoreSlim> UploadSemaphores { get; } = new ConcurrentDictionary<string, SemaphoreSlim>();
@@ -2520,19 +2523,22 @@ namespace Soulseek
                 throw new ArgumentException("The usernames must not be null", nameof(usernames));
             }
 
-            var usernameList = usernames
-                .Distinct(StringComparer.InvariantCultureIgnoreCase)
-                .ToList();
+            var rawUsernames = usernames.ToList();
 
-            if (usernameList.Count == 0)
+            if (rawUsernames.Count == 0)
             {
                 throw new ArgumentException("At least one username must be supplied", nameof(usernames));
             }
 
-            if (usernameList.Any(string.IsNullOrWhiteSpace))
+            if (rawUsernames.Any(string.IsNullOrWhiteSpace))
             {
                 throw new ArgumentException("The usernames must not contain null or empty strings, or strings consisting only of whitespace", nameof(usernames));
             }
+
+            var usernameList = rawUsernames
+                .Select(username => username.Trim())
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
 
             if (usernameList.Count > MaximumMessageUsersRecipients)
             {
@@ -3043,6 +3049,9 @@ namespace Soulseek
                     UserEndPointSemaphoreSyncRoot.Dispose();
 
                     SearchSemaphore.Dispose();
+                    RecommendationsSemaphore.Dispose();
+                    GlobalRecommendationsSemaphore.Dispose();
+                    SimilarUsersSemaphore.Dispose();
                     GlobalUploadSemaphore.Dispose();
                     GlobalDownloadSemaphore.Dispose();
 
@@ -4081,15 +4090,25 @@ namespace Soulseek
         private async Task<RecommendationList> GetRecommendationsInternalAsync(bool global, CancellationToken cancellationToken)
         {
             var code = global ? MessageCode.Server.GetGlobalRecommendations : MessageCode.Server.GetRecommendations;
+            var semaphore = global ? GlobalRecommendationsSemaphore : RecommendationsSemaphore;
 
             try
             {
-                var waitKey = new WaitKey(code);
-                var wait = Waiter.Wait<RecommendationList>(waitKey, cancellationToken: cancellationToken);
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                await ServerConnection.WriteAsync(new RecommendationsRequest(global), cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    var waitKey = new WaitKey(code);
+                    var wait = Waiter.Wait<RecommendationList>(waitKey, cancellationToken: cancellationToken);
 
-                return await wait.ConfigureAwait(false);
+                    await ServerConnection.WriteAsync(new RecommendationsRequest(global), cancellationToken).ConfigureAwait(false);
+
+                    return await wait.ConfigureAwait(false);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
             }
             catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
             {
@@ -4118,12 +4137,21 @@ namespace Soulseek
         {
             try
             {
-                var waitKey = new WaitKey(MessageCode.Server.GetSimilarUsers);
-                var wait = Waiter.Wait<IReadOnlyCollection<SimilarUser>>(waitKey, cancellationToken: cancellationToken);
+                await SimilarUsersSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                await ServerConnection.WriteAsync(new SimilarUsersRequest(), cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    var waitKey = new WaitKey(MessageCode.Server.GetSimilarUsers);
+                    var wait = Waiter.Wait<IReadOnlyCollection<SimilarUser>>(waitKey, cancellationToken: cancellationToken);
 
-                return await wait.ConfigureAwait(false);
+                    await ServerConnection.WriteAsync(new SimilarUsersRequest(), cancellationToken).ConfigureAwait(false);
+
+                    return await wait.ConfigureAwait(false);
+                }
+                finally
+                {
+                    SimilarUsersSemaphore.Release();
+                }
             }
             catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
             {

@@ -1,3 +1,18 @@
+## Update 2026-05-01 18:55:00Z
+
+- Current task: Current repo code is built and running on `kspls0` for user testing.
+- Last activity:
+  - stopped `slskd.service` on `kspls0`
+  - fixed stale obfuscation-only validation tests and documented ADR-0001 gotcha `0z266`
+  - built and published `0.0.0-slskdn.manual.20260501184708.7c7e8df32` for Linux x64
+  - deployed `/usr/lib/slskd/releases/manual-20260501184708.7c7e8df32` on `kspls0`
+  - corrected the stable launcher so it forwards `"$@"` and systemd keeps using `/etc/slskd/slskd.yml`; documented ADR-0001 gotcha `0z267`
+  - verified live API runtime path, `/etc/slskd/slskd.yml`, Soulseek login, shares ready, DHT bootstrap, Web UI HTTP, and listeners on `5030`, `50300`, `50301`, and `50305`
+  - validation passed: full `bin/publish --runtime linux-x64`, `bash ./bin/lint`
+- Next steps:
+  1. User testing on `http://kspls0:5030/`.
+  2. Push local commits when ready.
+
 ## Update 2026-05-01 18:19:00Z
 
 - Current task: Shared DHT/QUIC UDP demux and QUIC overlay restoration are complete locally and deployed to `kspls0`.

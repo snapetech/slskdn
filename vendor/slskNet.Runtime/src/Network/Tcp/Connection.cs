@@ -42,11 +42,13 @@ namespace Soulseek.Network.Tcp
         /// <param name="ipEndPoint">The remote IP endpoint of the connection.</param>
         /// <param name="options">The optional options for the connection.</param>
         /// <param name="tcpClient">The optional TcpClient instance to use.</param>
-        public Connection(IPEndPoint ipEndPoint, ConnectionOptions options = null, ITcpClient tcpClient = null)
+        /// <param name="obfuscated">A value indicating whether this connection uses type-1 obfuscation.</param>
+        public Connection(IPEndPoint ipEndPoint, ConnectionOptions options = null, ITcpClient tcpClient = null, bool obfuscated = false)
         {
             Id = Guid.NewGuid();
 
             IPEndPoint = ipEndPoint;
+            Obfuscated = obfuscated;
             Options = options ?? new ConnectionOptions();
 
             TcpClient = tcpClient ?? new TcpClientAdapter(new TcpClient());
@@ -160,9 +162,9 @@ namespace Soulseek.Network.Tcp
         public ConnectionOptions Options { get; protected set; }
 
         /// <summary>
-        ///     Gets or sets a value indicating whether this connection uses type-1 obfuscation.
+        ///     Gets a value indicating whether this connection uses type-1 obfuscation.
         /// </summary>
-        public bool Obfuscated { get; set; }
+        public bool Obfuscated { get; private set; }
 
         /// <summary>
         ///     Gets or sets the current connection state.
@@ -173,6 +175,11 @@ namespace Soulseek.Network.Tcp
         ///     Gets or sets the connection type.
         /// </summary>
         public ConnectionTypes Type { get; set; }
+
+        /// <summary>
+        ///     Marks this connection as using type-1 obfuscation.
+        /// </summary>
+        public void MarkObfuscated() => Obfuscated = true;
 
         /// <summary>
         ///     Gets the current depth of the double buffered write queue.

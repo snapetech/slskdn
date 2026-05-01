@@ -85,9 +85,9 @@ namespace Soulseek.Network.Tcp
         ConnectionOptions Options { get; }
 
         /// <summary>
-        ///     Gets or sets a value indicating whether this connection uses type-1 obfuscation.
+        ///     Gets a value indicating whether this connection uses type-1 obfuscation.
         /// </summary>
-        bool Obfuscated { get; set; }
+        bool Obfuscated { get; }
 
         /// <summary>
         ///     Gets the current connection state.
@@ -103,6 +103,11 @@ namespace Soulseek.Network.Tcp
         ///     Gets the current depth of the double buffered write queue.
         /// </summary>
         int WriteQueueDepth { get; }
+
+        /// <summary>
+        ///     Marks this connection as using type-1 obfuscation.
+        /// </summary>
+        void MarkObfuscated();
 
         /// <summary>
         ///     Asynchronously connects the client to the configured <see cref="IPEndPoint"/>.

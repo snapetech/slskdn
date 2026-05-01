@@ -23,6 +23,7 @@
 
 namespace Soulseek
 {
+    using System;
     using System.Globalization;
 
     /// <summary>
@@ -37,7 +38,12 @@ namespace Soulseek
         /// <returns>The normalized value.</returns>
         public static string Normalize(string value)
         {
-            return value?.ToUpper(CultureInfo.InvariantCulture);
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            return value.ToUpper(CultureInfo.InvariantCulture);
         }
     }
 }

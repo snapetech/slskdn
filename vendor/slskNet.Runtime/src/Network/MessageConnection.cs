@@ -27,6 +27,7 @@
 namespace Soulseek.Network
 {
     using System;
+    using System.Buffers.Binary;
     using System.Collections.Generic;
     using System.Net;
     using System.Threading;
@@ -68,10 +69,9 @@ namespace Soulseek.Network
         /// <param name="tcpClient">The optional TcpClient instance to use.</param>
         /// <param name="obfuscated">A value indicating whether this message connection uses type-1 obfuscation.</param>
         internal MessageConnection(IPEndPoint ipEndPoint, ConnectionOptions options = null, int codeLength = 4, ITcpClient tcpClient = null, bool obfuscated = false)
-            : base(ipEndPoint, options, tcpClient)
+            : base(ipEndPoint, options, tcpClient, obfuscated)
         {
             CodeLength = codeLength;
-            Obfuscated = obfuscated;
 
             // bind the connected event to begin reading upon connection. if we received a connected client, this will never fire
             // and the read loop must be started via ReadContinuouslyAsync().
@@ -312,7 +312,7 @@ namespace Soulseek.Network
         {
             var firstBlock = await ReadAsync(8, cancellationToken).ConfigureAwait(false);
             var decodedFirstBlock = RotatedObfuscation.Decode(firstBlock);
-            var length = BitConverter.ToInt32(decodedFirstBlock, 0);
+            var length = BinaryPrimitives.ReadInt32LittleEndian(decodedFirstBlock);
             ValidateObfuscatedMessageLength(length);
 
             var encoded = new byte[8 + length];
