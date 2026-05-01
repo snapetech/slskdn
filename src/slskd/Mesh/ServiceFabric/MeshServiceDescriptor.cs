@@ -15,43 +15,54 @@ namespace slskd.Mesh.ServiceFabric;
 [MessagePackObject]
 public sealed record MeshServiceDescriptor
 {
+    public MeshServiceDescriptor()
+    {
+        ServiceId = string.Empty;
+        ServiceName = string.Empty;
+        Version = "1.0.0";
+        OwnerPeerId = string.Empty;
+        Endpoint = new MeshServiceEndpoint();
+        Metadata = new Dictionary<string, string>();
+        Signature = Array.Empty<byte>();
+    }
+
     /// <summary>
     /// Deterministic service ID: hash("svc:" + ServiceName + ":" + OwnerPeerId).
     /// </summary>
     [Key(0)]
-    public string ServiceId { get; init; } = string.Empty;
+    public string ServiceId { get; init; }
 
     /// <summary>
     /// Stable functional service name (e.g., "pods", "shadow-index", "mesh-introspect").
     /// Must not contain PII.
     /// </summary>
     [Key(1)]
-    public string ServiceName { get; init; } = string.Empty;
+    public string ServiceName { get; init; }
 
     /// <summary>
     /// Service version (semver format).
     /// </summary>
     [Key(2)]
-    public string Version { get; init; } = "1.0.0";
+    public string Version { get; init; }
 
     /// <summary>
     /// Peer ID of the node hosting this service.
     /// </summary>
     [Key(3)]
-    public string OwnerPeerId { get; init; } = string.Empty;
+    public string OwnerPeerId { get; init; }
 
     /// <summary>
     /// Endpoint for accessing this service.
     /// </summary>
     [Key(4)]
-    public MeshServiceEndpoint Endpoint { get; init; } = new();
+    public MeshServiceEndpoint Endpoint { get; init; }
 
     /// <summary>
     /// Optional metadata (max 10 entries, max 4KB total serialized size).
     /// Must not contain PII.
     /// </summary>
     [Key(5)]
-    public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, string> Metadata { get; init; }
 
     /// <summary>
     /// UTC timestamp when this descriptor was created.
@@ -69,7 +80,7 @@ public sealed record MeshServiceDescriptor
     /// Ed25519 signature of the descriptor content, signed by owner's key.
     /// </summary>
     [Key(8)]
-    public byte[] Signature { get; init; } = Array.Empty<byte>();
+    public byte[] Signature { get; init; }
 
     /// <summary>
     /// Derives a deterministic ServiceId from the service name and owner peer ID.
@@ -132,17 +143,24 @@ public sealed record MeshServiceDescriptor
 [MessagePackObject]
 public sealed record MeshServiceEndpoint
 {
+    public MeshServiceEndpoint()
+    {
+        Protocol = "quic";
+        Host = string.Empty;
+        Path = string.Empty;
+    }
+
     /// <summary>
     /// Protocol for accessing the service (e.g., "quic", "udp").
     /// </summary>
     [Key(0)]
-    public string Protocol { get; init; } = "quic";
+    public string Protocol { get; init; }
 
     /// <summary>
     /// Host address or overlay node ID.
     /// </summary>
     [Key(1)]
-    public string Host { get; init; } = string.Empty;
+    public string Host { get; init; }
 
     /// <summary>
     /// Port number (0 = use default for protocol).
@@ -154,7 +172,7 @@ public sealed record MeshServiceEndpoint
     /// Optional path component.
     /// </summary>
     [Key(3)]
-    public string Path { get; init; } = string.Empty;
+    public string Path { get; init; }
 
     public override string ToString()
     {
