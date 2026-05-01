@@ -52,6 +52,68 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z239. Share Scans Need An Explicit Media-Attribute Probe Escape Hatch
+
+**The Bug**: Share scans always opened shared audio files with TagLib to extract bitrate, length, sample rate, and bit depth. On slow or remote storage this optional browse metadata could dominate scan runtime even though files can be shared without those attributes.
+
+**Files Affected**:
+- `src/slskd/Core/Options.cs`
+- `src/slskd/Shares/SoulseekFileFactory.cs`
+- `src/slskd/Shares/ShareScanner.cs`
+- `config/slskd.example.yml`
+- `docs/config.md`
+
+**Wrong**:
+```csharp
+if (AudioExtensionsSet.Contains(fileInfo.Extension))
+{
+    var tagLibFile = TagLib.File.Create(new StreamFileAbstraction(fileInfo.Name, stream));
+    attributes = GetAudioAttributes(tagLibFile);
+}
+```
+
+**Correct**:
+```csharp
+if (ProbeMediaAttributes && AudioExtensionsSet.Contains(fileInfo.Extension))
+{
+    var tagLibFile = TagLib.File.Create(new StreamFileAbstraction(fileInfo.Name, stream));
+    attributes = GetAudioAttributes(tagLibFile);
+}
+```
+
+**Why This Keeps Happening**: Media probing feels like harmless enrichment until the share library lives on NFS, USB, mergerfs, cloud mounts, or aging disks. Share discovery must keep the cheap "file exists and can be advertised" path separate from optional metadata extraction, with a visible config escape hatch for operators.
+
+### 0z238. DHT Rendezvous Must Back Off Repeated Unverified Overlay Candidates
+
+**The Bug**: Public DHT discovery kept retrying candidates that repeatedly failed overlay handshakes on a fixed service-level reconnect interval. Connector cooldowns prevented some hammering, but the rendezvous scheduler still spent work on likely non-overlay or dead endpoints every discovery cycle.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
+- `tests/slskd.Tests.Unit/DhtRendezvous/DhtRendezvousServiceTests.cs`
+
+**Wrong**:
+```csharp
+if (!ShouldRetryPeerConnection(peerId, PeerReconnectInterval, now))
+{
+    Interlocked.Increment(ref _totalConnectionCooldownSkips);
+    return;
+}
+```
+
+**Correct**:
+```csharp
+var failureCount = _peerConnectionFailureCounts.GetValueOrDefault(peerId);
+var reconnectInterval = GetPeerReconnectInterval(failureCount);
+
+if (!ShouldRetryPeerConnection(peerId, reconnectInterval, now))
+{
+    Interlocked.Increment(ref _totalConnectionCooldownSkips);
+    return;
+}
+```
+
+**Why This Keeps Happening**: DHT returns public endpoints, not verified slskdN overlay peers. Any path that turns DHT candidates into connection attempts needs its own progressive backoff before the connector layer, otherwise normal public endpoint churn becomes repeated failed work and noisy operator diagnostics.
+
 ### 0z237. Pod Channel Tabs Must Drive Active Channel State And Message Fetches
 
 **The Bug**: The Pods page could show a channel tab label such as `dm` without an obvious chat history/composer surface. Channel tab changes updated only the Semantic UI tab index, leaving `activeChannelId`, route state, and message fetching disconnected from the selected tab.
