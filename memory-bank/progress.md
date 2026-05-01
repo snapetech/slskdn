@@ -9370,3 +9370,11 @@ Code quality improvements were completed as part of Option A:
 - Confirmed the live frontend bundle contains the reduced-port copy and no active/not-reported status, public endpoint text, `50301`, `PREVIOUS`, or `CURRENT`; the daemon listens on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`, and a live Soulseek search plus small-file download smoke completed successfully.
 - Updated `bin/lint` to exclude the vendored runtime source from slskdN formatting enforcement while keeping slskdN builds pointed at the in-repo runtime project.
 - Validation: workflow YAML parsed, Web UI tests and production build passed, backend build passed against the vendored runtime, unit/API/integration tests passed through `bash ./bin/build --version 0.0.0-slskdn.slsknetrepo.2`, and `bash ./bin/lint` passed.
+
+## 2026-05-01 19:36:58Z
+
+- Devised and ran a focused network/runtime validation plan covering vendored runtime wiring, shared DHT/QUIC UDP demux, QUIC overlay, DHT rendezvous, Soulseek type-1 obfuscation config, native Soulseek discovery endpoints, local full-instance mesh search/download, and kspls0 listener/API/QUIC smoke checks.
+- Local validation passed: focused unit network/runtime slice passed (`123` tests) and focused integration/full-instance slice passed (`80` tests).
+- kspls0 smoke passed for service health, listeners on `50300/tcp`, `50301/tcp`, `50305/tcp`, shared UDP `50305`, backend QUIC UDP `55305`, API health/options, native Soulseek global recommendations, and a single QUIC handshake through `50305`.
+- Found a vendored runtime listener shutdown bug in kspls0 logs: `Stop()` could race an outstanding accept and surface a fatal unobserved task exception. Documented it in ADR-0001, committed the gotcha separately, and patched the runtime to observe swallowed fire-and-forget task exceptions and exit stopped listener accepts cleanly.
+- Remaining gap: the runtime shutdown fix is committed locally but not deployed to kspls0 yet.

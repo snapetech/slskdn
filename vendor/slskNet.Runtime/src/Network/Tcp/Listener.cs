@@ -30,6 +30,7 @@ namespace Soulseek.Network.Tcp
     using System.Diagnostics.CodeAnalysis;
     using System.Net;
     using System.Net.Sockets;
+    using System.Threading;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -116,7 +117,27 @@ namespace Soulseek.Network.Tcp
         {
             while (Listening)
             {
-                var client = await TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+                TcpClient client;
+                try
+                {
+                    client = await TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+                }
+                catch (InvalidOperationException) when (!Listening)
+                {
+                    break;
+                }
+                catch (ObjectDisposedException) when (!Listening)
+                {
+                    break;
+                }
+                catch (SocketException) when (!Listening)
+                {
+                    break;
+                }
+                catch (OperationCanceledException) when (!Listening)
+                {
+                    break;
+                }
 
                 Task.Run(() =>
                 {

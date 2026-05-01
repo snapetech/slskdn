@@ -11,6 +11,20 @@
 - Next steps:
   1. Push local commits when ready.
 
+## Update 2026-05-01 19:36:58Z
+
+- Current task: Focused network/runtime validation is complete locally.
+- Last activity:
+  - ran the focused unit network/runtime slice (`123` tests passed)
+  - ran the focused integration/full-instance mesh slice (`80` tests passed)
+  - smoke-checked kspls0 service state, listener bindings, API health/options, native Soulseek global recommendations, and QUIC handshake through shared public mesh UDP `50305`
+  - found a vendored runtime listener shutdown unobserved task exception in kspls0 logs
+  - documented ADR-0001 gotcha `0z274` and committed it separately
+  - patched `slskNet.Runtime` so `Forget()` observes swallowed faults and listener accept loops exit cleanly after `Stop()`
+- Next steps:
+  1. Commit and push the runtime shutdown fix plus memory-bank updates.
+  2. Deploy the patched runtime to `kspls0` if we want the live instance to pick up the listener shutdown fix now.
+
 ## Update 2026-05-01 18:55:00Z
 
 - Current task: Current repo code is built and running on `kspls0` for user testing.

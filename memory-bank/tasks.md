@@ -2244,3 +2244,7 @@
 - [x] Fix PPA FTP reachability on GitHub runners
   - Status: completed (2026-05-01)
   - Notes: Historical successful PPA releases used anonymous FTP, not SFTP. The failed `.215` rerun signed the source package but `dput` hit `[Errno 101] Network is unreachable`, then IPv4-pinned `dput` hit Launchpad passive FTP transfer errors. Both PPA workflows now pin `ppa.launchpad.net` to a resolved IPv4 address, preflight TCP port 21, verify signed source package files, and upload them with bounded anonymous `curl` FTP transfers.
+
+- [x] Run focused network/runtime validation plan
+  - Status: completed (2026-05-01)
+  - Notes: Validated shared UDP demux, QUIC overlay, DHT rendezvous, Soulseek obfuscation wiring, native Soulseek discovery, local two-node mesh search/download, streaming cleanup, and kspls0 listener/API/QUIC smoke checks. Found and fixed a vendored runtime fire-and-forget listener shutdown fault; deploy of that fix remains a follow-up if we want kspls0 to pick it up.

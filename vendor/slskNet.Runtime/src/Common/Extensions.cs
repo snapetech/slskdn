@@ -60,7 +60,10 @@ namespace Soulseek
         /// <param name="task">The task to continue.</param>
         public static void Forget(this Task task)
         {
-            task.ContinueWith(t => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
+            task.ContinueWith(t =>
+            {
+                _ = t.Exception;
+            }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.RunContinuationsAsynchronously);
         }
 
         /// <summary>
