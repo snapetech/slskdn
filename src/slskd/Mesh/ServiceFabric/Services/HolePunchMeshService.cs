@@ -49,7 +49,7 @@ public class HolePunchMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[HolePunch] Streaming requested by {PeerId}, but hole punch streaming is not implemented", context.RemotePeerId);
+        _logger.LogWarning("[HolePunch] Streaming requested by {PeerId}, but hole punch exposes request/response calls only", context.RemotePeerId);
         return stream.CloseAsync(cancellationToken);
     }
 

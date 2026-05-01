@@ -74,7 +74,7 @@ public class MeshIntrospectionService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[MeshIntrospect] Streaming requested by {PeerId}, but mesh introspection streaming is not implemented", context.RemotePeerId);
+        _logger.LogWarning("[MeshIntrospect] Streaming requested by {PeerId}, but mesh introspection exposes request/response calls only", context.RemotePeerId);
         return stream.CloseAsync(cancellationToken);
     }
 

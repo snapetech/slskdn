@@ -50,7 +50,7 @@ public class DhtMeshService : IMeshService
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[DHT] Streaming requested by {PeerId}, but DHT streaming is not implemented", context.RemotePeerId);
+        _logger.LogWarning("[DHT] Streaming requested by {PeerId}, but DHT exposes request/response calls only", context.RemotePeerId);
         return stream.CloseAsync(cancellationToken);
     }
 

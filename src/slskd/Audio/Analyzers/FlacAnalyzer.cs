@@ -62,7 +62,7 @@ namespace slskd.Audio.Analyzers
 
             baseQuality = Math.Clamp(baseQuality, 0.0, 1.0);
 
-            // Simple transcode heuristics (placeholder until spectral analysis arrives)
+            // STREAMINFO bitrate heuristic; spectral analysis can add stronger evidence later.
             var expectedMinKbps = EstimateMinFlacBitrate(streamInfo.SampleRate, streamInfo.BitsPerSample, streamInfo.Channels);
             var actualKbps = variant?.BitrateKbps ?? 0;
 

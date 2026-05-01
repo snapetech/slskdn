@@ -34,6 +34,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   adjacent multi-source comment formatting warning.
 - Cleaned consensus policy success wording and added coverage for consensus
   required versus not-required decisions.
+- Clarified FLAC analyzer heuristic wording and mesh service request/response
+  capability messages.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
