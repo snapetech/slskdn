@@ -20,7 +20,7 @@ Complete guide to all slskdn documentation.
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI for policies, integrations, diagnostics, source providers, and local preferences
 - [Pods, Rooms, and Messages](pods-and-rooms.md) - Gold Star, pod rooms, unified messages, and listen-along boundaries
 - [Soulseek Type-1 Obfuscation](soulseek-type1-obfuscation.md) - Default-on compatibility posture, mode semantics, runtime status, and safety caveats
-- [Soulseek Native Discovery](soulseek-native-discovery.md) - Native interests, recommendations, similar users, and batch private-message API
+- [Soulseek Native Discovery](soulseek-native-discovery.md) - UI and API guide for native interests, recommendations, similar users, item branching, user-interest lookup, and batch private messages
 - [Pod Private Service Gateway](pod-vpn/vpn-user-guide.md) - Pod-scoped private service tunnels over mesh; not host VPN routing or internet egress
 - [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
 - [Listening Party and Player](listening-party.md) - Integrated player, streaming, visualizers, and listen-along behavior
@@ -46,7 +46,7 @@ Complete guide to all slskdn documentation.
 - [Features Overview](FEATURES.md) - Complete feature list and details
 - [Lidarr Integration](lidarr-integration.md) - First-class plugin-free Lidarr wanted sync, download handoff, and safe post-download import
 - [Soulseek Type-1 Obfuscation](soulseek-type1-obfuscation.md) - Peer-message obfuscation options and runtime activation plan
-- [Soulseek Native Discovery](soulseek-native-discovery.md) - Backend API for native Soulseek discovery protocol features
+- [Soulseek Native Discovery](soulseek-native-discovery.md) - Backend API and Web UI integration for native Soulseek discovery protocol features
 - [VPN Agent](../src/slskdN.VpnAgent/README.md) - Host-side fail-closed VPN routing and forwarded-port integration
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI and operator panels
 - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - Development status and planned features

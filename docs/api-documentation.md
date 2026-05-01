@@ -143,6 +143,76 @@ slskdN uses URL-based versioning: `/api/v{version}/`
 - `POST /api/v0/users/{username}/notes` - Create/update user note
 - `DELETE /api/v0/users/{username}/notes` - Delete user note
 
+### Messaging APIs
+
+#### Conversations
+- `GET /api/v0/conversations` - List saved private-message conversations
+- `GET /api/v0/conversations/{username}` - Get a private-message conversation
+- `PUT /api/v0/conversations/{username}` - Acknowledge messages for a conversation
+- `POST /api/v0/conversations/{username}` - Send one private message to a user
+- `DELETE /api/v0/conversations/{username}` - Delete a saved conversation
+- `POST /api/v0/conversations/batch` - Send one native Soulseek multi-recipient private message
+
+Batch private-message request:
+
+```json
+{
+  "usernames": ["alice", "bob"],
+  "message": "hello"
+}
+```
+
+Recipients are trimmed, deduplicated case-insensitively, and capped at 100 unique usernames by the runtime. slskdN persists one outbound local conversation row per recipient after the native send succeeds.
+
+### Soulseek Native Discovery APIs
+
+These endpoints expose native Soulseek server commands through explicit authenticated API calls. They are rate-limited through the Soulseek safety limiter and do not run automatically during normal search, browse, room, transfer, or one-to-one private-message workflows.
+
+#### Interests
+- `POST /api/v0/soulseek/interests` - Add a liked interest
+- `DELETE /api/v0/soulseek/interests/{item}` - Remove a liked interest
+- `POST /api/v0/soulseek/hated-interests` - Add a hated interest
+- `DELETE /api/v0/soulseek/hated-interests/{item}` - Remove a hated interest
+
+Interest request:
+
+```json
+{
+  "item": "ambient"
+}
+```
+
+#### Recommendations and Similarity
+- `GET /api/v0/soulseek/recommendations` - Get recommendations for the logged-in account
+- `GET /api/v0/soulseek/recommendations/global` - Get global recommendations
+- `GET /api/v0/soulseek/users/{username}/interests` - Get a user's liked and hated interests
+- `GET /api/v0/soulseek/users/similar` - Get users similar to the logged-in account
+- `GET /api/v0/soulseek/items/{item}/recommendations` - Get recommendations related to an item string
+- `GET /api/v0/soulseek/items/{item}/similar-users` - Get users associated with an item string
+
+Recommendation response:
+
+```json
+{
+  "recommendations": [
+    { "item": "ambient", "score": 42 }
+  ],
+  "unrecommendations": []
+}
+```
+
+User interests response:
+
+```json
+{
+  "username": "alice",
+  "liked": ["ambient"],
+  "hated": ["noise"]
+}
+```
+
+Native recommendation item strings are discovery/search seeds, not verified catalog identities. API clients should keep review steps before download automation.
+
 ### Pod APIs
 
 #### Pods

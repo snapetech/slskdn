@@ -77,6 +77,23 @@
   - fallback metadata seeds from search and MusicBrainz context
 - Semantic zoom stack (mini-map, drawer modal, atlas) lets SongID/MusicBrainz/search seeds share state while provenance/score-component overlays keep closeness explainable and actionable
 
+### Soulseek Type-1 Peer-Message Obfuscation
+- Runtime-backed type-1 obfuscated peer-message listener support through the vendored `slskNet.Runtime`
+- Default compatibility posture keeps the regular peer-message port available for legacy clients
+- Prefer mode can prioritize compatible obfuscated outbound peer-message dials while keeping regular direct and indirect fallback
+- System → Network reports enablement, configured mode, effective obfuscated port, fallback posture, and runtime activation state
+- Scope is intentionally limited to peer-message streams; file transfers and distributed-network traffic keep normal Soulseek transport behavior
+
+### Soulseek Native Discovery
+- Search-page **Soulseek Discovery** panel for native liked/hated interests, personal/global recommendations, item recommendation branches, similar users, and user-interest lookup
+- Native discovery API under `/api/v0/soulseek/*` for authenticated operators and clients
+- Recommendation rows can start a normal Soulseek search or create a disabled review-only Wishlist item with auto-download off
+- Federated Taste can explicitly include native Soulseek recommendation strings as low-trust discovery seeds
+- User cards expose lazy native-interest lookup so large lists do not trigger background request fan-out
+- Messages workspace exposes batch private-message sending through the native Soulseek multi-recipient server command
+- Discovery calls use separate Soulseek safety limiter buckets from manual search and browse requests
+- All native discovery commands are opt-in; normal search, browse, transfer, room, and one-to-one private-message behavior remains unchanged
+
 ### System Admin Surfaces
 - **Policies**: guided YAML for webhooks/scripts, transfer policy, security and
   access, search/network/DHT/rescue settings, retention, and share scan pressure
