@@ -9264,6 +9264,13 @@ Code quality improvements were completed as part of Option A:
 - Corrected a bad post-deploy restart where the live process briefly launched without `/etc/slskd/slskd.yml` and bound HTTP only to `127.0.0.1`; restarted through systemd and verified `/proc` shows `--config /etc/slskd/slskd.yml` and `0.0.0.0:5030`.
 - Validation before deployment: focused Player visualizer tests, native MilkDrop smoke test, frontend lint, frontend production build, and touched-file whitespace checks passed.
 
+## 2026-05-01 03:08:11Z
+
+- Completed the remaining middle/backlog reconciliation pass: QR invite display/scanning is documented, DHT adaptive bootstrap diagnostics are marked complete, native MilkDrop3 T-938 is closed against the completed WebGL2/WebGPU design checklist, and SongID future MIR lanes are clarified as research rather than open baseline parity.
+- Completed repo-wide analyzer cleanup for the known warning clusters: MessagePack service-fabric DTO defaults now live in constructors, generated lowercase namespace noise and test-only fixture analyzer patterns are scoped, and `dotnet format --verify-no-changes --no-restore --verbosity minimal` exits cleanly.
+- Completed the production placeholder burn-down scan by replacing misleading production placeholder/TODO wording with explicit capability-gate, request/response-only, or unavailable-path wording. The documented scan now leaves only `FeatureNotImplementedException` infrastructure and startup handling.
+- Verified focused Contacts QR tests, focused DHT tests, touched Contacts ESLint, and analyzer format verification. The dev flake re-enable remains blocked because no real published `build-dev-*` tag exists and repo policy forbids creating tags without explicit user instruction.
+
 ## 2026-05-01 03:02:00Z
 
 - Tightened the player visual tile controls into one fixed seven-button row so the player bar no longer grows and scrolls just because the mode buttons wrap.
