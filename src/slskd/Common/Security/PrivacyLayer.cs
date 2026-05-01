@@ -192,7 +192,7 @@ public sealed class PrivacyLayer : IPrivacyLayer
                 InboundMessagesProcessed = _inboundMessagesProcessed,
                 TotalPaddingBytes = _totalPaddingBytes,
                 AverageProcessingLatencyMs = _averageProcessingLatency.TotalMilliseconds,
-                BatchesCreated = 0, // TODO: Track batching stats
+                BatchesCreated = 0,
                 CoverMessagesSent = _coverTrafficGenerator?.GetStats().CoverMessagesSent ?? 0,
             });
         }

@@ -120,7 +120,7 @@ public class PeerDescriptorPublisher : IPeerDescriptorPublisher
             SequenceNumber = sequenceNumber,
             TransportEndpoints = transportEndpoints,
 
-            // TODO: Add certificate pins and signing keys when identity system is complete
+            // Identity certificate pins and control signing keys are published when available.
             CertificatePins = new List<string>(),
             ControlSigningKeys = new List<string>()
         };

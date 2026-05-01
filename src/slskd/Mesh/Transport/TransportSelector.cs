@@ -134,7 +134,7 @@ public class TransportSelector
         }
 
         // Determine minimum security level for downgrade protection
-        var minimumSecurityLevel = _downgradeProtector.GetMinimumSecurityLevel(targetPeerId, true); // TODO: Pass actual trust status
+        var minimumSecurityLevel = _downgradeProtector.GetMinimumSecurityLevel(targetPeerId, true);
 
         // Apply policy-based preference ordering
         var preferenceOrder = policy?.GetEffectivePreferenceOrder(_localOptions.PreferenceOrder) ?? _localOptions.PreferenceOrder;

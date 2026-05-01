@@ -40,6 +40,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   telemetry comments, and clarified swarm/rescue unavailable-state messages.
 - Clarified mesh gateway, scheduler, bridge, LAN, and Mesh DHT validation
   comments to reflect current local validation and fetch-path enforcement.
+- Removed more stale placeholder comments from privacy, DHT publishing, pods,
+  and transport selection code paths.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native

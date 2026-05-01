@@ -299,7 +299,6 @@ public class PodsMeshService : IMeshService
             };
         }
 
-        // TODO: Validate message size
         if (request.Body?.Length > 4096)
         {
             return new ServiceReply
