@@ -512,14 +512,14 @@ class AddFriendForm extends Component {
 
     this.setState({ scanError: null, scanning: true });
     try {
-      if (!('BarcodeDetector' in window)) {
+      if (!('BarcodeDetector' in window) || !window.createImageBitmap) {
         throw new Error(
           'This browser does not support QR scanning from images yet.',
         );
       }
 
       const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      const bitmap = await createImageBitmap(file);
+      const bitmap = await window.createImageBitmap(file);
       try {
         const codes = await detector.detect(bitmap);
         const inviteLink = codes.find((code) =>
