@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z267. Manual Launcher Rewrites Must Preserve Literal `"$@"`
+
+**The Bug**: A manual deployment rewrote `/usr/lib/slskd/slskd` through nested local/SSH quoting and accidentally produced `exec /usr/lib/slskd/current/slskd ""`. Systemd still started the app, but the launcher dropped `--config /etc/slskd/slskd.yml`, so slskd fell back to the service user's local config and bound HTTP to `127.0.0.1`.
+
+**Files Affected**:
+- Live/manual deployment commands that rewrite `/usr/lib/slskd/slskd`
+- `slskd.service`
+
+**Wrong**:
+```bash
+printf '%s\n' '#!/bin/sh' 'exec /usr/lib/slskd/current/slskd "$@"' |
+  ssh host "sudo tee /usr/lib/slskd/slskd"
+```
+
+**Correct**:
+```bash
+ssh host "sudo tee /usr/lib/slskd/slskd >/dev/null <<'EOF'
+#!/bin/sh
+exec /usr/lib/slskd/current/slskd \"\$@\"
+EOF"
+```
+
+**Why This Keeps Happening**: The stable launcher is a tiny shell script, but nested shell expansion can consume `$@` before it reaches the remote file. After any manual launcher rewrite, inspect `/usr/lib/slskd/slskd` and verify the journal shows `Using configuration file /etc/slskd/slskd.yml`, not the service user's fallback path.
+
 ### 0z266. Obfuscation-Only Validation Tests Must Track The Runtime-Level Rejection
 
 **The Bug**: Unit tests kept asserting older subcondition messages for Soulseek obfuscation `Only` mode even after the validator changed to reject `Only` mode at the runtime-support boundary.
