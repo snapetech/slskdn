@@ -1,3 +1,10 @@
+## 2026-05-01 03:45:00Z
+
+- Removed the active `slskdn-dev` package channel from release automation by making `build-on-tag.yml` main-only and dropping the embedded dev release/package jobs.
+- Removed the stale dev package follow-up from the active task list; stable `build-main-*` releases remain the supported package path.
+- Added an Unreleased changelog entry for the cleanup.
+- Validation: `bash packaging/scripts/validate-release-copy.sh`, `bash packaging/scripts/validate-packaging-metadata.sh`, and `git diff --check` passed.
+
 ## 2026-05-01 02:41:03Z
 
 - Completed the public documentation/listing pass for the recent feature-expansion work.

@@ -1,21 +1,25 @@
 ## Update 2026-05-01 03:30:00Z
 
-- Current task: Remaining middle/backlog and production placeholder burn-down is complete locally.
+- Current task: Obsolete slskdn-dev package channel cleanup is complete locally.
 - Last activity:
   - reconciled completed QR invite display/scanning, DHT adaptive bootstrap diagnostics, native MilkDrop3 T-938, SongID parity notes, analyzer cleanup, and production placeholder burn-down tasks
-  - left `slskdn-dev` flake re-enable blocked because no published `build-dev-*` release tag exists and repo policy forbids creating tags without explicit instruction
+  - removed the active `slskdn-dev` package channel instead of keeping the blocked re-enable task
+  - stripped `build-dev-*` handling and dev package jobs from the tag release workflow
+  - removed stale dev-only package manifests, docs, and release-note template surfaces
   - reduced the production placeholder scan to the allowed `FeatureNotImplementedException` gate infrastructure
   - cleared stale MeshSync test wording after the unavailable-transport message cleanup
   - restored `/tmp` test capacity by deleting generated `/tmp/slskd_*.dmp` files before rerunning the broad suite
 - Validation:
+  - `bash packaging/scripts/validate-release-copy.sh`
+  - `bash packaging/scripts/validate-packaging-metadata.sh`
+  - `git diff --check`
   - `npm test -- Contacts.test.jsx`
   - `npm run lint`
   - `bash ./bin/lint`
   - `dotnet format --verify-no-changes --no-restore --verbosity minimal`
   - `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh" --no-restore`
 - Next steps:
-  1. Re-enable `slskdn-dev` only after a real `build-dev-*` release exists and asset hashes are populated from that release.
-  2. Preserve concurrent player/docs changes in the dirty tree; do not revert them during follow-up cleanup.
+  1. Preserve concurrent player/docs changes in the dirty tree; do not revert them during follow-up cleanup.
 
 ## Update 2026-05-01 03:20:30Z
 
@@ -4568,12 +4572,11 @@ dotnet test
 - Current task: Remaining middle/backlog completion pass is complete locally.
 - Last activity:
   - reconciled completed QR invite display/scanning, DHT adaptive bootstrap diagnostics, native MilkDrop3 T-938, SongID parity notes, analyzer cleanup, and production placeholder burn-down tasks
-  - confirmed no published `build-dev-*` release tag exists, so the dev flake re-enable remains blocked instead of being faked
+  - confirmed the old dev package channel was stale; the later cleanup removed it from active release automation
   - replaced production placeholder/TODO wording with explicit capability-gate or unavailable-path language and updated the placeholder completion plan
   - verified focused Contacts QR tests, focused DHT tests, touched Contacts ESLint, and `dotnet format --verify-no-changes --no-restore --verbosity minimal`
 - Next steps:
-  1. Re-enable `slskdn-dev` only after a real `build-dev-*` release exists and asset hashes are populated from that release.
-  2. Continue normal validation before merge because concurrent agents have been committing adjacent player and docs work.
+  1. Continue normal validation before merge because concurrent agents have been committing adjacent player and docs work.
 
 ## Update 2026-05-01 02:52:32Z
 

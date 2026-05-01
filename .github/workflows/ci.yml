@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     # Only build on version tags, not on every push to master
-    # build-dev-* and build-main-* tags are handled by build-on-tag.yml
+    # build-main-* tags are handled by build-on-tag.yml
     tags: 
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-slskdn.[0-9]+"
@@ -98,8 +98,7 @@ jobs:
         run: |
           bash packaging/scripts/validate-aur-pkgbuild-hashes.sh \
             packaging/aur/PKGBUILD \
-            packaging/aur/PKGBUILD-bin \
-            packaging/aur/PKGBUILD-dev
+            packaging/aur/PKGBUILD-bin
 
       - name: Changelog Discipline Check
         if: github.event_name == 'pull_request'
