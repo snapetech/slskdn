@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Shortened the logged-out browser title, description, and PWA name to
+  `slskdN`, removing the old unofficial-fork tagline.
 - Fixed admin restart argument forwarding, streaming limiter cleanup during
   failed setup, and passthrough no-auth docs for the required CIDR gate.
 - Updated the login wordmark to show `slskdN` with a baseline-aligned block

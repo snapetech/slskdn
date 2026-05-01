@@ -1,3 +1,12 @@
+## Update 2026-05-01 19:43:00Z
+
+- Current task: Logged-out Web UI title tagline removal is complete locally.
+- Last activity:
+  - changed `src/web/index.html`, `src/web/public/index.html`, and `src/web/public/manifest.json` to use `slskdN` without the old unofficial-fork tagline
+  - validation passed: stale-title search, focused `LoginForm`/`App` tests, Web UI production build, `bash ./bin/lint`
+- Next steps:
+  1. Push local commits when ready.
+
 ## Update 2026-05-01 19:10:00Z
 
 - Current task: Review-reported non-security correctness bugs are fixed locally.

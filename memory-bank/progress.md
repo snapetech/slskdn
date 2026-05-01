@@ -1,3 +1,8 @@
+## 2026-05-01 19:43:00Z
+
+- Removed the logged-out Web UI browser-title tagline so `index.html`, `public/index.html`, and the PWA manifest now identify the app as `slskdN` without the old unofficial-fork wording.
+- Validation: stale-title search passed, focused `LoginForm`/`App` frontend tests passed, Web UI production build passed, and `bash ./bin/lint` passed.
+
 ## 2026-05-01 19:10:00Z
 
 - Fixed three non-security correctness bugs from review: admin restart now preserves only argv[1..], stream setup failures release the reserved limiter slot before rethrowing, and passthrough no-auth XML docs now state that remote access requires both `AllowRemoteNoAuth=true` and a matching non-empty `AllowedCidrs`.
