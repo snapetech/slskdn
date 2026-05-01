@@ -1,5 +1,4 @@
 import ArtistReleaseRadarPanel from './ArtistReleaseRadarPanel';
-import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
 import {
   fetchArtistReleaseRadarNotifications,
   fetchArtistReleaseRadarSubscriptions,
@@ -57,28 +56,14 @@ describe('ArtistReleaseRadarPanel', () => {
     });
   });
 
-  it('shows subscriptions and sends radar hits to Discovery Inbox review', async () => {
+  it('shows subscriptions and direct routing actions for radar hits', async () => {
     render(<ArtistReleaseRadarPanel />);
 
     expect(await screen.findByText('Fixture Artist')).toBeInTheDocument();
     expect(screen.getByText('Fixture Artist - New Radar Track')).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Send New Radar Track radar hit to Discovery Inbox',
-      }),
-    );
-
-    expect(screen.getByText(/Sent Fixture Artist - New Radar Track/)).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem(discoveryInboxStorageKey))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          acquisitionProfile: 'rare-hunt',
-          source: 'Release Radar',
-          title: 'Fixture Artist - New Radar Track',
-        }),
-      ]),
-    );
+    expect(
+      screen.getByRole('button', { name: 'Route New Radar Track radar hit' }),
+    ).toBeInTheDocument();
   });
 
   it('saves artist radar subscriptions and routes notifications explicitly', async () => {

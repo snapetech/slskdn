@@ -28,6 +28,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   `kspls0` Playwright verification.
 - Removed stale Wishlist feed-import and Discovery Inbox review entry points
   from the active Wishlist surface.
+- Removed remaining player, playlist-intake, and search-test references to
+  Discovery Inbox actions after the active review surface cleanup.
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
   links, with focused UI coverage, constructor-compatible scanner tests, and
   browser capability checks.

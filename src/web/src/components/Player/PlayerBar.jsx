@@ -1,6 +1,5 @@
 import './Player.css';
 import * as collectionsAPI from '../../lib/collections';
-import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import {
   clearDiscoveryShelf,
   exportDiscoveryShelfPolicyReport,
@@ -15,7 +14,6 @@ import {
 import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
 import {
-  buildListeningDiscoverySeeds,
   clearListeningHistory,
   exportListeningHistoryCsv,
   exportListeningHistoryJson,
@@ -31,7 +29,6 @@ import {
   setPlayerRating,
 } from '../../lib/playerRatings';
 import {
-  buildPlayerRadioDiscoveryItems,
   buildPlayerRadioPlan,
   buildPlayerRadioSearchPath,
   getPlayerRadioQueries,
@@ -332,16 +329,6 @@ const PlayerRadioModal = ({ current, onClose, onOpenSearch, open }) => {
     }
   };
 
-  const sendRadioToInbox = () => {
-    const items = buildPlayerRadioDiscoveryItems(plan, { limit: 4 });
-    items.forEach((item) => addDiscoveryInboxItem(item));
-    setStatus(
-      items.length > 0
-        ? `Sent ${items.length} smart-radio seed${items.length === 1 ? '' : 's'} to Discovery Inbox.`
-        : 'No smart-radio seeds are ready for Discovery Inbox.',
-    );
-  };
-
   return (
     <Modal
       className="player-browser-modal player-radio-modal"
@@ -424,20 +411,6 @@ const PlayerRadioModal = ({ current, onClose, onOpenSearch, open }) => {
             >
               <Icon name="heart" />
               Add Wishlist
-            </Button>
-          }
-        />
-        <Popup
-          content="Send smart-radio seeds to Discovery Inbox for review and approval before acquisition."
-          trigger={
-            <Button
-              data-testid="player-radio-send-inbox"
-              disabled={!plan.ready}
-              onClick={sendRadioToInbox}
-              type="button"
-            >
-              <Icon name="inbox" />
-              Send Inbox
             </Button>
           }
         />
@@ -808,27 +781,6 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
     setMessage(`Policy report prepared for ${items.length} shelf items.`);
   };
 
-  const sendPromoteItemsToInbox = () => {
-    const promoteItems = getDiscoveryShelfPromoteItems(items, { limit: 10 });
-    promoteItems.forEach((item) => addDiscoveryInboxItem(item));
-    setMessage(
-      promoteItems.length > 0
-        ? `Sent ${promoteItems.length} promote candidate${promoteItems.length === 1 ? '' : 's'} to Discovery Inbox.`
-        : 'No promote candidates are ready for Discovery Inbox.',
-    );
-  };
-
-  const sendItemToInbox = (item) => {
-    const [inboxItem] = getDiscoveryShelfPromoteItems([item], { limit: 1 });
-    if (!inboxItem) {
-      setMessage(`${getDiscoveryShelfActionLabel(item.action)} is not a promote candidate.`);
-      return;
-    }
-
-    addDiscoveryInboxItem(inboxItem);
-    setMessage(`Sent ${item.title} to Discovery Inbox for approval.`);
-  };
-
   return (
     <Modal
       className="player-browser-modal player-discovery-shelf-modal"
@@ -910,21 +862,6 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
               </Button>
             }
           />
-          <Popup
-            content="Send up to ten promote-preview shelf items to Discovery Inbox for approval. This does not start search, download, sync ratings, or mutate files."
-            trigger={
-              <Button
-                data-testid="player-shelf-send-promotes"
-                disabled={items.length === 0 || policyPreview.promote === 0}
-                onClick={sendPromoteItemsToInbox}
-                size="mini"
-                type="button"
-              >
-                <Icon name="inbox" />
-                Send Promotes
-              </Button>
-            }
-          />
         </section>
         <div className="player-shelf-list">
           {items.length > 0 ? items.map((item) => (
@@ -954,21 +891,6 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
                     type="button"
                   >
                     <Icon name="eye" />
-                  </Button>
-                }
-              />
-              <Popup
-                content="Send this promote-preview item to Discovery Inbox for approval. This creates a review candidate only."
-                trigger={
-                  <Button
-                    data-testid={`player-shelf-send-${item.key}`}
-                    disabled={item.action !== 'promote-preview'}
-                    icon
-                    onClick={() => sendItemToInbox(item)}
-                    size="mini"
-                    type="button"
-                  >
-                    <Icon name="inbox" />
                   </Button>
                 }
               />
@@ -1082,15 +1004,6 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
     }
 
     setImportStatus(`Prepared ${format.toUpperCase()} export for ${stats.history.length} plays.`);
-  };
-
-  const sendSeedsToDiscoveryInbox = () => {
-    discoverySeeds.forEach((seed) => addDiscoveryInboxItem(seed));
-    setImportStatus(
-      `Sent ${discoverySeeds.length} listening seed${
-        discoverySeeds.length === 1 ? '' : 's'
-      } to Discovery Inbox for approval.`,
-    );
   };
 
   const startSeedSearches = async () => {
@@ -1280,20 +1193,6 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
                   </div>
                 ))}
               </div>
-              <Popup
-                content="Send these listening-derived seeds to Discovery Inbox for approval and acquisition planning. This does not search, browse peers, or download."
-                trigger={
-                  <Button
-                    data-testid="player-stats-send-seeds-to-discovery-inbox"
-                    onClick={sendSeedsToDiscoveryInbox}
-                    size="mini"
-                    type="button"
-                  >
-                    <Icon name="inbox" />
-                    Send to Discovery Inbox
-                  </Button>
-                }
-              />
               <Popup
                 content="Start up to three live searches from the strongest listening seeds. This only starts searches; it does not browse peers, queue downloads, or mutate files."
                 trigger={
