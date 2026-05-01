@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z242. Listen Along Controls Must Be Channel-Scoped And Compact
+
+**The Bug**: Unified pod messaging mounted the full Listen Along panel for every pod channel, including direct-message channels, which made DMs look like broadcast rooms and consumed most of the message panel.
+
+**Files Affected**:
+- `src/web/src/components/Messaging/Messaging.jsx`
+- `src/web/src/components/Pods/Pods.jsx`
+- `src/web/src/components/Player/PodListenAlongPanel.jsx`
+- `src/web/src/components/Player/Player.css`
+
+**Wrong**:
+```jsx
+<PodListenAlongPanel
+  channelId={channel.channelId}
+  podId={channel.podId}
+/>
+```
+
+**Correct**:
+```jsx
+{!isPodDirectChannel(channel) && (
+  <PodListenAlongPanel
+    channelId={channel.channelId}
+    compact
+    podId={channel.podId}
+  />
+)}
+```
+
+**Why This Keeps Happening**: Listen Along is a room/broadcast affordance, not a direct-message affordance. Reusing room-level collaboration widgets in a unified message workspace must keep channel kind in the render condition and use compact controls, otherwise DMs inherit unrelated broadcast UI and the chat surface loses usable space.
+
 ### 0z241. WebGPU Raw Texture Upload Rows Must Be 256-Byte Aligned
 
 **The Bug**: WebGPU texture uploads can fail validation when small imported RGBA images use a tightly packed `bytesPerRow` such as `width * 4`, unlike WebGL `texImage2D` which accepts tightly packed rows.
