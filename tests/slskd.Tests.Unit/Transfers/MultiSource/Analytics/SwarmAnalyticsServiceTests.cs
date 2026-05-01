@@ -4,6 +4,7 @@
 namespace slskd.Tests.Unit.Transfers.MultiSource.Analytics;
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -33,6 +34,9 @@ public class SwarmAnalyticsServiceTests
         _peerMetricsMock = new Mock<IPeerMetricsService>();
         _downloadServiceMock = new Mock<IMultiSourceDownloadService>();
         _loggerMock = new Mock<ILogger<SwarmAnalyticsService>>();
+        _downloadServiceMock
+            .SetupGet(x => x.ActiveDownloads)
+            .Returns(new ConcurrentDictionary<Guid, MultiSourceDownloadStatus>());
         _service = new SwarmAnalyticsService(
             _peerMetricsMock.Object,
             _downloadServiceMock.Object,
@@ -218,9 +222,6 @@ public class SwarmAnalyticsServiceTests
     [Fact]
     public async Task GetEfficiencyMetricsAsync_Should_Return_Efficiency_Metrics()
     {
-        // Arrange
-        // Efficiency metrics use placeholder calculations
-
         // Act
         var result = await _service.GetEfficiencyMetricsAsync(null, CancellationToken.None);
 
@@ -229,6 +230,59 @@ public class SwarmAnalyticsServiceTests
         Assert.True(result.ChunkUtilization >= 0.0 && result.ChunkUtilization <= 1.0);
         Assert.True(result.PeerUtilization >= 0.0 && result.PeerUtilization <= 1.0);
         Assert.True(result.RedundancyFactor >= 0.0);
+    }
+
+    [Fact]
+    public async Task GetEfficiencyMetricsAsync_Should_Derive_Values_From_Active_Downloads_And_Peers()
+    {
+        // Arrange
+        var downloads = new ConcurrentDictionary<Guid, MultiSourceDownloadStatus>();
+        var downloadId = Guid.NewGuid();
+        var status = new MultiSourceDownloadStatus
+        {
+            Id = downloadId,
+            TotalChunks = 10,
+            ActiveWorkers = 3,
+        };
+        status.PeerTimeouts["slow-peer"] = DateTime.UtcNow.AddMinutes(1);
+        downloads[downloadId] = status;
+
+        _downloadServiceMock
+            .SetupGet(x => x.ActiveDownloads)
+            .Returns(downloads);
+        _peerMetricsMock
+            .Setup(x => x.GetRankedPeersAsync(100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PeerPerformanceMetrics>
+            {
+                new PeerPerformanceMetrics
+                {
+                    PeerId = "peer1",
+                    ChunksCompleted = 3,
+                    RecentThroughputSamples = new Queue<ThroughputSample>(new[]
+                    {
+                        new ThroughputSample
+                        {
+                            Duration = TimeSpan.FromMilliseconds(250),
+                            BytesTransferred = 1024,
+                            BytesPerSec = 4096,
+                        },
+                    }),
+                },
+                new PeerPerformanceMetrics
+                {
+                    PeerId = "peer2",
+                },
+            });
+
+        // Act
+        var result = await _service.GetEfficiencyMetricsAsync(null, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0.5, result.PeerUtilization, 3);
+        Assert.Equal(3, result.RedundancyFactor, 3);
+        Assert.Equal(250, result.AverageTimeToFirstByteMs, 3);
+        Assert.Equal(0.1, result.AverageReassignmentRate, 3);
+        Assert.Equal(0, result.AverageRescueRate);
     }
 
     [Fact]
@@ -276,8 +330,8 @@ public class SwarmAnalyticsServiceTests
 
         // Assert
         Assert.NotNull(result);
-        // Note: Current implementation uses placeholders, so we just verify structure
-        Assert.NotNull(result.TimePoints);
+        Assert.Empty(result.TimePoints);
+        Assert.Empty(result.SuccessRates);
     }
 
     [Fact]
