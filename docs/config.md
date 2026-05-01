@@ -687,6 +687,12 @@ Symptoms of a misconfigured listen port include poor search results and the inab
 The local IP address defaults to 0.0.0.0, and this should be correct for most people.  If you have multiple network adapters or are using a VPN you may want to set this value to ensure
 incoming traffic is properly routed.
 
+If your VPN provider assigns dynamic forwarded ports, use the
+[slskdN VPN Agent](../src/slskdN.VpnAgent/README.md) rather than hard-coding a
+stale listen port. The Web UI/API can usually remain local or LAN-bound while
+Soulseek traffic uses VPN egress. When VPN integration is enabled, the agent can
+update `soulseek.listen_port` from the active provider mapping.
+
 | Command-Line                | Environment Variable           | Description                                                      |
 | --------------------------- | ------------------------------ | ---------------------------------------------------------------- |
 | `--slsk-listen-ip-address`  | `SLSKD_SLSK_LISTEN_IP_ADDRESS` | The local IP address on which to listen for incoming connections |
@@ -697,6 +703,42 @@ incoming traffic is properly routed.
 soulseek:
   listen_ip_address: 0.0.0.0
   listen_port: 50300
+```
+
+## Type-1 Peer-Message Obfuscation
+
+slskdN exposes Soulseek type-1 peer-message obfuscation as a first-class feature option. The research behind this option proved that the public server can carry obfuscation type and obfuscated-port metadata, and that type-1 peer-message streams can work for direct and indirect peer-message connectivity when both sides honor the metadata.
+
+This is obfuscation, not transport security. It should be treated as a compatibility and traffic-shaping posture, not encryption. Current research covers peer-message (`P`) streams; file transfer (`F`) and distributed-network (`D`) paths remain regular-port based until separate wire support is implemented and validated.
+
+The current slskdN runtime uses Soulseek.NET, which does not yet expose public hooks for SetWaitPort obfuscation metadata or type-1 obfuscated peer-message listener/dialer activation. For that reason these options are visible, validated, and reported in the web UI as configured feature options, but they do not activate the type-1 wire path until runtime support lands.
+
+Modes:
+
+| Mode | Intent |
+| ---- | ------ |
+| `compatibility` | Advertise both regular and obfuscated peer-message reachability when runtime support exists. This is the safest future default for broad client compatibility. |
+| `prefer` | Prefer type-1 obfuscated outbound peer-message dials when compatible peer metadata is available, while preserving regular fallback. |
+| `only` | Advertise obfuscated peer-message reachability without regular fallback. This requires an explicit obfuscated listen port and `advertise_regular_port: false` because clients that ignore obfuscated metadata will fail. |
+
+| Command-Line                             | Environment Variable                         | Description |
+| ---------------------------------------- | -------------------------------------------- | ----------- |
+| `--slsk-obfuscation`                     | `SLSKD_SLSK_OBFUSCATION`                     | Enables the type-1 obfuscation feature option and status reporting |
+| `--slsk-obfuscation-mode`                | `SLSKD_SLSK_OBFUSCATION_MODE`                | Obfuscation posture: `compatibility`, `prefer`, or `only` |
+| `--slsk-obfuscation-listen-port`         | `SLSKD_SLSK_OBFUSCATION_LISTEN_PORT`         | Dedicated type-1 obfuscated peer-message listen port; `0` derives from `listen_port + 1` when runtime support exists |
+| `--slsk-obfuscation-advertise-regular-port` | `SLSKD_SLSK_OBFUSCATION_ADVERTISE_REGULAR_PORT` | Advertises the regular peer-message port alongside obfuscation metadata |
+| `--slsk-obfuscation-prefer-outbound`     | `SLSKD_SLSK_OBFUSCATION_PREFER_OUTBOUND`     | Prefers compatible type-1 obfuscated outbound peer-message dials |
+
+#### **YAML**
+```yaml
+soulseek:
+  listen_port: 50300
+  obfuscation:
+    enabled: false
+    mode: compatibility
+    listen_port: 0
+    advertise_regular_port: true
+    prefer_outbound: true
 ```
 
 ## Other

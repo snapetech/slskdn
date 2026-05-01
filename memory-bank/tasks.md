@@ -16,6 +16,11 @@
  - Priority: P2
  - Notes: Added System -> Policies as a guided YAML surface for webhooks/scripts, transfer slots/speed/retry/schedules/auto-replace, security/auth/API keys/HTTPS/rate limits, search/network/DHT/Scene-Pod/rescue controls, and retention/share-cache/media-probe settings. Added System -> Experience as a browser-local surface for Search, Discovery Inbox, Player, and Messages preferences. Both surfaces are passive and do not test hooks, run scripts, contact peers, restart the daemon, mutate transfers, perform file actions, or change page behavior until follow-up code consumes the settings.
 
+- [x] **docs**: Complete feature-expansion README and current-doc listings.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Updated README, docs index, getting-started, advanced-features, features, config cross-links, Web UI surface audit, and documentation audit for the current SongID/Discovery, Acquisition Review, System Policies/Experience, unified Messages, Pods/Rooms, player/native visualizer, and operator-surface state. Added focused user guides for System Admin Surfaces, Pods/Rooms/Messages, and SongID/Discovery.
+
 - [x] **security**: Close sharegroups streaming token/content-location checklist.
  - Status: completed (2026-05-01)
  - Priority: P2
@@ -1058,7 +1063,7 @@
 
 - [x] **Proxmox LXC templates**: `packaging/proxmox-lxc/` — README, `slskdn.conf.example`, `setup-inside-ct.sh` (Debian 12/Ubuntu 22.04: .NET 8, slskdn zip to /opt/slskdn, systemd, /etc/slskd, /var/lib/slskd). Done.
 - [ ] **Packaging follow-up: re-enable dev flake only with a real published build-dev release**: On 2026-03-16 the broken `slskdn-dev` flake output was disabled and the fake `releases/download/dev/...` alias was removed. Re-enable `slskdn-dev` only after a real `build-dev-<version>` GitHub release is confirmed for the intended platforms and the dev hashes are populated from those published assets.
-- [ ] **Packaging follow-up: automate the NixOS VM smoke test**: The 2026-03-17 QEMU/KVM NixOS validation proved the stable flake now builds and the packaged `slskd` binary starts on real NixOS, but the flow is manual and the upstream NixOS module still needs explicit `domain`, `environmentFile`, and `settings.shares.directories` values for local validation. Script a reusable smoke test or CI-friendly VM harness so future Nix packaging changes are validated without hand-driving the guest.
+- [x] **Packaging follow-up: automate the NixOS VM smoke test**: Added `packaging/scripts/run-nixos-vm-smoke.sh`, an opt-in reusable NixOS VM harness that builds a minimal system around the flake package, supplies the required `domain`, `environmentFile`, and `settings.shares.directories` values, boots headless under QEMU/KVM when available, and waits for a serial `SLSKDN_VM_SMOKE_OK` marker after `slskd.service` becomes active. The script skips cleanly when Nix, Linux, or KVM are unavailable, with `SLSKDN_NIXOS_VM_SMOKE_ALLOW_TCG=1` for slower software-emulated runs. Completed 2026-05-01.
 - [ ] **Repo-wide C# analyzer cleanup**: As of 2026-03-16 the packaging/test follow-up cleaned the touched files, but `bash ./bin/lint` / full-solution `dotnet format --verify-no-changes` still report broad existing analyzer/style debt across unrelated C# files. Triage and fix that separately from packaging work.
 - [x] **Security follow-up (2026-03-21): close remaining CodeQL alert clusters**: Fixed the true-positive clusters by removing cleartext secret logging from `Program` and `AsymmetricDisclosure`, constraining relay token validation to trusted server-side agent identities, rebuilding SQLite share-repo connection strings from validated data sources, and restricting HashDb query profiling to admin-only single-statement read-only SQL with regression tests. Remaining scanner-only findings should now be handled as justified dismissals after the next GitHub analysis refresh instead of by more code churn.
 - [x] **Release regression follow-up: add a subpath-hosted web smoke test**: Added automated coverage that serves the built web UI under `/slskd`, loads the deep link `/slskd/system/info`, verifies built HTML uses relative `./assets/...` references instead of root-relative `/assets/...`, and checks bundled JS/CSS assets resolve under the mounted base. Backend HTML rewrite coverage now asserts non-root `web.url_base` injects a `<base href="/slskd/" />` tag while preserving relative built assets.
@@ -2203,3 +2208,7 @@
 - [x] Prevent deleted Soulseek DMs from becoming pod DMs
   - Status: completed (2026-05-01)
   - Notes: Hid pod direct channels from the Messages pod-channel list unconditionally and close stale pod-DM workspace panels, so deleting a Soulseek DM no longer reveals a duplicate mesh DM. Deployed the rebuilt web bundle to `kspls0`.
+
+- [x] Add first-class Soulseek type-1 obfuscation feature options
+  - Status: completed (2026-05-01)
+  - Notes: Added validated Soulseek type-1 obfuscation options, a serializable runtime plan, startup/status API exposure, Network tab visibility, config examples, and a dedicated feature doc. Current Soulseek.NET support is surfaced honestly as `configured_unsupported` when enabled.

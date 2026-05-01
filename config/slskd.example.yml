@@ -354,6 +354,12 @@
 #   picture: path/to/slsk-profile-picture.jpg
 #   listen_ip_address: 0.0.0.0  # do not use 127.0.0.1/::1 for live peer traffic; remote peers will not be able to connect back
 #   listen_port: 50300
+#   obfuscation:
+#     enabled: false
+#     mode: compatibility      # compatibility, prefer, or only
+#     listen_port: 0           # 0 derives from listen_port + 1 when runtime support exists
+#     advertise_regular_port: true
+#     prefer_outbound: true
 #   diagnostic_level: Info
 #   distributed_network:
 #     disabled: false

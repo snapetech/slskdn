@@ -1,3 +1,15 @@
+## Update 2026-05-01 02:41:03Z
+
+- Current task: Feature-expansion public docs and README listings are updated locally.
+- Last activity:
+  - updated README with Acquisition Review, System admin surfaces, unified Messages, System Policies/Experience, native MilkDrop maturity, and links to new guides
+  - refreshed `docs/getting-started.md` for current ports, default credentials, System tour, manual Search vs Acquisition Review, unified Messages, and conservative multi-source wording
+  - added `docs/system-surfaces.md`, `docs/pods-and-rooms.md`, and `docs/songid-discovery.md`
+  - updated docs index, feature overview, advanced features, config cross-links, Web UI surface audit, documentation audit, task log, and progress log
+- Next steps:
+  1. Run docs lint/markdown checks and targeted stale-reference searches.
+  2. Treat Essentia/MIR, cover-similarity, embedding clustering, and real preset/device visualizer measurement as research/runtime scope, not documentation gaps.
+
 ## Update 2026-05-01 02:20:56Z
 
 - Current task: Remaining admin policy and experience Web UI surfaces are implemented locally.
@@ -13,6 +25,19 @@
   1. Let backend lanes backfill live action execution behind these surfaces where needed.
   2. Let page-specific frontend lanes consume the browser-local Experience preferences where those pages need live behavior.
   3. Full repo `git diff --check` is still blocked by existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
+
+## Update 2026-05-01 02:39:15Z
+
+- Current task: NixOS VM smoke automation follow-up is complete locally.
+- Last activity:
+  - added `packaging/scripts/run-nixos-vm-smoke.sh`
+  - the script builds a minimal NixOS VM around the flake package and required slskd module options
+  - it boots headless with QEMU/KVM when available, waits for `slskd.service` to become active, and reports a serial success marker
+  - it skips cleanly when Nix, Linux, or KVM are unavailable, with explicit TCG opt-in for slower runs
+  - validated shell syntax; local execution skipped because Nix is not installed
+- Next steps:
+  1. Run final whitespace, lint, and broad non-live .NET validation for the accumulated backend/middle batch.
+  2. Remaining unchecked entries are active visualizer work, artifact-dependent dev flake release work, live-runtime diagnostics, repo-wide analyzer debt, QR-library placeholder work, or future SongID MIR research.
 
 ## Update 2026-05-01 02:37:44Z
 

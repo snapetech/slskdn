@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Surfaced the current Soulseek type-1 obfuscation plan through native
+  capabilities and System -> Network, including runtime support state and
+  configured effective obfuscated port.
 - Added Soulseek type-1 peer-message obfuscation configuration options and
   validation, including explicit mode and dedicated obfuscated listen-port
   checks, plus a runtime-support plan that reports the current unsupported

@@ -52,7 +52,8 @@ public class CapabilitiesController : ControllerBase
             "warm_cache",
             "job_manifests",
             "session_traces",
-            "playback_aware"
+            "playback_aware",
+            "soulseek_type1_obfuscation_options"
         };
 
         if (optionsMonitor.CurrentValue.Feature.ScenePodBridge)
@@ -71,6 +72,7 @@ public class CapabilitiesController : ControllerBase
             compat = "slskd",
             version,
             features,
+            obfuscation = SoulseekObfuscationSupport.BuildPlan(optionsMonitor.CurrentValue.Soulseek),
             feature = new
             {
                 scenePodBridge = optionsMonitor.CurrentValue.Feature.ScenePodBridge

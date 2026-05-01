@@ -6,6 +6,11 @@ unless explicitly called out.
 
 ## Executive Summary
 
+> Update 2026-05-01: The first-run port/credential issues, root README logo
+> TODO, docs index user-guide gaps, and missing System/Pods/SongID user-guide
+> entries were addressed. Remaining audit items are mostly broken-link cleanup,
+> VPN doc splitting, and historical snapshot banners.
+
 The user-facing docs have good coverage for the newest Lidarr and VPN work in
 `README.md`, `docs/FEATURES.md`, `docs/config.md`, `docs/lidarr-integration.md`,
 and `src/slskdN.VpnAgent/README.md`. The biggest problems are stale entry-level
@@ -18,13 +23,10 @@ different "VPN" concepts:
 The docs should be cleaned in this order:
 
 1. Fix broken links in non-archived tracked markdown.
-2. Refresh `docs/getting-started.md` and `docs/CURRENT_STATUS.md`.
-3. Split and rename VPN docs so host VPN binding and pod private-service
+2. Split and rename VPN docs so host VPN binding and pod private-service
    gateway docs cannot be mistaken for each other.
-4. Add first-class user docs for Lidarr, Gold Star/Rooms/Pods, and the compact
-   VPN port modes to the docs index and getting-started flow.
-5. Move stale phase/audit docs into archive or mark them clearly as historical.
-6. Soften or qualify public-readiness/security claims that overstate the
+3. Move stale phase/audit docs into archive or mark them clearly as historical.
+4. Soften or qualify public-readiness/security claims that overstate the
    current codebase.
 
 ## Overstatement Findings
@@ -362,6 +364,8 @@ old plans into archive to avoid reintroducing already-fixed work.
 
 ### 10. Root README Still Has A Logo TODO
 
+**Resolved 2026-05-01:** The root README TODO comment was removed.
+
 `README.md` starts with:
 
 ```html
@@ -429,12 +433,10 @@ Recommendation:
 
 ## Suggested Next Patch Set
 
-1. Fix `docs/getting-started.md` ports and add links to Lidarr/VPN/Pods.
-2. Fix all 25 broken non-archive links.
-3. Add `docs/pods-and-rooms.md`.
-4. Add status banners to stale January test/status docs.
-5. Split or at least restructure `src/slskdN.VpnAgent/README.md`.
-6. Rename pod-VPN docs in link text to "Pod Private Service Gateway" without
+1. Fix all 25 broken non-archive links.
+2. Add status banners to remaining stale January test/status docs.
+3. Split or at least restructure `src/slskdN.VpnAgent/README.md`.
+4. Rename pod-VPN docs in link text to "Pod Private Service Gateway" without
    moving files immediately.
 
 ## Commands Used

@@ -1,3 +1,12 @@
+## 2026-05-01 02:41:03Z
+
+- Completed the public documentation/listing pass for the recent feature-expansion work.
+- Updated README with Acquisition Review, System admin surfaces, unified Messages, System Policies/Experience status, native MilkDrop backend maturity, and new user-guide links.
+- Refreshed `docs/getting-started.md` for current ports, default credentials, System admin tour, manual Search vs Acquisition Review, unified Messages, and safer multi-source wording.
+- Added `docs/system-surfaces.md`, `docs/pods-and-rooms.md`, and `docs/songid-discovery.md` as current user-facing guides.
+- Updated `docs/README.md`, `docs/FEATURES.md`, `docs/advanced-features.md`, `docs/config.md`, `docs/dev/webui-surface-audit-2026-04-30.md`, and `docs/dev/documentation-audit-2026-04-30.md`.
+- Validation pending: markdown/search checks and docs lint after this doc pass.
+
 ## 2026-05-01 02:20:56Z
 
 - Added System -> Policies as the broad remaining admin Web UI surface for YAML-backed operator settings.
@@ -6,6 +15,13 @@
 - Kept the surface configuration-only: no webhook test send, script execution, peer contact, daemon restart, transfer mutation, file mutation, or provider credential validation.
 - Corrected the guided transfer YAML writer to use the documented `transfers` section instead of the runtime `Global` property name, documented that gotcha in ADR-0001, and committed it as `8cdb31d9e`.
 - Validation: focused AdminPolicies and ExperienceSettings tests passed, focused AdminPolicies/ExperienceSettings/System ESLint passed, full Web UI lint passed, frontend production build passed, `bash ./bin/lint` passed, and touched-file whitespace checks passed. Full repo `git diff --check` is still blocked by pre-existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
+
+## 2026-05-01 02:39:15Z
+
+- Completed the NixOS VM smoke automation follow-up.
+- Added `packaging/scripts/run-nixos-vm-smoke.sh`, which builds a minimal NixOS VM around the flake package, configures the required slskd module fields, boots headless with QEMU/KVM when available, and waits for a serial success marker after `slskd.service` becomes active.
+- The script skips cleanly when Nix, Linux, or KVM are unavailable and supports explicit TCG opt-in through `SLSKDN_NIXOS_VM_SMOKE_ALLOW_TCG=1`.
+- Validation: shell syntax check passed; local execution skipped because Nix is not installed on this machine.
 
 ## 2026-05-01 02:37:44Z
 
@@ -9182,3 +9198,11 @@ Code quality improvements were completed as part of Option A:
 - Added focused coverage that deleting a matching saved chat does not reveal `peer / dm`.
 - Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-C4NrW-sY.js`, `Messaging-DLn6J19-.js`, and `Messaging-BCMd8f7c.css`.
 - Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 02:41:29Z
+
+- Added first-class Soulseek type-1 peer-message obfuscation feature options under `soulseek.obfuscation`.
+- Added validation for invalid only-mode combinations, privileged obfuscation ports, and reuse of the regular Soulseek listen port.
+- Added `SoulseekObfuscationSupport` runtime plans and exposed them through the slskdN capabilities API and System -> Network status.
+- Documented the modes, flags, current Soulseek.NET runtime limitation, proven research scope, and network-health caveats in config docs and a dedicated guide.
+- Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, and touched-file whitespace checks passed.

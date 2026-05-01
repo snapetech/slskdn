@@ -9,6 +9,9 @@ This guide covers advanced features and how to use them effectively.
 - [Collections & Sharing](#collections--sharing)
 - [Streaming](#streaming)
 - [Integrated Web Player](#integrated-web-player)
+- [Acquisition Review](#acquisition-review)
+- [System Admin Surfaces](#system-admin-surfaces)
+- [Pods, Rooms, And Messages](#pods-rooms-and-messages)
 - [Wishlist & Background Search](#wishlist--background-search)
 - [Discography Concierge](#discography-concierge)
 - [Auto-Replace Stuck Downloads](#auto-replace-stuck-downloads)
@@ -18,7 +21,10 @@ This guide covers advanced features and how to use them effectively.
 
 ## Swarm Downloads
 
-Swarm downloads use multiple sources simultaneously to download a file faster and more reliably.
+Swarm downloads and rescue paths use multiple verified sources to download or
+recover content more reliably. Normal Soulseek downloads remain the default
+path; multi-source behavior is opt-in or explicitly triggered by rescue,
+remediation, or integration flows.
 
 ### How It Works
 
@@ -28,19 +34,11 @@ Swarm downloads use multiple sources simultaneously to download a file faster an
 4. **Parallel Download**: Downloads chunks simultaneously from multiple peers
 5. **Automatic Assembly**: Assembles chunks into complete file
 
-### Enabling Swarm Downloads
-
-**Configuration:**
-```yaml
-features:
-  swarmDownloads: true
-```
-
-**Automatic Activation:**
-- Swarm downloads activate automatically when:
-  - Multiple verified sources are available
-  - File size is large enough to benefit from chunking
-  - Sources support partial downloads
+**Activation:**
+- Mesh-overlay peers can support parallel chunking when verified sources exist.
+- Public Soulseek peers use conservative sequential failover/resume behavior.
+- Rescue and accelerated behavior should be visible to the user and bounded by
+  network-health policy.
 
 ### Monitoring Swarm Downloads
 
@@ -77,11 +75,11 @@ Unified search across Pod/Mesh and Soulseek Scene networks.
 **Configuration:**
 ```yaml
 features:
-  scenePodBridge: true
+  scene_pod_bridge: true
 ```
 
 **Web UI:**
-- Settings → Features → Scene Pod Bridge
+- System -> Policies -> Search and Network Policy -> Enable Scene Pod Bridge
 
 ### Using Unified Search
 
@@ -201,7 +199,7 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 
 - **Equalizer**: 10-band Web Audio EQ with Flat, Classical, Dance, Metal, Rock, and Vocal presets. Settings persist in browser localStorage.
 - **Spectrum / Oscilloscope**: lightweight canvas analyzer modes for visual feedback without loading MilkDrop.
-- **MilkDrop**: butterchurn visualizer with inline, full-window, and native fullscreen modes.
+- **MilkDrop**: Butterchurn plus experimental native WebGL2/WebGPU backend selection with inline, full-window, and fullscreen modes.
 - **External visualizer launcher**: optional configured-only host-side launcher for MilkDrop3 or a compatible wrapper script. The browser can launch only the configured executable and cannot supply paths or arguments.
 - **MilkDrop3-compatible engine plan**: slskdN is tracking a browser-native WebGL2-first visualizer engine so MilkDrop3-style features can run in-app without a Windows desktop process. See [WebGL MilkDrop3 Port Plan](design/webgl-milkdrop3-port.md).
 - **Document Picture-in-Picture**: opens a tiny always-on-top spectrum window on browsers that support `documentPictureInPicture` (currently Chromium-family browsers).
@@ -219,6 +217,91 @@ The Web UI includes a persistent player drawer for local shared/downloaded audio
 - Lyrics contact LRCLIB only when the lyrics pane is opened for a track with artist/title metadata.
 - ListenBrainz is opt-in and only submits when a token is present.
 - These player features do not browse remote Soulseek peers or add background network scanning.
+
+## Acquisition Review
+
+Acquisition Review is the review-first queue for candidates that came from
+passive, imported, or generated sources.
+
+### Appropriate Inputs
+
+- Source-feed imports such as Spotify, YouTube, and Last.fm.
+- Watchlist or release-radar seeds.
+- Listening-history and forgotten-favorites handoffs.
+- SongID candidate fan-out.
+- Discovery Graph nearby recommendations.
+
+Manual Search is different: when a user types a query and presses Search, that
+is already explicit intent and should open results directly.
+
+### Review States
+
+- **Suggested**: visible but not yet accepted.
+- **Approved**: ready for later acquisition planning.
+- **Snoozed**: hidden until the local due date.
+- **Rejected**: kept out of active review.
+
+The queue is browser-local unless a backend workflow explicitly persists or
+consumes an approved candidate.
+
+### Network Impact
+
+Reviewing, filtering, approving, snoozing, rejecting, or exporting candidates
+does not contact peers, browse users, queue downloads, or mutate files. Network
+activity starts only from explicit follow-up actions.
+
+## System Admin Surfaces
+
+The System section is the operator control center.
+
+### Policies
+
+**System -> Policies** writes guided YAML for:
+
+- Webhooks and scripts.
+- Upload/download slots, speed limits, retry, schedules, and auto-replace.
+- Authentication, API keys, JWT, passthrough CIDRs, HTTPS, and rate limits.
+- Search filters, blacklist, DHT, Scene Pod Bridge, and rescue mode.
+- Retention, share cache workers/retention, and media-attribute probing.
+
+Saving this panel writes YAML only. It does not execute hooks, validate
+credentials, contact peers, restart the daemon, or mutate files.
+
+### Experience
+
+**System -> Experience** stores browser-local preferences for:
+
+- Search ranking, preferred conditions, duplicate folding, and action previews.
+- Acquisition Review filters, stale age, confidence floor, and evidence detail.
+- Player queue/radio/rating/history/scrobble/visualizer/keyboard behavior.
+- Messages dense mode, pinned restore, unread badges, user filtering, and local
+  search posture.
+
+### Integrations, Providers, And Automation
+
+- **System -> Integrations**: VPN, Lidarr, metadata providers, notifications,
+  source feeds, FTP, Servarr readiness, and media-server execution contracts.
+- **System -> Source Providers**: read-only provider capability and priority
+  catalog.
+- **System -> Automations**: recipe visibility, local enablement, impact labels,
+  and dry-run history.
+- **System -> Info**: setup health and redacted diagnostic bundles.
+
+See [System Admin Surfaces](system-surfaces.md) for the full map.
+
+## Pods, Rooms, And Messages
+
+Messages is the unified conversation workspace.
+
+- Soulseek DMs, joined Soulseek rooms, and pod room channels open as panels.
+- Pod direct channels are hidden from the visible list so they do not duplicate
+  Soulseek DMs.
+- Pod room channels can show compact room-scoped Listen Along controls.
+- Permanent delete/leave actions require confirmation.
+- Gold Star Club is a pod/room workflow; leaving is intentionally irreversible
+  for local Gold Star status.
+
+See [Pods, Rooms, And Messages](pods-and-rooms.md) for user-facing details.
 
 ## Wishlist & Background Search
 
@@ -298,11 +381,11 @@ Automatically find alternatives when downloads get stuck.
 
 **Configuration:**
 ```yaml
-downloads:
-  autoReplace:
-    enabled: true
-    maxSizeDiffPercent: 5.0  # 5% size difference tolerance
-    interval: 60  # Check every 60 seconds
+transfers:
+  download:
+    auto_replace_stuck: true
+    auto_replace_threshold: 5.0
+    auto_replace_interval: 60
 ```
 
 ### Configuration Options
@@ -428,8 +511,9 @@ Monitor and manage all background jobs.
 
 **Concurrent Downloads:**
 ```yaml
-downloads:
-  maxConcurrent: 5  # Adjust based on network/CPU
+transfers:
+  download:
+    slots: 5
 ```
 
 **Search Limits:**

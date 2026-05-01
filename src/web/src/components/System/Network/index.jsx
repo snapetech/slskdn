@@ -167,6 +167,7 @@ const Network = ({ theme }) => {
   };
 
   const { backfill, capabilities, hashDb, mesh, swarmJobs } = stats;
+  const obfuscation = capabilities?.obfuscation;
   const darkTheme = theme === 'dark';
   const dhtIsLanOnly = stats?.dht?.isLanOnly ?? stats?.dht?.lanOnly ?? false;
   const dhtIsRunning = stats?.dht?.isDhtRunning ?? false;
@@ -479,6 +480,33 @@ const Network = ({ theme }) => {
             </>
           )}
         </Label.Group>
+        {obfuscation && (
+          <Message
+            info={!obfuscation.enabled}
+            warning={obfuscation.enabled && !obfuscation.runtimeSupported}
+            positive={obfuscation.enabled && obfuscation.runtimeSupported}
+          >
+            <Message.Header>Soulseek Type-1 Obfuscation</Message.Header>
+            <p>{obfuscation.summary}</p>
+            <Label.Group>
+              <Label color={obfuscation.enabled ? 'teal' : 'grey'}>
+                {obfuscation.enabled ? 'enabled' : 'disabled'}
+              </Label>
+              <Label color="blue">mode: {obfuscation.mode}</Label>
+              <Label color="blue">type: {obfuscation.type}</Label>
+              <Label color="blue">
+                obfuscated port: {obfuscation.effectiveListenPort ?? 'unset'}
+              </Label>
+              <Label color={obfuscation.advertiseRegularPort ? 'green' : 'grey'}>
+                regular fallback:{' '}
+                {obfuscation.advertiseRegularPort ? 'advertised' : 'off'}
+              </Label>
+              <Label color={obfuscation.runtimeSupported ? 'green' : 'orange'}>
+                runtime: {obfuscation.runtimeState}
+              </Label>
+            </Label.Group>
+          </Message>
+        )}
       </Segment>
 
       <Grid

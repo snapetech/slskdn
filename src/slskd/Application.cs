@@ -485,6 +485,17 @@ namespace slskd
             Log.Debug("Client configured");
             Log.Information("Listening for incoming connections on {IP}:{Port}", OptionsAtStartup.Soulseek.ListenIpAddress, OptionsAtStartup.Soulseek.ListenPort);
 
+            var obfuscationPlan = SoulseekObfuscationSupport.BuildPlan(OptionsAtStartup.Soulseek);
+            if (obfuscationPlan.Enabled)
+            {
+                Log.Warning(
+                    "Soulseek type-1 obfuscation requested in {Mode} mode on port {Port}, but runtime support is {RuntimeState}: {Summary}",
+                    obfuscationPlan.Mode,
+                    obfuscationPlan.EffectiveListenPort,
+                    obfuscationPlan.RuntimeState,
+                    obfuscationPlan.Summary);
+            }
+
             if (OptionsAtStartup.Soulseek.Connection.Proxy.Enabled)
             {
                 Log.Information($"Using Proxy {OptionsAtStartup.Soulseek.Connection.Proxy.Address}:{OptionsAtStartup.Soulseek.Connection.Proxy.Port}");

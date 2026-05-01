@@ -58,6 +58,105 @@ public class SoulseekOptionsValidationTests
     }
 
     [Fact]
+    public void Options_RejectsObfuscationListenPortThatMatchesRegularListenPort()
+    {
+        var options = new Options
+        {
+            Soulseek = new Options.SoulseekOptions
+            {
+                ListenPort = 50300,
+                Obfuscation = new Options.SoulseekOptions.ObfuscationOptions
+                {
+                    Enabled = true,
+                    ListenPort = 50300,
+                },
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "dedicated listen port different from soulseek.listen_port",
+                System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Options_RejectsObfuscationOnlyModeWithoutExplicitDedicatedPort()
+    {
+        var options = new Options
+        {
+            Soulseek = new Options.SoulseekOptions
+            {
+                Obfuscation = new Options.SoulseekOptions.ObfuscationOptions
+                {
+                    Enabled = true,
+                    Mode = SoulseekObfuscationMode.Only.ToString(),
+                    ListenPort = 0,
+                    AdvertiseRegularPort = false,
+                },
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "only mode requires an explicit obfuscated listen port",
+                System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Options_RejectsObfuscationOnlyModeWithRegularFallback()
+    {
+        var options = new Options
+        {
+            Soulseek = new Options.SoulseekOptions
+            {
+                Obfuscation = new Options.SoulseekOptions.ObfuscationOptions
+                {
+                    Enabled = true,
+                    Mode = SoulseekObfuscationMode.Only.ToString(),
+                    ListenPort = 50301,
+                    AdvertiseRegularPort = true,
+                },
+            },
+        };
+
+        var results = options.Validate(new ValidationContext(options)).ToList();
+
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "only mode requires advertise_regular_port to be false",
+                System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SoulseekObfuscationPlan_ReportsConfiguredUnsupportedRuntime()
+    {
+        var plan = SoulseekObfuscationSupport.BuildPlan(new Options.SoulseekOptions
+        {
+            ListenPort = 50300,
+            Obfuscation = new Options.SoulseekOptions.ObfuscationOptions
+            {
+                Enabled = true,
+                Mode = SoulseekObfuscationMode.Prefer.ToString(),
+                ListenPort = 50301,
+            },
+        });
+
+        Assert.True(plan.Enabled);
+        Assert.Equal("prefer", plan.Mode);
+        Assert.Equal(1, plan.Type);
+        Assert.Equal(50301, plan.EffectiveListenPort);
+        Assert.False(plan.RuntimeSupported);
+        Assert.Equal("configured_unsupported", plan.RuntimeState);
+    }
+
+    [Fact]
     public void Options_RejectsMissingStableDhtPort_WhenDhtRendezvousIsEnabled()
     {
         var options = new Options
