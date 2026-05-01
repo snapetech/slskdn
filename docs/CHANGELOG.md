@@ -22,7 +22,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
-- Updated the login wordmark to show `slskdN` with an oversized block `N`
+- Updated the login wordmark to show `slskdN` with a larger block `N`
   suffix.
 - Added native Soulseek discovery support for interests, hated interests,
   recommendations, item recommendations, similar users, and user-interest
