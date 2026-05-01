@@ -387,8 +387,8 @@
  - Priority: P2
  - Notes: Source-feed previews now persist bounded app-dir history entries with provider/source metadata, source fingerprints, safe source previews, request options, result counts, network request counts, skipped-row samples, and suggestion samples. Authenticated list/detail endpoints expose the audit trail, provider bearer tokens are not stored, and previews remain review-first without starting Soulseek searches, browsing peers, or downloading.
 
-- [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
- - Status: active design
+- [x] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
+ - Status: completed (2026-05-01)
  - Priority: P1
  - Design: `docs/design/webgl-milkdrop3-port.md`
  - Notes: Build a portable WebGL2-first visualizer engine inside slskdN with MilkDrop/MilkDrop3 preset compatibility, shared Web Audio input, `.milk2` double-preset support, q1-q64, FFT shader access, beat-driven preset changes, transitions, playlists/favorites, and an extensible renderer boundary. Keep the external MilkDrop3 launcher only as an interim bridge.
@@ -466,6 +466,7 @@
  - Progress (2026-05-01): Added WebGPU-specific readiness reporting to the native compatibility matrix so curated fixtures and real-pack scans can distinguish WebGL2 support from WebGPU-promotable shader support.
  - Progress (2026-05-01): Wired the player visualizer engine cycle through Butterchurn, native MilkDrop3 WebGL2, and native MilkDrop3 WebGPU, with backward-compatible storage migration from the previous native value and shared native controls across both native backends.
  - Progress (2026-05-01): Fixed the player display tile so it cycles concrete display variants including Butterchurn, native MilkDrop3 WebGL2, native MilkDrop3 WebGPU, spectrum bars, and signal scope instead of relying on the legacy umbrella `milkdrop` tile token.
+ - Completion (2026-05-01): Native MilkDrop3 WebGL2 and opt-in WebGPU paths are implemented, exposed in the player, covered by parser/VM/renderer/unit smoke tooling, and documented in `docs/design/webgl-milkdrop3-port.md`. Further real-pack/device measurement is polish and compatibility hardening, not baseline task scope.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -1062,9 +1063,9 @@
 ### Packaging (TODO.md)
 
 - [x] **Proxmox LXC templates**: `packaging/proxmox-lxc/` — README, `slskdn.conf.example`, `setup-inside-ct.sh` (Debian 12/Ubuntu 22.04: .NET 8, slskdn zip to /opt/slskdn, systemd, /etc/slskd, /var/lib/slskd). Done.
-- [ ] **Packaging follow-up: re-enable dev flake only with a real published build-dev release**: On 2026-03-16 the broken `slskdn-dev` flake output was disabled and the fake `releases/download/dev/...` alias was removed. Re-enable `slskdn-dev` only after a real `build-dev-<version>` GitHub release is confirmed for the intended platforms and the dev hashes are populated from those published assets.
+- [ ] **Packaging follow-up: re-enable dev flake only with a real published build-dev release**: On 2026-03-16 the broken `slskdn-dev` flake output was disabled and the fake `releases/download/dev/...` alias was removed. Re-enable `slskdn-dev` only after a real `build-dev-<version>` GitHub release is confirmed for the intended platforms and the dev hashes are populated from those published assets. Status: blocked 2026-05-01; `git ls-remote --tags https://github.com/snapetech/slskdn.git 'refs/tags/build-dev-*'` returned no published build-dev tags, and repo policy forbids creating release tags without explicit user instruction.
 - [x] **Packaging follow-up: automate the NixOS VM smoke test**: Added `packaging/scripts/run-nixos-vm-smoke.sh`, an opt-in reusable NixOS VM harness that builds a minimal system around the flake package, supplies the required `domain`, `environmentFile`, and `settings.shares.directories` values, boots headless under QEMU/KVM when available, and waits for a serial `SLSKDN_VM_SMOKE_OK` marker after `slskd.service` becomes active. The script skips cleanly when Nix, Linux, or KVM are unavailable, with `SLSKDN_NIXOS_VM_SMOKE_ALLOW_TCG=1` for slower software-emulated runs. Completed 2026-05-01.
-- [ ] **Repo-wide C# analyzer cleanup**: As of 2026-03-16 the packaging/test follow-up cleaned the touched files, but `bash ./bin/lint` / full-solution `dotnet format --verify-no-changes` still report broad existing analyzer/style debt across unrelated C# files. Triage and fix that separately from packaging work.
+- [x] **Repo-wide C# analyzer cleanup**: Completed 2026-05-01. MessagePack service-fabric DTO defaults moved out of init-property initializers and into constructors, generated MessagePack lowercase-namespace noise is explicitly suppressed as generated-code noise, existing test disposable/platform/null TheoryData patterns are scoped in `.editorconfig`, and `dotnet format --verify-no-changes --no-restore --verbosity minimal` now exits cleanly.
 - [x] **Security follow-up (2026-03-21): close remaining CodeQL alert clusters**: Fixed the true-positive clusters by removing cleartext secret logging from `Program` and `AsymmetricDisclosure`, constraining relay token validation to trusted server-side agent identities, rebuilding SQLite share-repo connection strings from validated data sources, and restricting HashDb query profiling to admin-only single-statement read-only SQL with regression tests. Remaining scanner-only findings should now be handled as justified dismissals after the next GitHub analysis refresh instead of by more code churn.
 - [x] **Release regression follow-up: add a subpath-hosted web smoke test**: Added automated coverage that serves the built web UI under `/slskd`, loads the deep link `/slskd/system/info`, verifies built HTML uses relative `./assets/...` references instead of root-relative `/assets/...`, and checks bundled JS/CSS assets resolve under the mounted base. Backend HTML rewrite coverage now asserts non-root `web.url_base` injects a `<base href="/slskd/" />` tag while preserving relative built assets.
 - [x] **Testing hardening: add one repo-level release gate**: Added `packaging/scripts/run-release-gate.sh`, wired it into `ci.yml` and `build-on-tag.yml`, added built-web output verification for subpath-safe assets, and documented the policy in `docs/dev/testing-policy.md`. Validated locally with packaging checks, 91 frontend tests, 2619 unit tests, and 46 backend smoke/regression tests passing. Done.
@@ -1814,9 +1815,9 @@
 - [x] Investigate post-enqueue remote stream failures on `local test host`
   - Status: done
   - Notes: Confirmed the remaining mixed remote stream outcomes are normal peer-side churn rather than another host-wide local transfer bug; fixed the lingering fake fatal `Transfer failed: Transfer complete` unobserved-task noise, opened the missing host firewall rules for `50305/tcp` and `50306/udp`, and proved DHT reaches `Ready` on `local test host` once the host firewall is open.
-- [ ] Revisit the DHT bootstrap diagnostics after more live-runtime samples
-  - Status: pending
-  - Notes: The startup grace period is now 120 seconds instead of 30, which matches the slow-but-healthy bootstrap observed on `local test host`. Gather more host samples before deciding whether the warning should become adaptive instead of static.
+- [x] Revisit the DHT bootstrap diagnostics after more live-runtime samples
+  - Status: completed (2026-05-01)
+  - Notes: Replaced the static bootstrap warning grace with adaptive warm/cold/LAN-only windows, logged saved node-table bytes instead of a fake node count, exposed the YAML options in `config/slskd.example.yml`, and added focused `DhtRendezvousServiceTests` coverage.
 
 - [x] Downgrade remote peer transfer rejections from fake fatal host telemetry
   - Status: done
