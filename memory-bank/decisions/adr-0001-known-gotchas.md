@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z254. WebGPU Visualizer Mode Must Degrade To Native WebGL2
+
+**The Bug**: The compact player's MilkDrop3 WebGPU button treated WebGPU as a hard requirement, so HTTP LAN browsers, headless Chromium, or GPUs without `navigator.gpu` support dropped the tile into analyzer fallback bars even though native WebGL2 rendering was available.
+
+**Files Affected**:
+- `src/web/src/components/Player/visualizers/nativeMilkdropEngine.js`
+- `src/web/src/components/Player/Visualizer.jsx`
+- `src/web/src/components/Player/PlayerBar.jsx`
+
+**Wrong**:
+```javascript
+if (rendererBackend === 'webgpu' && !webGpuStatus.available) {
+  throw new Error(webGpuStatus.reason);
+}
+```
+
+**Correct**:
+```javascript
+const activeRendererBackend =
+  requestedRendererBackend === 'webgpu' && webGpuStatus.available
+    ? 'webgpu'
+    : 'webgl2';
+
+return activeRendererBackend === 'webgpu'
+  ? Promise.resolve(createRendererSet(options)).catch(() =>
+      createRendererSet({ ...options, rendererBackend: 'webgl2' }))
+  : createRendererSet({ ...options, rendererBackend: 'webgl2' });
+```
+
+**Why This Keeps Happening**: The UI exposes WebGPU as a user-facing visualizer mode, but WebGPU availability depends on browser flags, secure-origin policy, hardware, and driver support. Treat WebGPU as a preferred backend, not the only backend for that button, and keep the WebGL2 path synchronous so preset transitions and unit tests keep their existing behavior.
+
 ### 0z253. Positional Records Need Constructor Arguments In Tests
 
 **The Bug**: A test created `SecurityContext` with an object initializer, but
