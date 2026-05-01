@@ -213,7 +213,7 @@ namespace slskd.Tests.Unit.Mesh
         }
 
         [Fact]
-        public async Task TrySyncWithPeerAsync_WhenTransportIsNotImplemented_DoesNotLeakLocalSequenceState()
+        public async Task TrySyncWithPeerAsync_WhenTransportIsUnavailable_DoesNotLeakLocalSequenceState()
         {
             mockCapabilities
                 .Setup(c => c.GetPeerCapabilities("mesh-peer"))
@@ -226,7 +226,7 @@ namespace slskd.Tests.Unit.Mesh
             var result = await meshSyncService.TrySyncWithPeerAsync("mesh-peer", CancellationToken.None);
 
             Assert.False(result.Success);
-            Assert.Equal("Mesh sync transport is not implemented", result.Error);
+            Assert.Equal("Mesh sync transport unavailable", result.Error);
             Assert.DoesNotContain("seq", result.Error, StringComparison.OrdinalIgnoreCase);
         }
 
