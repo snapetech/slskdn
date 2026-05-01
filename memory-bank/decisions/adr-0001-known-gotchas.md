@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z266. Obfuscation-Only Validation Tests Must Track The Runtime-Level Rejection
+
+**The Bug**: Unit tests kept asserting older subcondition messages for Soulseek obfuscation `Only` mode even after the validator changed to reject `Only` mode at the runtime-support boundary.
+
+**Files Affected**:
+- `tests/slskd.Tests.Unit/SoulseekOptionsValidationTests.cs`
+- `src/slskd/Core/Options.cs`
+
+**Wrong**:
+```csharp
+Assert.Contains(
+    results,
+    result => result.ErrorMessage!.Contains(
+        "only mode requires advertise_regular_port to be false",
+        StringComparison.Ordinal));
+```
+
+**Correct**:
+```csharp
+Assert.Contains(
+    results,
+    result => result.ErrorMessage!.Contains(
+        "obfuscation only mode is not currently supported",
+        StringComparison.Ordinal));
+```
+
+**Why This Keeps Happening**: `Only` mode has had multiple design constraints, but the current runtime still preserves regular peer-message fallback for legacy compatibility. Validation tests should assert the operator-facing contract that matters now, not obsolete lower-level checks that no longer run.
+
 ### 0z265. Launchpad SFTP Upload Failure Must Fall Back To FTP
 
 **The Bug**: The PPA workflow selected SFTP after a TCP port-22 preflight succeeded, but the actual `dput` upload later failed during SSH banner negotiation. Because the upload step treated selected SFTP as final, it exited before trying the signed anonymous FTP fallback.

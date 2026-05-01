@@ -101,11 +101,7 @@ public class SoulseekOptionsValidationTests
 
         var results = options.Validate(new ValidationContext(options)).ToList();
 
-        Assert.Contains(
-            results,
-            result => result.ErrorMessage!.Contains(
-                "only mode requires an explicit obfuscated listen port",
-                System.StringComparison.Ordinal));
+        AssertRejectsUnsupportedOnlyMode(results);
     }
 
     [Fact]
@@ -127,11 +123,7 @@ public class SoulseekOptionsValidationTests
 
         var results = options.Validate(new ValidationContext(options)).ToList();
 
-        Assert.Contains(
-            results,
-            result => result.ErrorMessage!.Contains(
-                "only mode requires advertise_regular_port to be false",
-                System.StringComparison.Ordinal));
+        AssertRejectsUnsupportedOnlyMode(results);
     }
 
     [Fact]
@@ -154,6 +146,16 @@ public class SoulseekOptionsValidationTests
         Assert.Equal(50301, plan.EffectiveListenPort);
         Assert.True(plan.RuntimeSupported);
         Assert.Equal("active", plan.RuntimeState);
+    }
+
+    private static void AssertRejectsUnsupportedOnlyMode(
+        System.Collections.Generic.IReadOnlyCollection<ValidationResult> results)
+    {
+        Assert.Contains(
+            results,
+            result => result.ErrorMessage!.Contains(
+                "obfuscation only mode is not currently supported",
+                System.StringComparison.Ordinal));
     }
 
     [Fact]
