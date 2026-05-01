@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z262. Shared UDP Demux Must Preserve The Local Destination IP
+
+**The Bug**: The DHT/QUIC shared UDP demux bound a single wildcard socket to `0.0.0.0:50305`. QUIC Initial packets reached the listener, but backend QUIC replies left with a different host source IP than the address the client contacted, so remote QUIC handshakes timed out even though the port was open.
+
+**Files Affected**:
+- `src/slskd/DhtRendezvous/SharedMeshUdpListener.cs`
+
+**Wrong**:
+```csharp
+_publicUdp = new UdpClient(new IPEndPoint(IPAddress.Any, port));
+await _publicUdp.SendAsync(result.Buffer, remoteEndPoint, cancellationToken);
+```
+
+**Correct**:
+```csharp
+foreach (var endpoint in GetBindEndPoints(listenEndPoint))
+{
+    var udp = new UdpClient(endpoint);
+    _receiveTasks.Add(ReceiveLoopAsync(udp, cancellationToken));
+}
+```
+
+**Why This Keeps Happening**: Wildcard UDP binds are convenient for receive paths, but they do not guarantee the source address used for later sends on multi-address hosts. Demux/proxy code for connection-oriented UDP protocols such as QUIC must reply from a socket bound to the same local address that received the packet, or clients will discard the response as the wrong endpoint.
+
 ### 0z261. Launchpad SFTP Uploads Must Fail Fast On SSH Auth Problems
 
 **The Bug**: The SFTP-preferred PPA workflow reached `dput`, validated signatures, spawned `ssh`, and then sat silently until the GitHub run was manually canceled. Without explicit batch-mode SSH settings and a bounded upload command, a missing Launchpad public key or interactive password prompt can make the release job look like a slow upload instead of an authentication/configuration failure.
