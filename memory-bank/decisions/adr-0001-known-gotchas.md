@@ -12621,3 +12621,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The visible nav/routes were removed first, while secondary handoff buttons and browser-local workflow tests still assumed the deleted surface existed. This left a mixed state where the app compiled only after local imports were restored, and tests still looked for controls no longer rendered.
 
 **How to prevent it:** When removing or renaming a Web UI surface, grep for its route name, component name, storage key, helper imports, button labels, and `data-testid` prefixes. Update the tests in the same pass to assert the replacement workflow, not the removed handoff.
+
+### 0z71. Launchpad PPA Uploads Should Use SFTP On GitHub Runners
+
+**What went wrong:** The `build-main-2026050100-slskdn.215` release built and signed the Jammy PPA source package successfully, then failed in the upload step. `dput` was still configured for anonymous FTP to `ppa.launchpad.net`, and GitHub's runner reported `Connection failed, aborting. Check your network` / `[Errno 101] Network is unreachable` on each retry.
+
+**Why it happened:** The earlier passive-FTP retry hardening handled Launchpad-side transient FTP errors, but it still depended on FTP being routable from the ephemeral GitHub runner. Launchpad supports SFTP uploads, and the current runner failure was in the transport path after package generation and signing had already succeeded.
+
+**How to prevent it:** PPA upload workflows should configure `dput` with `method = sftp` and the Launchpad account login, install a dedicated `LAUNCHPAD_SSH_PRIVATE_KEY` secret into `~/.ssh`, and fail clearly if the GPG signing key exists but the Launchpad SSH key is missing. Do not add more FTP retries for runner-level `Network is unreachable` failures.
