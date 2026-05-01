@@ -74,7 +74,7 @@ expect_line flake.nix 'dontStrip = true;'
 expect_line flake.nix '--replace-needed liblttng-ust\.so\.0 liblttng-ust\.so\.1'
 expect_line flake.nix 'pkgs\.util-linux'
 reject_line flake.nix 'releases/download/dev/'
-expect_line flake.nix 'slskdn-dev = throw "slskdn-dev flake output is temporarily unavailable'
+reject_literal flake.nix 'slskdn-dev'
 
 expect_line packaging/winget/snapetech.slskdn.yaml '^PackageIdentifier: snapetech\.slskdn$'
 expect_line packaging/winget/snapetech.slskdn.installer.yaml '^PackageIdentifier: snapetech\.slskdn$'
@@ -83,15 +83,8 @@ expect_line packaging/winget/snapetech.slskdn.locale.en-US.yaml '^PackageIdentif
 expect_line packaging/winget/snapetech.slskdn.locale.en-US.yaml '^Moniker: slskdn$'
 expect_line packaging/winget/snapetech.slskdn.locale.en-US.yaml '^PackageName: slskdN$'
 
-expect_line packaging/winget/snapetech.slskdn-dev.yaml '^PackageIdentifier: snapetech\.slskdn-dev$'
-expect_line packaging/winget/snapetech.slskdn-dev.installer.yaml '^PackageIdentifier: snapetech\.slskdn-dev$'
-expect_line packaging/winget/snapetech.slskdn-dev.installer.yaml 'PortableCommandAlias: slskdn-dev$'
-expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^PackageIdentifier: snapetech\.slskdn-dev$'
-expect_line packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml '^Moniker: slskdn-dev$'
-
 expect_line packaging/homebrew/Formula/slskdn.rb '^class Slskdn < Formula$'
 
-reject_line .github/workflows/dev-release.yml 'slskdn-dev-windows-x64\.zip'
 expect_line .github/workflows/release-packages.yml 'slskdn-main-linux-glibc-x64\.zip'
 expect_literal .github/workflows/build-on-tag.yml 'cp packaging/linux/install-from-release.sh release/install-linux-release.sh'
 expect_literal .github/workflows/build-on-tag.yml 'sha256sum *.zip slskd.service slskd.yml slskd.sysusers install-linux-release.sh > SHA256SUMS.txt'
@@ -113,7 +106,6 @@ expect_literal packaging/aur/PKGBUILD-bin '"slskdn-${pkgver}-main-linux-glibc-x6
 expect_literal packaging/aur/PKGBUILD-bin 'noextract=("slskdn-${pkgver}-main-linux-glibc-x64.zip")'
 expect_line packaging/aur/PKGBUILD-bin '^install=slskd\.install$'
 expect_line packaging/aur/PKGBUILD '^install=slskd\.install$'
-expect_line packaging/aur/PKGBUILD-dev '^install=slskd\.install$'
 expect_line packaging/aur/slskd.service '^ExecStart=/usr/lib/slskd/slskd --config /etc/slskd/slskd\.yml$'
 expect_literal packaging/aur/PKGBUILD-bin 'local release_root="${app_root}/releases/${pkgver}"'
 expect_literal packaging/aur/PKGBUILD-bin 'local archive="${srcdir}/slskdn-${pkgver}-main-linux-glibc-x64.zip"'
@@ -131,17 +123,8 @@ reject_literal packaging/aur/PKGBUILD '-p:Version="$_assembly_ver"'
 expect_literal packaging/aur/PKGBUILD 'chmod -R u=rwX,go=rX "${release_root}"'
 expect_literal packaging/aur/PKGBUILD 'chmod 755 "${release_root}/slskd"'
 expect_literal packaging/aur/PKGBUILD 'exec /usr/lib/slskd/current/slskd "$@"'
-expect_literal packaging/aur/PKGBUILD-dev 'noextract=("slskdn-dev-${pkgver}-linux-glibc-x64.zip")'
-expect_literal packaging/aur/PKGBUILD-dev 'local release_root="${app_root}/releases/${pkgver}"'
-expect_literal packaging/aur/PKGBUILD-dev 'local archive="${srcdir}/slskdn-dev-${pkgver}-linux-glibc-x64.zip"'
-expect_literal packaging/aur/PKGBUILD-dev 'unzip -q "${archive}" -d "${stage_root}"'
-expect_literal packaging/aur/PKGBUILD-dev 'Microsoft.AspNetCore.Diagnostics.Abstractions.dll'
-expect_literal packaging/aur/PKGBUILD-dev 'chmod -R u=rwX,go=rX "${release_root}"'
-expect_literal packaging/aur/PKGBUILD-dev 'chmod 755 "${release_root}/slskd"'
-expect_literal packaging/aur/PKGBUILD-dev 'exec /usr/lib/slskd/current/slskd "$@"'
 test -f packaging/aur/slskd.install || fail 'packaging/aur/slskd.install is missing'
 reject_line packaging/aur/PKGBUILD-bin 'slskdn-\$\{pkgver\}-linux-x64\.zip::https://github\.com/snapetech/slskdn/releases/download/\${pkgver//\.slskdn/-slskdn}/slskdn-\$\{pkgver\}-linux-x64\.zip'
-expect_literal packaging/aur/PKGBUILD-dev '"slskdn-dev-${pkgver}-linux-glibc-x64.zip::https://github.com/snapetech/slskdn/releases/download/RELEASE_TAG_PLACEHOLDER/slskdn-dev-linux-glibc-x64.zip"'
 
 bash packaging/scripts/validate-release-copy.sh
 
@@ -205,12 +188,7 @@ validate_winget() {
     installer_url=$(sed -n 's/^ *InstallerUrl: \(.*\)/\1/p' "$installer_file" | head -n1)
     fail_if_empty "$installer_url" "Winget InstallerUrl in ${installer_file}"
 
-    local expected_release_tag
-    if [[ "$installer_url" == *"build-dev-"* ]]; then
-        expected_release_tag="build-dev-${manifest_version}"
-    else
-        expected_release_tag="${manifest_version/.slskdn./-slskdn.}"
-    fi
+    local expected_release_tag="${manifest_version/.slskdn./-slskdn.}"
 
     if [[ "$installer_url" != *"${expected_release_tag}"* ]]; then
         fail "Winget manifest ${installer_file} url does not match release tag ${expected_release_tag}"
@@ -227,7 +205,6 @@ validate_winget() {
 
 if [[ "${VALIDATE_WINGET_RELEASE_METADATA:-false}" == "true" ]]; then
   validate_winget packaging/winget/snapetech.slskdn.installer.yaml packaging/winget/snapetech.slskdn.locale.en-US.yaml
-  validate_winget packaging/winget/snapetech.slskdn-dev.installer.yaml packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
 
   WINGET_STABLE_VERSION=$(sed -n 's/^PackageVersion: \(.*\)$/\1/p' packaging/winget/snapetech.slskdn.installer.yaml | head -n1)
   if [[ "${WINGET_STABLE_VERSION/.slskdn./-slskdn.}" != "$STABLE_FORMULA_VERSION" ]]; then

@@ -516,35 +516,6 @@ sudo SLSKDN_VERSION=0.24.5-slskdn.133 bash install-linux-release.sh
 
 The installer places the release under `/opt/slskdn`, keeps config at `/etc/slskd/slskd.yml`, and points `slskd.service` at the extracted release.
 
-### Development Builds
-For latest experimental features:
-
-<!-- BEGIN_DEV_BUILD -->
-**[Development Build master →](https://github.com/snapetech/slskdn/releases/tag/master)** 
-
-Version: `0.24.1-dev-91769043447` | Branch: `master` 
-
-```bash
-# Arch Linux (AUR)
-yay -S slskdn-dev
-
-# Fedora/RHEL (COPR)
-sudo dnf copr enable slskdn/slskdn-dev
-sudo dnf install slskdn-dev
-
-# Ubuntu/Debian (PPA)
-sudo add-apt-repository ppa:keefshape/slskdn
-sudo apt update
-sudo apt install slskdn-dev
-
-# Docker
-docker pull ghcr.io/snapetech/slskdn:dev
-```
-<!-- END_DEV_BUILD -->
-
-
-
-
 ### Homebrew (macOS/Linux)
 ```bash
 brew tap snapetech/slskdn https://github.com/snapetech/slskdn
@@ -820,8 +791,6 @@ Features that prove stable may be submitted as PRs to upstream slskd. Our auto-r
 
 ## Versioning
 slskdN follows slskd's version numbers with a suffix: `0.24.1-slskdN.1` = First slskdN release based on slskd 0.24.1
-
-Development builds use epoch-based versioning: `0.24.1-dev-91769014133` for proper sorting.
 
 ---
 

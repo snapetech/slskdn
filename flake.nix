@@ -11,8 +11,6 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         version = "2026043000-slskdn.209";
-        devVersion = "0.24.1.dev.91769727133";
-        devTag = "build-dev-${devVersion}";
         
         # Helper function to build slskdn from a given version and sources
         mkSlskdn = { pname, version, sources }:
@@ -69,8 +67,7 @@
               '';
 
               meta = with pkgs.lib; {
-                description = "Unofficial slskd fork with batteries-included Soulseek features" +
-                  (if pname == "slskdn-dev" then " (Development Build)" else "");
+                description = "Unofficial slskd fork with batteries-included Soulseek features";
                 homepage = "https://github.com/snapetech/slskdn";
                 license = licenses.agpl3Plus;
                 platforms = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -97,25 +94,6 @@
             sha256 = "sha256-j9tFXbiwEzERe7nyMTuy3al+x9WPsIroEjRgJg0Yws4="; # aarch64-darwin
           };
         };
-
-        devSources = {
-          "x86_64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-x64.zip";
-            sha256 = "1bz25gy9p0h3jin4zfhp5msvy8aqxbniq4m50q2xikp6p7bhw1km"; # x86_64-linux (glibc)
-          };
-          "aarch64-linux" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-linux-arm64.zip";
-            sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-linux (glibc)
-          };
-          "x86_64-darwin" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-osx-x64.zip";
-            sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # x86_64-darwin
-          };
-          "aarch64-darwin" = {
-            url = "https://github.com/snapetech/slskdn/releases/download/${devTag}/slskdn-dev-osx-arm64.zip";
-            sha256 = "0000000000000000000000000000000000000000000000000000000000000000"; # aarch64-darwin
-          };
-        };
       in
       {
         packages = {
@@ -124,8 +102,6 @@
             version = version;
             sources = stableSources;
           };
-
-          slskdn-dev = throw "slskdn-dev flake output is temporarily unavailable because no matching build-dev release is currently published. Use a stable package or publish a build-dev release first.";
         };
       }
     );

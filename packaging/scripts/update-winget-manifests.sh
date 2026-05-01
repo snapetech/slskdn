@@ -9,7 +9,7 @@ WIN_X64_SHA="${4:-}"
 RELEASE_TAG="${5:-$VERSION}"
 
 if [ -z "$CHANNEL" ] || [ -z "$VERSION" ] || [ -z "$WIN_X64_URL" ] || [ -z "$WIN_X64_SHA" ]; then
-    echo "Usage: $0 <stable|dev> <version> <win-x64-url> <win-x64-sha> [release-tag]"
+    echo "Usage: $0 <stable> <version> <win-x64-url> <win-x64-sha> [release-tag]"
     exit 1
 fi
 
@@ -40,40 +40,13 @@ EOF
 )
         RELEASE_NOTES_URL="https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG"
         ;;
-    dev)
-        PACKAGE_IDENTIFIER="snapetech.slskdn-dev"
-        FILE_BASENAME="snapetech.slskdn-dev"
-        PACKAGE_NAME="slskdN (Development)"
-        MONIKER="slskdn-dev"
-        COMMAND_ALIAS="slskdn-dev"
-        SHORT_DESCRIPTION="Dev Soulseek client with SongID and Discovery Graph first"
-        DESCRIPTION=$(cat <<'EOF'
-slskdN development builds ship the newest identity and discovery work first,
-especially SongID and Discovery Graph changes.
-
-WARNING: This is an unstable development build.
-
-Features in development builds:
-- SongID from URLs, text, and local media with ranked acquisition paths
-- Discovery Graph atlas across SongID, MusicBrainz, and search
-- Acquisition, packaging, and network changes before they reach stable
-EOF
-)
-        RELEASE_NOTES=$(cat <<EOF
-Development Build $VERSION
-
-See https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG for details.
-EOF
-)
-        RELEASE_NOTES_URL="https://github.com/snapetech/slskdn/releases/tag/$RELEASE_TAG"
-        ;;
     *)
         echo "Unknown channel: $CHANNEL"
         exit 1
         ;;
 esac
 
-if [ "$CHANNEL" = "stable" ] && [[ "$VERSION" =~ ^([0-9]{10})-slskdn\.([0-9]+)$ ]]; then
+if [[ "$VERSION" =~ ^([0-9]{10})-slskdn\.([0-9]+)$ ]]; then
     WINGET_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
 else
     WINGET_VERSION="$(echo "$VERSION" | sed 's/-/./g')"
