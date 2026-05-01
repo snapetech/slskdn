@@ -7,6 +7,14 @@
 - Corrected the guided transfer YAML writer to use the documented `transfers` section instead of the runtime `Global` property name, documented that gotcha in ADR-0001, and committed it as `8cdb31d9e`.
 - Validation: focused AdminPolicies and ExperienceSettings tests passed, focused AdminPolicies/ExperienceSettings/System ESLint passed, full Web UI lint passed, frontend production build passed, `bash ./bin/lint` passed, and touched-file whitespace checks passed. Full repo `git diff --check` is still blocked by pre-existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
 
+## 2026-05-01 02:37:44Z
+
+- Completed the direct mesh transport runtime-gate follow-up.
+- `DirectQuicDialer` is now registered only when the QUIC runtime supports both client connections and listeners.
+- Startup now warns explicitly when direct mesh transport is enabled but QUIC runtime support is unavailable, making the unsupported direct-circuit state visible instead of silently carrying a dead direct dialer.
+- `DirectQuicDialer.IsAvailableAsync()` now reports the same `QuicRuntime.IsAvailable()` gate used by descriptor publication and DI registration.
+- Validation: focused DirectQuicDialer, PeerDescriptorPublisher, and TransportSelector tests passed.
+
 ## 2026-05-01 02:22:16Z
 
 - Completed the collection item display metadata follow-up.

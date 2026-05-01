@@ -1869,9 +1869,9 @@
   - Status: done
   - Notes: Reproduced on `local test host` that `PeerDescriptorPublisher` was auto-advertising fake `2234/2235` endpoints and impossible `DirectQuic` transports while `QuicListener.IsSupported` was false. Updated descriptor publication to derive legacy endpoints from the real UDP overlay listen port and to suppress direct QUIC transport advertisement when the host cannot actually accept QUIC. Validated on `local test host`: published self descriptor now logs `endpoints=4 transports=0` instead of poisoning DHT with impossible direct candidates.
 
-- [ ] Add a non-QUIC direct mesh transport path or runtime dependency gate
-  - Status: pending
-  - Notes: The audit on `local test host` showed a deeper architecture gap remains after the descriptor fix: `TransportSelector` still only has `DirectQuicDialer` for clearnet mesh transport, so QUIC-unsupported hosts cannot build direct circuits at all. Either wire the existing direct TLS transport into mesh dialing or add a startup/package gate that makes this unsupported state explicit before release.
+- [x] Add a non-QUIC direct mesh transport path or runtime dependency gate
+  - Status: completed (2026-05-01)
+  - Notes: Added the explicit runtime dependency gate path. `DirectQuicDialer` is now registered only when `QuicRuntime.IsAvailable()` reports both connection and listener support, and startup logs an operator-visible warning when direct mesh transport is enabled but QUIC runtime support is unavailable. `DirectQuicDialer.IsAvailableAsync()` now uses the same runtime gate, keeping transport selection and descriptor publication aligned until a real non-QUIC direct dialer exists.
 
 - [x] Verify DHT rendezvous overlay search and transfer between two full local slskdN instances
   - Status: done

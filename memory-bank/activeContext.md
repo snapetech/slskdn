@@ -14,6 +14,19 @@
   2. Let page-specific frontend lanes consume the browser-local Experience preferences where those pages need live behavior.
   3. Full repo `git diff --check` is still blocked by existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
 
+## Update 2026-05-01 02:37:44Z
+
+- Current task: Direct mesh transport runtime dependency gate is complete locally.
+- Last activity:
+  - registered `DirectQuicDialer` only when `QuicRuntime.IsAvailable()` succeeds
+  - added an explicit startup warning when direct mesh transport is enabled but QUIC runtime support is unavailable
+  - aligned `DirectQuicDialer.IsAvailableAsync()` with the same runtime gate used by descriptor publication and DI
+  - marked the non-QUIC direct transport/runtime-gate task complete
+  - validated focused DirectQuicDialer, PeerDescriptorPublisher, and TransportSelector tests
+- Next steps:
+  1. Run final whitespace, lint, and broad non-live .NET validation for the accumulated backend/middle batch.
+  2. Remaining unchecked entries are active visualizer work, packaging artifact/live-runtime work, repo-wide analyzer debt, QR-library placeholder work, or future SongID MIR research.
+
 ## Update 2026-05-01 02:22:16Z
 
 - Current task: Collection item display metadata follow-up is complete locally.
