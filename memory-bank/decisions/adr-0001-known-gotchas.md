@@ -52,6 +52,30 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z263. Do Not Preflight Launchpad PPA SFTP With `sftp pwd`
+
+**The Bug**: The PPA workflow replaced a hanging `dput` upload with a bounded `sftp -b - ppa.launchpad.net` authentication probe that runs `pwd`. Even with a Launchpad-accepted SSH key, the PPA SFTP endpoint can sit until the probe timeout, so the workflow fails before `dput` gets a chance to upload.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+echo "Checking Launchpad SFTP authentication"
+timeout --preserve-status 90 sftp -b - ppa.launchpad.net <<'EOF'
+pwd
+EOF
+timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+```
+
+**Correct**:
+```bash
+timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+```
+
+**Why This Keeps Happening**: `git.launchpad.net` is useful for checking whether Launchpad accepts a key for an account, but `ppa.launchpad.net` is an upload endpoint, not a general interactive SFTP shell. Keep SSH noninteractive and bound the real `dput` upload; do not add separate `pwd` probes against the PPA SFTP server.
+
 ### 0z262. Shared UDP Demux Must Preserve The Local Destination IP
 
 **The Bug**: The DHT/QUIC shared UDP demux bound a single wildcard socket to `0.0.0.0:50305`. QUIC Initial packets reached the listener, but backend QUIC replies left with a different host source IP than the address the client contacted, so remote QUIC handshakes timed out even though the port was open.
