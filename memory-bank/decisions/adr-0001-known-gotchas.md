@@ -52,6 +52,90 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z268. Restart Arguments Must Not Reuse `Environment.CommandLine`
+
+**The Bug**: The admin restart endpoint passed `Environment.CommandLine` as the child process argument string. `Environment.CommandLine` includes argv[0], so the restarted process receives the executable path twice.
+
+**Files Affected**:
+- `src/slskd/Core/API/Controllers/ApplicationController.cs`
+
+**Wrong**:
+```csharp
+Process.Start(currentExecutable, Environment.CommandLine);
+```
+
+**Correct**:
+```csharp
+Process.Start(currentExecutable, Environment.GetCommandLineArgs().Skip(1));
+```
+
+**Why This Keeps Happening**: `Environment.CommandLine` looks like a convenient way to preserve startup flags, but it is the full command line, not just arguments. Restart paths should preserve argv[1..] through the enumerable overload so quoting and argv[0] are handled by the runtime.
+
+### 0z269. Stream Wrapper Handoff Must Release Limiter On Any Setup Failure
+
+**The Bug**: Streaming acquired a limiter slot and opened a `FileStream`, then transferred ownership to `ReleaseOnDisposeStream`. If wrapper construction or another non-IO setup step threw before ownership handoff completed, the underlying stream and limiter slot could leak.
+
+**Files Affected**:
+- `src/slskd/Streaming/StreamsController.cs`
+
+**Wrong**:
+```csharp
+stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+var wrapped = new ReleaseOnDisposeStream(stream, () => limiter.Release(key));
+stream = null;
+return File(wrapped, contentType);
+```
+
+**Correct**:
+```csharp
+var limiterAcquired = true;
+try
+{
+    stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    var wrapped = new ReleaseOnDisposeStream(stream, () => limiter.Release(key));
+    stream = null;
+    limiterAcquired = false;
+    return File(wrapped, contentType);
+}
+catch
+{
+    if (limiterAcquired)
+    {
+        limiter.Release(key);
+    }
+
+    throw;
+}
+finally
+{
+    stream?.Dispose();
+}
+```
+
+**Why This Keeps Happening**: Ownership-transfer code has two resources with different owners: the open stream and the concurrency slot. Nulling the stream only proves the file handle was handed off; a separate flag is needed to prove the limiter release responsibility moved to the wrapper.
+
+### 0z270. Passthrough Remote No-Auth Docs Must Mention CIDR Gate
+
+**The Bug**: `AllowRemoteNoAuth` documentation implied the flag alone allowed remote passthrough. The implementation correctly requires both `AllowRemoteNoAuth=true` and a matching non-empty `AllowedCidrs`, so the docs could mislead operators.
+
+**Files Affected**:
+- `src/slskd/Common/Authentication/PassthroughAuthentication.cs`
+
+**Wrong**:
+```csharp
+/// When true, allow passthrough from non-loopback addresses.
+public bool AllowRemoteNoAuth { get; set; }
+```
+
+**Correct**:
+```csharp
+/// When true, allow passthrough from non-loopback addresses only when
+/// AllowedCidrs is non-empty and matches the remote address.
+public bool AllowRemoteNoAuth { get; set; }
+```
+
+**Why This Keeps Happening**: The safe behavior lives in the handler guard, while the option name sounds like a complete authorization switch. Operator-facing XML docs must describe the full gate whenever one option only works in combination with another.
+
 ### 0z267. Manual Launcher Rewrites Must Preserve Literal `"$@"`
 
 **The Bug**: A manual deployment rewrote `/usr/lib/slskd/slskd` through nested local/SSH quoting and accidentally produced `exec /usr/lib/slskd/current/slskd ""`. Systemd still started the app, but the launcher dropped `--config /etc/slskd/slskd.yml`, so slskd fell back to the service user's local config and bound HTTP to `127.0.0.1`.
