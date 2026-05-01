@@ -11,10 +11,10 @@
 
 *No high priority tasks currently active
 
-- [x] **network**: Remove stray legacy UDP overlay listener from shared QUIC/DHT builds.
+- [x] **network**: Share one UDP mesh port across DHT, UDP overlay, and QUIC.
  - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: kspls0 log/socket inspection found the shared-port build still binding legacy UDP `50400`. Documented ADR-0001 gotcha `0z276`, skipped `UdpOverlayServer` registration when QUIC is the active direct mesh transport, published/deployed `0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` to `kspls0`, and verified no legacy UDP `50306`/`50400`/`50401`/`50402` sockets remain while shared UDP `50305`, backend UDP `55305`, TCP `50305`, and Soulseek listeners stay active.
+ - Notes: kspls0 log/socket inspection found the shared-port build still binding a separate UDP overlay socket on `50400`. Documented ADR-0001 gotcha `0z276` and corrected the design so QUIC does not replace UDP overlay: the shared mesh UDP listener owns public `50305/udp` and demuxes DHT rendezvous packets, UDP overlay control envelopes, and QUIC traffic proxied to backend UDP `55305`.
 
 - [x] **network**: Deploy current runtime/network build to kspls0 and validate live behavior.
  - Status: completed (2026-05-01)

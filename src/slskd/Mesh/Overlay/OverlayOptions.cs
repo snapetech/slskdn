@@ -9,11 +9,11 @@ namespace slskd.Mesh.Overlay;
 public class OverlayOptions
 {
     public bool Enable { get; set; } = true;
-    public int ListenPort { get; set; } = 50400;
+    public int ListenPort { get; set; } = 50305;
     public bool EnableQuic { get; set; } = true;
 
     // Public QUIC overlay port. When ShareQuicWithDhtPort is true, DHT owns the public
-    // UDP socket and proxies QUIC datagrams to QuicBackendListenPort on loopback.
+    // UDP socket and routes DHT, UDP overlay, and QUIC datagrams on one public port.
     public int QuicListenPort { get; set; } = 50305;
     public bool ShareQuicWithDhtPort { get; set; } = true;
     public int QuicBackendListenPort { get; set; } = 55305;

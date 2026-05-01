@@ -43,13 +43,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Documented Soulseek type-1 obfuscation activation, native discovery
   workflows, compatibility posture, and safety limiter buckets.
 - Added shared UDP port handling so the DHT rendezvous listener can keep the
-  public `50305/udp` forward while proxying QUIC overlay traffic to a loopback
-  MsQuic listener, putting direct QUIC back on the reduced two-forward mesh
-  setup.
+  public `50305/udp` forward while demuxing DHT rendezvous packets, UDP overlay
+  control envelopes, and QUIC overlay traffic proxied to a loopback MsQuic
+  listener.
 - Quieted normal QUIC probe disconnects so successful handshake-only checks no
   longer log warning stack traces when the peer closes before opening a stream.
-- Stopped the legacy UDP overlay listener from binding `50400/udp` when the
-  active direct mesh transport is QUIC on the shared DHT/overlay port.
+- Kept UDP overlay and QUIC active together on the shared mesh UDP port instead
+  of treating QUIC as a replacement for UDP overlay.
 - Switched slskdN to the private `slskNet.Runtime` Soulseek.NET-derived
   runtime fork for local builds, vendored the runtime source under
   `vendor/slskNet.Runtime`, activated Soulseek type-1 peer-message

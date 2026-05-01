@@ -9394,8 +9394,6 @@ Code quality improvements were completed as part of Option A:
 
 ## 2026-05-01 20:11:53Z
 
-- Inspected current `kspls0` logs and found one real port-reduction regression: the QUIC/shared-DHT build still registered `UdpOverlayServer` and bound legacy UDP `50400`.
-- Documented ADR-0001 gotcha `0z276`, changed hosted-service registration so the legacy UDP overlay server only starts when QUIC is disabled or unavailable, and added focused coverage for that decision.
-- Published and deployed `0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` to `kspls0` under `/usr/lib/slskd/releases/manual-20260501200529.f76cfe3e10a9`.
-- Live validation after restart: `50400/udp`, `50401/udp`, `50402/udp`, and `50306/udp` are not bound; shared UDP `50305`, QUIC backend UDP `55305`, TCP `50305`, Web UI `5030`, and Soulseek `50300`/`50301` are active; QUIC handshake through `kspls0:50305` connects and closes cleanly; Soulseek health recovered to Healthy; post-restart log scan found no fatal/error/exception/stack/abort/50400 lines.
-- Validation: focused `ProgramPathNormalizationTests` passed (`36` tests); full `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` passed Web UI tests/build, Release backend build, `3824` unit tests, `46` API tests, `276` integration tests, and publish.
+- Inspected current `kspls0` logs and found one real port-reduction regression: the shared DHT/QUIC build still registered `UdpOverlayServer` separately and bound UDP `50400`.
+- Corrected the design note from the first pass: UDP overlay is not legacy, and QUIC does not replace it. DHT rendezvous, UDP overlay control envelopes, and QUIC overlay traffic can share one public UDP port when the shared listener demuxes all three.
+- Documented ADR-0001 gotcha `0z276` with the corrected rule and changed the shared mesh UDP listener to route bencoded DHT packets to MonoTorrent, MessagePack overlay envelopes to `IControlDispatcher`, and QUIC Initial/session packets to the loopback MsQuic backend.

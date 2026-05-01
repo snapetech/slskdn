@@ -2283,12 +2283,14 @@ namespace slskd
             });
             var overlayOptionsAtStartup = Configuration.GetSlskdSection("Overlay").Get<Mesh.Overlay.OverlayOptions>() ?? new Mesh.Overlay.OverlayOptions();
             var dataOverlayOptionsAtStartup = Configuration.GetSlskdSection("OverlayData").Get<Mesh.Overlay.DataOverlayOptions>() ?? new Mesh.Overlay.DataOverlayOptions();
+            var dhtOptionsAtStartup = OptionsAtStartup.DhtRendezvous;
             var quicPlatformSupported = OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows();
             var quicRuntimeAvailable = quicPlatformSupported && Mesh.QuicRuntime.IsAvailable();
             var quicOverlayRequested = overlayOptionsAtStartup.Enable && overlayOptionsAtStartup.EnableQuic;
             var quicDataRequested = dataOverlayOptionsAtStartup.Enable;
+            var sharedMeshUdpRequested = DhtRendezvousService.ShouldUseSharedMeshUdpListener(dhtOptionsAtStartup, overlayOptionsAtStartup);
 
-            if (ShouldRunUdpOverlayServer(overlayOptionsAtStartup.Enable, quicOverlayRequested, quicRuntimeAvailable))
+            if (ShouldRunStandaloneUdpOverlayServer(overlayOptionsAtStartup.Enable, sharedMeshUdpRequested))
             {
                 services.AddHostedService(p =>
                 {
@@ -2300,7 +2302,7 @@ namespace slskd
             }
             else
             {
-                Log.Debug("[DI] Legacy UDP overlay server skipped because QUIC overlay owns direct mesh transport");
+                Log.Debug("[DI] Standalone UDP overlay server skipped because the shared mesh UDP listener owns the configured overlay port");
             }
 
             if (quicOverlayRequested && quicRuntimeAvailable)
@@ -4409,9 +4411,9 @@ namespace slskd
             return ActivatorUtilities.CreateInstance<Mesh.Overlay.QuicOverlayServer>(serviceProvider);
         }
 
-        internal static bool ShouldRunUdpOverlayServer(bool overlayEnabled, bool quicOverlayRequested, bool quicRuntimeAvailable)
+        internal static bool ShouldRunStandaloneUdpOverlayServer(bool overlayEnabled, bool sharedMeshUdpRequested)
         {
-            return overlayEnabled && !(quicOverlayRequested && quicRuntimeAvailable);
+            return overlayEnabled && !sharedMeshUdpRequested;
         }
 
         internal static bool IsExpectedSoulseekNetworkException(Exception exception)

@@ -52,34 +52,57 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
-### 0z276. Shared QUIC/DHT Ports Must Not Also Start The Legacy UDP Overlay Listener
+### 0z276. Shared Mesh UDP Ports Must Demux DHT, UDP Overlay, And QUIC
 
-**The Bug**: After restoring QUIC on the reduced shared mesh port, the app still registered the legacy `UdpOverlayServer`. The live `kspls0` build correctly exposed shared UDP `50305` and QUIC backend UDP `55305`, but it also bound legacy UDP `50400`, contradicting the reduced ingress contract and the Web UI port guidance.
+**The Bug**: After restoring QUIC on the reduced shared mesh port, the app still treated UDP overlay and QUIC as mutually exclusive listeners. The first correction skipped `UdpOverlayServer` whenever QUIC was active, which removed the extra `50400/udp` socket but also implied QUIC replaced UDP overlay. That is wrong: DHT rendezvous, UDP overlay control envelopes, and QUIC overlay traffic are distinct protocols that can share public UDP `50305` only if the shared listener demuxes all three.
 
 **Files Affected**:
+- `src/slskd/DhtRendezvous/SharedMeshUdpListener.cs`
+- `src/slskd/DhtRendezvous/DhtRendezvousService.cs`
 - `src/slskd/Program.cs`
 - `src/slskd/Mesh/Overlay/UdpOverlayServer.cs`
 
 **Wrong**:
 ```csharp
-services.AddHostedService(p =>
+if (overlayEnabled && !(quicOverlayRequested && quicRuntimeAvailable))
 {
-    return ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
-});
+    services.AddHostedService(p => ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p));
+}
+
+if (IsQuicInitialPacket(result.Buffer))
+{
+    await session.ForwardToBackendAsync(result.Buffer, cancellationToken);
+}
+else
+{
+    MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
+}
 ```
 
 **Correct**:
 ```csharp
-if (Program.ShouldRunUdpOverlayServer(overlayEnabled, quicOverlayRequested, quicRuntimeAvailable))
+if (DhtRendezvousService.ShouldUseSharedMeshUdpListener(dhtOptions, overlayOptions))
 {
-    services.AddHostedService(p =>
-    {
-        return ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
-    });
+    // The shared listener owns the public UDP socket and routes DHT, UDP overlay,
+    // and QUIC to their respective handlers.
+    return new SharedMeshUdpListener(...);
+}
+
+if (IsQuicInitialPacket(result.Buffer))
+{
+    await session.ForwardToBackendAsync(result.Buffer, cancellationToken);
+}
+else if (IsDhtPacket(result.Buffer))
+{
+    MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
+}
+else
+{
+    await HandleOverlayDatagramAsync(result.Buffer, result.RemoteEndPoint, cancellationToken);
 }
 ```
 
-**Why This Keeps Happening**: The legacy UDP overlay server and the newer QUIC/shared-port path are separate hosted services. Enabling QUIC does not automatically suppress the older listener unless registration is conditional. Any port-reduction work must validate actual sockets with `ss`, not just API options, public forwards, or UI copy.
+**Why This Keeps Happening**: Port reduction is about socket ownership, not protocol replacement. QUIC does not supersede UDP overlay or DHT. If multiple mesh protocols share one public UDP port, the owner of that socket must route every expected wire format; otherwise a fix will either bind an extra public port or silently disable one transport.
 
 ### 0z275. QUIC Probe Connections May Close Without Opening A Stream
 

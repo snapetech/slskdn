@@ -9,16 +9,24 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using MonoTorrent.Connections;
 using MonoTorrent.Connections.Dht;
+using Microsoft.Extensions.Options;
+using slskd.Mesh;
+using slskd.Mesh.Overlay;
+using slskd.Mesh.Transport;
 
 /// <summary>
-/// Shares the public DHT UDP socket with QUIC by proxying QUIC Initial flows to a loopback MsQuic listener.
+/// Shares the public mesh UDP socket between DHT rendezvous, UDP overlay control, and QUIC.
 /// </summary>
 public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
 {
     private static readonly TimeSpan SessionIdleTimeout = TimeSpan.FromMinutes(2);
     private readonly IPEndPoint _listenEndPoint;
-    private readonly IPEndPoint _quicBackendEndPoint;
+    private readonly IPEndPoint? _quicBackendEndPoint;
     private readonly ILogger<SharedMeshUdpListener> _logger;
+    private readonly IControlDispatcher? _overlayDispatcher;
+    private readonly ConnectionThrottler? _connectionThrottler;
+    private readonly int _maxOverlayDatagramBytes;
+    private readonly int _maxRemotePayload;
     private readonly ConcurrentDictionary<IPEndPoint, QuicProxySession> _quicSessions = new();
     private readonly CancellationTokenSource _cts = new();
     private readonly List<UdpClient> _publicSockets = new();
@@ -28,12 +36,20 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
 
     public SharedMeshUdpListener(
         IPEndPoint listenEndPoint,
-        IPEndPoint quicBackendEndPoint,
-        ILogger<SharedMeshUdpListener> logger)
+        IPEndPoint? quicBackendEndPoint,
+        ILogger<SharedMeshUdpListener> logger,
+        IControlDispatcher? overlayDispatcher = null,
+        ConnectionThrottler? connectionThrottler = null,
+        IOptions<OverlayOptions>? overlayOptions = null,
+        IOptions<MeshOptions>? meshOptions = null)
     {
         _listenEndPoint = listenEndPoint;
         _quicBackendEndPoint = quicBackendEndPoint;
         _logger = logger;
+        _overlayDispatcher = overlayDispatcher;
+        _connectionThrottler = connectionThrottler;
+        _maxOverlayDatagramBytes = overlayOptions?.Value?.MaxDatagramBytes ?? new OverlayOptions().MaxDatagramBytes;
+        _maxRemotePayload = meshOptions?.Value?.Security?.GetEffectiveMaxPayloadSize() ?? SecurityUtils.MaxRemotePayloadSize;
     }
 
     public event Action<ReadOnlyMemory<byte>, IPEndPoint>? MessageReceived;
@@ -65,10 +81,11 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
             }
 
             _logger.LogInformation(
-                "[DHT] Shared UDP listener bound {PublicPort} on {SocketCount} socket(s); QUIC datagrams proxy to {Backend}",
+                "[DHT] Shared UDP listener bound {PublicPort} on {SocketCount} socket(s); UDP overlay enabled={OverlayEnabled}; QUIC backend={Backend}",
                 _listenEndPoint.Port,
                 _publicSockets.Count,
-                _quicBackendEndPoint);
+                _overlayDispatcher is not null,
+                _quicBackendEndPoint?.ToString() ?? "disabled");
         }
         catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
         {
@@ -114,6 +131,11 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
         return buffer.Length > 0 && (buffer[0] & 0xC0) == 0xC0;
     }
 
+    internal static bool IsDhtPacket(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length > 0 && buffer[0] == (byte)'d';
+    }
+
     private async Task ReceiveLoopAsync(UdpClient udp, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -129,13 +151,25 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
                     continue;
                 }
 
-                if (IsQuicInitialPacket(result.Buffer))
+                if (_quicBackendEndPoint is not null && IsQuicInitialPacket(result.Buffer))
                 {
                     var session = _quicSessions.GetOrAdd(
                         result.RemoteEndPoint,
                         endpoint => new QuicProxySession(endpoint, _quicBackendEndPoint, udp, _logger, _cts.Token));
 
                     await session.ForwardToBackendAsync(result.Buffer, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                if (IsDhtPacket(result.Buffer))
+                {
+                    MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
+                    continue;
+                }
+
+                if (_overlayDispatcher is not null)
+                {
+                    await HandleOverlayDatagramAsync(result.Buffer, result.RemoteEndPoint, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
@@ -154,6 +188,44 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
                 _logger.LogWarning(ex, "[DHT] Shared UDP listener receive loop error");
             }
         }
+    }
+
+    private async Task HandleOverlayDatagramAsync(byte[] buffer, IPEndPoint remoteEndPoint, CancellationToken cancellationToken)
+    {
+        if (_connectionThrottler is not null && !_connectionThrottler.ShouldAllowInboundDatagram(remoteEndPoint.ToString()))
+        {
+            return;
+        }
+
+        if (buffer.Length > _maxRemotePayload)
+        {
+            _logger.LogWarning("[Overlay] Dropping datagram exceeding MaxRemotePayloadSize ({Size} bytes)", buffer.Length);
+            return;
+        }
+
+        if (buffer.Length > _maxOverlayDatagramBytes)
+        {
+            _logger.LogWarning("[Overlay] Dropping oversized datagram size={Size}", buffer.Length);
+            return;
+        }
+
+        ControlEnvelope? envelope;
+        try
+        {
+            envelope = PayloadParser.ParseMessagePackSafely<ControlEnvelope>(buffer, _maxRemotePayload);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Overlay] Failed to decode envelope");
+            return;
+        }
+
+        if (envelope is null)
+        {
+            return;
+        }
+
+        await _overlayDispatcher!.HandleAsync(envelope, cancellationToken).ConfigureAwait(false);
     }
 
     private void PruneIdleQuicSessions()

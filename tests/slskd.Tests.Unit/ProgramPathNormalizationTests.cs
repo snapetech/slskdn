@@ -417,6 +417,7 @@ public class ProgramPathNormalizationTests
         var dataOverlay = new slskd.Mesh.Overlay.DataOverlayOptions();
 
         Assert.True(overlay.Enable);
+        Assert.Equal(50305, overlay.ListenPort);
         Assert.True(overlay.EnableQuic);
         Assert.True(overlay.ShareQuicWithDhtPort);
         Assert.Equal(50305, overlay.QuicListenPort);
@@ -425,17 +426,16 @@ public class ProgramPathNormalizationTests
     }
 
     [Theory]
-    [InlineData(true, true, true, false)]
-    [InlineData(true, true, false, true)]
-    [InlineData(true, false, true, true)]
-    [InlineData(false, false, true, false)]
-    public void ShouldRunUdpOverlayServer_OnlyUsesLegacyUdpWhenQuicIsNotActive(
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, false)]
+    public void ShouldRunStandaloneUdpOverlayServer_UsesStandaloneSocketOnlyWhenSharedMeshUdpIsInactive(
         bool overlayEnabled,
-        bool quicOverlayRequested,
-        bool quicRuntimeAvailable,
+        bool sharedMeshUdpRequested,
         bool expected)
     {
-        Assert.Equal(expected, Program.ShouldRunUdpOverlayServer(overlayEnabled, quicOverlayRequested, quicRuntimeAvailable));
+        Assert.Equal(expected, Program.ShouldRunStandaloneUdpOverlayServer(overlayEnabled, sharedMeshUdpRequested));
     }
 
     [Fact]

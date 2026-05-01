@@ -5,8 +5,10 @@ namespace slskd.Tests.Unit.DhtRendezvous;
 
 using System.Net;
 using System.Net.Sockets;
+using MessagePack;
 using Microsoft.Extensions.Logging.Abstractions;
 using slskd.DhtRendezvous;
+using slskd.Mesh.Overlay;
 using Xunit;
 
 public class SharedMeshUdpListenerTests
@@ -20,6 +22,16 @@ public class SharedMeshUdpListenerTests
     public void IsQuicInitialPacket_OnlyMatchesQuicLongHeaderInitial(byte[] datagram, bool expected)
     {
         Assert.Equal(expected, SharedMeshUdpListener.IsQuicInitialPacket(datagram));
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0x64, 0x31, 0x3a }, true)]
+    [InlineData(new byte[] { 0x96, 0xa4, 0x70, 0x69, 0x6e, 0x67 }, false)]
+    [InlineData(new byte[] { 0xc3, 0x00, 0x00 }, false)]
+    [InlineData(new byte[] { }, false)]
+    public void IsDhtPacket_OnlyMatchesBencodedDictionary(byte[] datagram, bool expected)
+    {
+        Assert.Equal(expected, SharedMeshUdpListener.IsDhtPacket(datagram));
     }
 
     [Fact]
@@ -54,5 +66,47 @@ public class SharedMeshUdpListenerTests
 
         Assert.Equal(quicResponse, clientResult.Buffer);
         Assert.Equal(publicEndpoint, clientResult.RemoteEndPoint);
+    }
+
+    [Fact]
+    public async Task SharedListener_RoutesUdpOverlayEnvelopeToDispatcher()
+    {
+        var dispatcher = new CapturingDispatcher();
+        using var listener = new SharedMeshUdpListener(
+            new IPEndPoint(IPAddress.Loopback, 0),
+            quicBackendEndPoint: null,
+            NullLogger<SharedMeshUdpListener>.Instance,
+            dispatcher);
+        using var client = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+
+        listener.Start();
+
+        var envelope = new ControlEnvelope
+        {
+            Type = OverlayControlTypes.Ping,
+            Payload = Array.Empty<byte>(),
+        };
+        var payload = MessagePackSerializer.Serialize(envelope);
+        await client.SendAsync(payload, listener.LocalEndPoint);
+
+        var received = await dispatcher.Received.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(OverlayControlTypes.Ping, received.Type);
+    }
+
+    private sealed class CapturingDispatcher : IControlDispatcher
+    {
+        public TaskCompletionSource<ControlEnvelope> Received { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<bool> HandleAsync(ControlEnvelope envelope, CancellationToken ct = default)
+        {
+            Received.TrySetResult(envelope);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> HandleAsync(ControlEnvelope envelope, slskd.Mesh.Dht.MeshPeerDescriptor peerDescriptor, string peerId, CancellationToken ct = default)
+        {
+            return HandleAsync(envelope, ct);
+        }
     }
 }

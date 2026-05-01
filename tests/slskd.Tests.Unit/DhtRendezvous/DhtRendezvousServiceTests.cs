@@ -64,6 +64,44 @@ public class DhtRendezvousServiceTests
     }
 
     [Fact]
+    public void ShouldUseSharedMeshUdpListener_WhenUdpOverlayUsesDhtPort_ReturnsTrue()
+    {
+        var result = DhtRendezvousService.ShouldUseSharedMeshUdpListener(
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50305,
+            },
+            new OverlayOptions
+            {
+                Enable = true,
+                ListenPort = 50305,
+                EnableQuic = false,
+            });
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldUseSharedMeshUdpListener_WhenOverlayUsesSeparatePortAndQuicIsDisabled_ReturnsFalse()
+    {
+        var result = DhtRendezvousService.ShouldUseSharedMeshUdpListener(
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50305,
+            },
+            new OverlayOptions
+            {
+                Enable = true,
+                ListenPort = 50400,
+                EnableQuic = false,
+            });
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public void OnPeersFound_WhenRendezvousPeersAreDiscovered_TracksUnverifiedCandidateWithoutClaimingCircuitCapability()
     {
         var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
