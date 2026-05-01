@@ -619,6 +619,7 @@ jobs:
     name: Publish to PPA (Main)
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -941,6 +942,7 @@ jobs:
     name: Publish to Chocolatey (Stable)
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
+    continue-on-error: true
     runs-on: windows-latest
     steps:
       - name: Checkout

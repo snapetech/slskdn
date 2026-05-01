@@ -73,6 +73,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Hardened release publishing by copying vendored runtime projects into Docker
   builds and adding slower Chocolatey timeout retries with duplicate-package
   success handling.
+- Made Launchpad PPA and Chocolatey publishes best-effort in tag releases so
+  external mirror outages no longer mark the entire release workflow failed.
 - Fixed the standalone PPA retry workflow so rebuilt frontend assets are copied
   into a created `publish-linux-x64/wwwroot` directory.
 - Simplified the ingress-port migration notice to show only the five old
