@@ -22,7 +22,7 @@ helm install slskdn ./packaging/helm/slskdn \
   --set env.SLSKD_USERNAME=myuser \
   --set env.SLSKD_PASSWORD=mypass \
   --set image.repository=ghcr.io/snapetech/slskdn \
-  --set image.tag=2026050100-slskdn.215
+  --set image.tag=2026050100-slskdn.216
 ```
 
 ## Main values
