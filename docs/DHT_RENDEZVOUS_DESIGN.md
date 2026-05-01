@@ -638,5 +638,4 @@ public interface IMeshNeighborRegistry
 - [BEP 5: DHT Protocol](http://www.bittorrent.org/beps/bep_0005.html)
 - [MonoTorrent GitHub](https://github.com/alanmcgovern/monotorrent)
 - [slskdn Implementation Roadmap](./IMPLEMENTATION_ROADMAP.md)
-- [slskdn Multi-Source Documentation](./MULTI_SOURCE.md)
-
+- [slskdn Multi-Source Documentation](./multipart-downloads.md)
