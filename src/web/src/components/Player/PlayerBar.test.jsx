@@ -340,21 +340,25 @@ describe('PlayerBar', () => {
       expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('scope'));
     expect(within(tile).getByLabelText('Oscilloscope')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('player-visual-tile-cycle'));
+    fireEvent.click(screen.getByTestId('player-visual-tile-mode-butterchurn'));
     await waitFor(() =>
-      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('art'));
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('butterchurn'));
   });
 
   it('shows tile-level visualizer maximize controls even while analyzer bars are active', async () => {
     renderPlayer();
     window.localStorage.setItem('slskdn.player.visualizerEngine', 'native-webgl2');
 
-    const tile = screen.getByTestId('player-visual-tile');
-    fireEvent.click(tile);
-    fireEvent.click(tile);
-    fireEvent.click(tile);
-    fireEvent.click(tile);
+    fireEvent.click(screen.getByTestId('player-visual-tile-mode-spectrum'));
 
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('spectrum'));
+
+    fireEvent.click(screen.getByTestId('player-visual-tile-mode-butterchurn'));
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('butterchurn'));
+
+    fireEvent.click(screen.getByTestId('player-visual-tile-mode-spectrum'));
     await waitFor(() =>
       expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('spectrum'));
 
