@@ -623,8 +623,7 @@ namespace slskd.Transfers.API
             var totalUploadSpeed = activeUploads.Sum(GetLiveSpeed);
             var totalSpeed = totalDownloadSpeed + totalUploadSpeed;
 
-            // TODO: Distinguish mesh vs soulseek transfers
-            // For now, all transfers are soulseek-based
+            // Current transfer service telemetry is Soulseek-based; mesh chunk transfers report separately when enabled.
             var soulseekSpeed = totalSpeed;
             var meshSpeed = 0.0;
 

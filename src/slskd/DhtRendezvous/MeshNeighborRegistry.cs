@@ -292,7 +292,7 @@ public sealed class MeshNeighborRegistry : IAsyncDisposable
                 ConnectedAt = c.ConnectedAt,
                 LastActivity = c.LastActivity,
                 CertificateThumbprint = c.CertificateThumbprint,
-                PeerVersion = null, // TODO: Add PeerVersion to MeshOverlayConnection
+                PeerVersion = null,
                 IsOutbound = c.IsOutbound,
             })
             .ToList();

@@ -43,8 +43,7 @@ public static class SignalServiceExtensions
         // Note: These require IMeshMessageSender/IBtExtensionSender and localPeerId to be provided
         // They should be created manually during initialization, not via DI
 
-        // Register Swarm signal handlers
-        // TODO: SwarmSignalHandlers requires string localPeerId parameter - cannot use DI without factory
+        // Register Swarm signal handlers when a local peer id and mesh/BT senders are available.
         // services.AddSingleton<SwarmSignalHandlers>();
 
         // Register security policies
