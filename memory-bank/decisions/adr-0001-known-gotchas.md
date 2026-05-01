@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z271. Docker Builds Must Copy Vendored Project References
+
+**The Bug**: Release Docker builds copied only `bin`, `config`, `src/slskd`, and `tests`, but `src/slskd/slskd.csproj` references `../../vendor/slskNet.Runtime/src/Soulseek.csproj`. The normal release build passed from the full checkout while Docker failed inside the trimmed image context because `vendor/` was missing.
+
+**Files Affected**:
+- `Dockerfile`
+- `src/slskd/slskd.csproj`
+
+**Wrong**:
+```dockerfile
+COPY src/slskd src/slskd/.
+COPY tests tests/.
+RUN bash ./bin/build --dotnet-only --skip-tests --version $VERSION
+```
+
+**Correct**:
+```dockerfile
+COPY src/slskd src/slskd/.
+COPY tests tests/.
+COPY vendor vendor/.
+RUN bash ./bin/build --dotnet-only --skip-tests --version $VERSION
+```
+
+**Why This Keeps Happening**: Dockerfiles often copy a narrowed build context for cache efficiency. Any new local `ProjectReference` outside `src/` must be copied into the build stage, or Docker becomes the only release path that cannot resolve the solution graph.
+
 ### 0z268. Restart Arguments Must Not Reuse `Environment.CommandLine`
 
 **The Bug**: The admin restart endpoint passed `Environment.CommandLine` as the child process argument string. `Environment.CommandLine` includes argv[0], so the restarted process receives the executable path twice.
