@@ -349,6 +349,16 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 
 📖 **Design docs**: [MeshCore research](docs/phase8-meshcore-research.md) • [Mesh architecture](docs/virtual-soulfind-mesh-architecture.md)
 
+### 🕶️ Soulseek Type-1 Obfuscation Options
+First-class Soulseek peer-message obfuscation posture for compatible clients.
+- **Default-on compatibility mode** — keeps the regular peer-message path available and adds type-1 obfuscated reachability when runtime support exists
+- **Prefer mode** — future runtime posture for preferring obfuscated outbound peer-message dials while keeping regular fallback
+- **Only mode** — explicit opt-in posture for obfuscated-only peer-message reachability; this can break clients that ignore obfuscated metadata
+- **Visible status** — System → Network reports enablement, mode, advertised ports, fallback posture, and runtime activation state
+- **Current runtime honesty** — today’s Soulseek.NET dependency does not expose the required SetWaitPort or type-1 listener/dialer hooks yet, so slskdN reports `configured_pending_runtime` until those hooks or a local transport adapter land
+
+📖 **Guide**: [Soulseek type-1 obfuscation](docs/soulseek-type1-obfuscation.md) • [Configuration](docs/config.md#type-1-peer-message-obfuscation)
+
 ### 🔒 Security Hardening
 Active zero-trust hardening work with defense-in-depth controls:
 - **NetworkGuard** — Rate limiting, connection caps per IP
