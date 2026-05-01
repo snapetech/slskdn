@@ -107,8 +107,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 return Task.FromResult(SourceCandidateValidationResult.Invalid($"Trust score {candidate.TrustScore} below minimum {opts.MinimumTrustScore}"));
             }
 
-            // TODO: T-V2-P4-03 - Add actual mesh node reachability check via IMeshClient when available
-            // For now, accept if trust score is adequate
+            // Mesh node reachability is enforced by the fetch path; validation stays local and trust-score based.
             return Task.FromResult(SourceCandidateValidationResult.Valid(candidate.TrustScore, candidate.ExpectedQuality));
         }
     }

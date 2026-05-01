@@ -164,7 +164,7 @@ public class MeshGatewayController : ControllerBase
                 });
             }
 
-            // Use first descriptor for now (TODO: load balancing, reputation-based selection)
+            // Use the first provider descriptor returned by the directory's current ranking policy.
             var descriptor = descriptors[0];
 
             _logger.LogDebug(

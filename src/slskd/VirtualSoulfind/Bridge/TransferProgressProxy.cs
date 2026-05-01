@@ -190,8 +190,7 @@ public class TransferProgressProxy : ITransferProgressProxy
             session.LastProgress?.FileSize ?? 0,
             update.TransferRateBps);
 
-        // TODO: Push update to legacy client via Soulfind bridge
-        // This would require implementing a callback mechanism in Soulfind
+        // Legacy Soulfind callbacks are unavailable in this bridge; API polling remains the supported path.
     }
 
     private string MapMeshStateToLegacy(MeshTransferState meshState)

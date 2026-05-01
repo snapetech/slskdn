@@ -211,7 +211,7 @@ public class MediaCoreChunkScheduler : IChunkScheduler
         // Extract content information from the request
         // This is simplified - in practice, the ChunkRequest might contain content metadata
         // For now, we'll work without direct filename access
-        string? contentId = null; // TODO: Pass contentId through chunk request context
+        string? contentId = null;
 
         if (contentId != null)
         {

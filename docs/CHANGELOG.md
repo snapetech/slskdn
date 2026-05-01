@@ -38,6 +38,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   capability messages, including mesh sync and bridge proxy startup wording.
 - Removed stale TODO wording from mesh neighbor, signal handler, and transfer
   telemetry comments, and clarified swarm/rescue unavailable-state messages.
+- Clarified mesh gateway, scheduler, bridge, LAN, and Mesh DHT validation
+  comments to reflect current local validation and fetch-path enforcement.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native

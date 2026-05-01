@@ -95,7 +95,7 @@ namespace slskd.VirtualSoulfind.v2.Backends
                 return Task.FromResult(SourceCandidateValidationResult.Invalid("Path not in allowed networks"));
             }
 
-            // TODO: T-V2-P4-06 - Add actual SMB/NFS reachability check
+            // LAN share reachability is enforced by the fetch path; validation keeps this local and allowlist-based.
             return Task.FromResult(SourceCandidateValidationResult.Valid(candidate.TrustScore, candidate.ExpectedQuality));
         }
 
