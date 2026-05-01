@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z258. Launchpad PPA Uploads Should Prefer SFTP When A Key Is Configured
+
+**The Bug**: After IPv4-pinning anonymous FTP, PPA uploads still failed from GitHub, the local workstation, and `kspls0` with slow greetings, resets, or passive-transfer failures. Treating anonymous FTP as the only release path leaves the package pipeline dependent on the least reliable Launchpad transport.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+curl --fail --show-error --ipv4 --ftp-pasv \
+  --upload-file "$source_file" \
+  "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
+```
+
+**Correct**:
+```bash
+if [ -n "$LAUNCHPAD_SFTP_KEY" ]; then
+  printf '%s\n' "$LAUNCHPAD_SFTP_KEY" > ~/.ssh/launchpad_ppa
+  dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+else
+  curl --fail --show-error --ipv4 --ftp-pasv \
+    --upload-file "$source_file" \
+    "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
+fi
+```
+
+**Why This Keeps Happening**: Historical slskdN PPA uploads used anonymous FTP, so it was correct to avoid making SFTP a surprise hard requirement while diagnosing the first regression. Once FTP failed from multiple networks and runners, the stable fix became a dual path: prefer Launchpad SFTP when `LAUNCHPAD_SFTP_KEY` is configured, keep signed-source verification in both paths, and leave anonymous FTP only as a fallback for environments without a Launchpad SSH key.
+
 ### 0z257. PPA FTP Uploads Must Pin Launchpad To Reachable IPv4
 
 **The Bug**: GitHub-hosted PPA uploads can fail with `Connection failed, aborting. Check your network`, `[Errno 101] Network is unreachable`, `550 Requested action not taken: internal server error`, resets, or timeouts when `dput` chooses Launchpad's IPv6 FTP endpoint or stalls during passive FTP data transfer.
@@ -82,7 +111,7 @@ curl --fail --show-error --ipv4 --ftp-pasv --retry 5 --retry-all-errors \
   "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
 ```
 
-**Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address, preflight port 21, verify the signed `.changes` and `.dsc`, then upload the exact source files with bounded `curl` retries so the logs separate runner reachability, FTP transfer failures, signing, and Launchpad rejection.
+**Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address, preflight port 21, verify the signed `.changes` and `.dsc`, then upload the exact source files with bounded `curl` retries so the logs separate runner reachability, FTP transfer failures, signing, and Launchpad rejection. If SFTP secrets are configured, prefer SFTP and keep this IPv4 FTP path as fallback only.
 
 ### 0z256. VPN Forwarded Ports Are Not Local Soulseek Listen Ports
 
