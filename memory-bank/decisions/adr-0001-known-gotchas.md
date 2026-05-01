@@ -52,6 +52,36 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z246. Unified Message Surfaces Must Share The Same Panel Anatomy
+
+**The Bug**: Pod room channels used a separate custom message layout from Soulseek rooms, so they had different transcript sizing, composer placement, member visibility, and Listen Along treatment inside the same Messages workspace.
+
+**Files Affected**:
+- `src/web/src/components/Messaging/Messaging.jsx`
+- `src/web/src/components/Messaging/Messaging.css`
+- `src/web/src/components/Messaging/Messaging.test.jsx`
+
+**Wrong**:
+```jsx
+<div className="pod-message-session-list">
+  {messages.map((message) => (
+    <div className="pod-message-session-item">{message.body}</div>
+  ))}
+</div>
+<Input placeholder="Type a pod message..." />
+```
+
+**Correct**:
+```jsx
+<Segment.Group>
+  <Segment className="pod-message-session-history">...</Segment>
+  <Segment className="pod-message-session-composer">...</Segment>
+</Segment.Group>
+<Segment className="room-users pod-message-users">...</Segment>
+```
+
+**Why This Keeps Happening**: Messages is a unified workspace. Adding pod channels as a separate visual implementation makes pod rooms, Soulseek rooms, and DMs drift into different products on the same screen. New conversation types should reuse the existing panel anatomy first, then add only channel-specific affordances such as compact room broadcast controls.
+
 ### 0z245. Deleting A Soulseek DM Must Not Reveal A Hidden Pod DM
 
 **The Bug**: The Messages sidebar hid pod direct channels only while a matching saved Soulseek DM existed. After deleting the Soulseek thread, the pod `DM` channel became visible as a replacement conversation that could not be managed like a normal DM.
