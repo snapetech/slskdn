@@ -9302,3 +9302,8 @@ Code quality improvements were completed as part of Option A:
 - Confirmed the only still-open checkbox is blocked external release work: `slskdn-dev` flake re-enable requires a real published `build-dev-*` release and must not be faked or tag-triggered automatically.
 - Removed stale `/tmp/slskd_*.dmp` crash dumps to restore tmpfs capacity for integration fixtures.
 - Validation: Contacts QR Vitest, frontend lint, repo lint, analyzer format verification, focused MeshSync test, and broad non-live `.NET` tests all passed.
+
+## 2026-05-01 09:18:00Z
+
+- Investigated the failed `2026050100-slskdn.215` PPA release job and confirmed package assembly/signing succeeded; upload failed because anonymous FTP to `ppa.launchpad.net` was unreachable from the GitHub runner on all retries.
+- Switched the main release PPA and standalone PPA workflows to Launchpad SFTP uploads using a required `LAUNCHPAD_SSH_PRIVATE_KEY` secret, with strict host-key setup and clear failure when signing is enabled but the Launchpad SSH key is absent.

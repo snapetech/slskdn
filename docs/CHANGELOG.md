@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Switched Launchpad PPA release uploads from anonymous FTP to SFTP using a
+  dedicated `LAUNCHPAD_SSH_PRIVATE_KEY` secret after GitHub runners failed to
+  route FTP uploads to `ppa.launchpad.net`.
 - Reworded the ingress-port migration notice to show plain old-versus-current
   port requirements and mark currently reported forwards as active.
 - Kept VPN provider forwarded ports separate from the local Soulseek listener

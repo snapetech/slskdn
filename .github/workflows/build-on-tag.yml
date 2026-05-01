@@ -638,7 +638,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dput gnupg build-essential patchelf
+          sudo apt-get install -y devscripts debhelper dput gnupg build-essential patchelf openssh-client python3-paramiko
 
       - name: Import GPG Key
         env:
@@ -711,15 +711,37 @@ jobs:
           cd slskdn-${VERSION}
           debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
+      - name: Configure Launchpad SSH
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          LAUNCHPAD_SSH_PRIVATE_KEY: ${{ secrets.LAUNCHPAD_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then exit 0; fi
+          if [ -z "$LAUNCHPAD_SSH_PRIVATE_KEY" ]; then
+            echo "::error::LAUNCHPAD_SSH_PRIVATE_KEY secret is required for PPA SFTP uploads"
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$LAUNCHPAD_SSH_PRIVATE_KEY" > ~/.ssh/launchpad_ppa
+          chmod 600 ~/.ssh/launchpad_ppa
+          ssh-keyscan -t rsa,ecdsa,ed25519 ppa.launchpad.net >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config << 'EOF'
+          Host ppa.launchpad.net
+            User keefshape
+            IdentityFile ~/.ssh/launchpad_ppa
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+          chmod 600 ~/.ssh/config
+
       - name: Configure dput
         run: |
           cat > ~/.dput.cf << 'EOF'
           [slskdn-ppa]
           fqdn = ppa.launchpad.net
-          method = ftp
+          method = sftp
           incoming = ~keefshape/ubuntu/slskdn/
-          login = anonymous
-          passive_ftp = 1
+          login = keefshape
           allow_unsigned_uploads = 0
           EOF
 

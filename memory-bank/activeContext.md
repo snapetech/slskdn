@@ -4603,3 +4603,14 @@ dotnet test
 - Next steps:
   1. WebGPU on `http://kspls0:5030` may still be browser-blocked if the browser requires a secure context for `navigator.gpu`; WebGL2 should now be retryable after switching away and back.
   2. If WebGL2 still fails, capture the browser console error from the compact tile after loading `index-BGGUa318.js`.
+
+## Update 2026-05-01 09:18:00Z
+
+- Current task: PPA upload transport failure fix is implemented locally.
+- Last activity:
+  - confirmed the `.215` PPA source package built and signed correctly before upload
+  - identified anonymous FTP to `ppa.launchpad.net` as the failing runner transport
+  - changed release PPA workflows to use Launchpad SFTP with `LAUNCHPAD_SSH_PRIVATE_KEY`
+- Next steps:
+  1. Push the workflow fix and rerun the PPA upload path for a fresh tag or manually dispatched PPA workflow.
+  2. Ensure the `LAUNCHPAD_SSH_PRIVATE_KEY` repository secret is present and belongs to the `keefshape` Launchpad account.
