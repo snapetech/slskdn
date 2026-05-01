@@ -133,4 +133,4 @@ dotnet run --project tests/slskd.Tests.Performance --configuration Release -- \
 
 **See Also:**
 - [BenchmarkDotNet Documentation](https://benchmarkdotnet.org/)
-- [Performance Testing Guide](../docs/dev/e2e-testing-guide.md)
+- [Performance Testing Guide](../../docs/dev/e2e-testing-guide.md)
