@@ -52,6 +52,32 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z236. Port Migration Notices Must Explain Service Routing, Not Dump Raw Endpoints
+
+**The Bug**: The network-port migration banner showed raw forwarded-port fields such as `Soulseek TCP public:port (local 50300)` and generic `TCP public:port (local 50305, selected 50305)`. That did not tell operators which protocol and public port belonged to which slskdN service or which local/config port should be updated.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/App.css`
+- `src/web/src/components/App.test.jsx`
+
+**Wrong**:
+```javascript
+return [forward.label, forward.proto, publicEndpoint, details].filter(Boolean).join(' ');
+```
+
+**Correct**:
+```javascript
+return {
+  service: 'slskdN mesh overlay',
+  publicEndpoint: 'TCP public-ip:port',
+  localEndpoint: 'TCP localhost:50305',
+  config: 'dht.overlay_port 50305',
+};
+```
+
+**Why This Keeps Happening**: Forwarding APIs expose transport-shaped fields, but users need routing instructions: service purpose, protocol, public endpoint, local destination, and the slskdN config option involved. Any UI warning about changed forwards must translate slot/protocol/local-port data into that operator-facing shape.
+
 ### 0z235. Persistent Services Need Test-Scoped Storage Paths
 
 **The Bug**: MusicBrainz overlay persistence made the default constructor load the shared app-directory state file. Existing unit tests used the default constructor for isolated in-memory services, so edits stored by one test leaked into later tests through persisted global state.
