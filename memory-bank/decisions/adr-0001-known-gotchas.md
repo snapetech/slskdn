@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z247. ContentId Fallbacks Must Not Bypass Non-Advertisable Share Entries
+
+**The Bug**: `ContentLocator` rejected a matching repository content item when `IsAdvertisable` was false, but then continued into the allowed-local-root fallback, letting `path:` content ids bypass the explicit non-advertisable share decision.
+
+**Files Affected**:
+- `src/slskd/Streaming/ContentLocator.cs`
+- `tests/slskd.Tests.Unit/Streaming/ContentLocatorTests.cs`
+
+**Wrong**:
+```csharp
+if (ci == null || !ci.Value.IsAdvertisable)
+{
+    return ResolveFromAllowedLocalRoots(contentId, cancellationToken);
+}
+```
+
+**Correct**:
+```csharp
+if (ci == null)
+{
+    return ResolveFromAllowedLocalRoots(contentId, cancellationToken);
+}
+
+if (!ci.Value.IsAdvertisable)
+{
+    return null;
+}
+```
+
+**Why This Keeps Happening**: Fallback resolvers are useful for downloads and locally generated content ids, but they must only run when the repository has no opinion. Once a share repository entry exists and marks content non-advertisable, that denial has to be terminal.
+
 ### 0z246. Unified Message Surfaces Must Share The Same Panel Anatomy
 
 **The Bug**: Pod room channels used a separate custom message layout from Soulseek rooms, so they had different transcript sizing, composer placement, member visibility, and Listen Along treatment inside the same Messages workspace.
