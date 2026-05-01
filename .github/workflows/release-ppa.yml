@@ -61,6 +61,7 @@ jobs:
 
       - name: Copy Web Assets
         run: |
+          mkdir -p publish-linux-x64/wwwroot
           cp -r src/web/build/* publish-linux-x64/wwwroot/
 
       - name: Verify Publish Output

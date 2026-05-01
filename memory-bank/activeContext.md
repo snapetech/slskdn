@@ -4611,6 +4611,7 @@ dotnet test
   - confirmed the `.215` PPA source package built and signed correctly before upload
   - identified anonymous FTP to `ppa.launchpad.net` as the failing runner transport
   - changed release PPA workflows to use Launchpad SFTP with `LAUNCHPAD_SSH_PRIVATE_KEY`
+  - fixed standalone PPA web asset staging after the manual retry failed on a missing `publish-linux-x64/wwwroot`
 - Next steps:
   1. Push the workflow fix and rerun the PPA upload path for a fresh tag or manually dispatched PPA workflow.
   2. Ensure the `LAUNCHPAD_SSH_PRIVATE_KEY` repository secret is present and belongs to the `keefshape` Launchpad account.
