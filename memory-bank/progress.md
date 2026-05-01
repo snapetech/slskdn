@@ -9263,3 +9263,11 @@ Code quality improvements were completed as part of Option A:
 - Confirmed the live bundle contains the compact visualizer control path and external player tile control CSS.
 - Corrected a bad post-deploy restart where the live process briefly launched without `/etc/slskd/slskd.yml` and bound HTTP only to `127.0.0.1`; restarted through systemd and verified `/proc` shows `--config /etc/slskd/slskd.yml` and `0.0.0.0:5030`.
 - Validation before deployment: focused Player visualizer tests, native MilkDrop smoke test, frontend lint, frontend production build, and touched-file whitespace checks passed.
+
+## 2026-05-01 03:02:00Z
+
+- Tightened the player visual tile controls into one fixed seven-button row so the player bar no longer grows and scrolls just because the mode buttons wrap.
+- Made compact visualizer mode button clicks remount the visualizer engine, including same-mode retries after an error.
+- Keyed the visualizer canvas by active engine type and dispose partially initialized native engines on setup failure, preventing a failed WebGPU/WebGL setup from pinning the canvas for the next WebGL2 retry.
+- Deployed the rebuilt bundle to `kspls0`; the live service is serving `index-BGGUa318.js` and `index-DwvOKuMB.css` on `0.0.0.0:5030`.
+- Validation: focused Player visualizer tests, frontend lint, native MilkDrop smoke test, frontend production build, and touched-file whitespace checks passed.

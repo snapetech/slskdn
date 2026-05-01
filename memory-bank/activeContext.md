@@ -4539,3 +4539,16 @@ dotnet test
 - Next steps:
   1. If the browser still shows the old visualizer tile, hard-refresh once or unregister the old service worker; the server endpoint is now serving the new bundle.
   2. Continue debugging any runtime browser-console errors from Butterchurn or native MilkDrop after confirming the new bundle is loaded.
+
+## Update 2026-05-01 03:02:00Z
+
+- Current task: Player visual tile one-row controls and native visualizer retry fix are complete and deployed to `kspls0`.
+- Last activity:
+  - changed the visual tile buttons from wrapping flex controls to a fixed seven-column icon row
+  - remount the compact visualizer when a tile visualizer mode button is clicked, including same-mode retry clicks
+  - key the visualizer canvas by engine type so WebGPU/WebGL2 context changes get a fresh canvas
+  - dispose partially initialized native engines when setup fails
+  - verified `kspls0:5030` serves `index-BGGUa318.js` and `index-DwvOKuMB.css`
+- Next steps:
+  1. WebGPU on `http://kspls0:5030` may still be browser-blocked if the browser requires a secure context for `navigator.gpu`; WebGL2 should now be retryable after switching away and back.
+  2. If WebGL2 still fails, capture the browser console error from the compact tile after loading `index-BGGUa318.js`.
