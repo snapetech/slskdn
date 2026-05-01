@@ -15,11 +15,9 @@ public class ConsensusPolicyTests
     {
         var policy = new ConsensusPolicy(NullLogger<ConsensusPolicy>.Instance);
 
-        var decision = await policy.EvaluateAsync(new SecurityContext
-        {
-            PeerId = "peer-1",
-            Operation = "mesh-search",
-        });
+        var decision = await policy.EvaluateAsync(new SecurityContext(
+            PeerId: "peer-1",
+            Operation: "mesh-search"));
 
         Assert.True(decision.Allowed);
         Assert.Equal("consensus not required", decision.Reason);
@@ -30,11 +28,9 @@ public class ConsensusPolicyTests
     {
         var policy = new ConsensusPolicy(NullLogger<ConsensusPolicy>.Instance);
 
-        var decision = await policy.EvaluateAsync(new SecurityContext
-        {
-            PeerId = "peer-1",
-            Operation = "content-consensus-publish",
-        });
+        var decision = await policy.EvaluateAsync(new SecurityContext(
+            PeerId: "peer-1",
+            Operation: "content-consensus-publish"));
 
         Assert.False(decision.Allowed);
         Assert.Equal("consensus verification unavailable", decision.Reason);

@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z253. Positional Records Need Constructor Arguments In Tests
+
+**The Bug**: A test created `SecurityContext` with an object initializer, but
+`SecurityContext` is a positional record with required constructor parameter
+`PeerId`, so the test project failed to compile.
+
+**Files Affected**:
+- `src/slskd/Security/ISecurityPolicyEngine.cs`
+- `tests/slskd.Tests.Unit/Security/ConsensusPolicyTests.cs`
+
+**Wrong**:
+```csharp
+new SecurityContext
+{
+    PeerId = "peer-1",
+    Operation = "mesh-search",
+};
+```
+
+**Correct**:
+```csharp
+new SecurityContext(
+    PeerId: "peer-1",
+    Operation: "mesh-search");
+```
+
+**Why This Keeps Happening**: Some slskdN models look like simple DTOs but are
+declared as positional records. Before adding tests around a model, check the
+type declaration and use its constructor when the primary constructor has
+required parameters.
+
 ### 0z252. Separately Bound Mesh Sections Are Not On `OptionsAtStartup`
 
 **The Bug**: `Program` tried to read `OptionsAtStartup.Mesh.Transport.EnableDirect`, but `OptionsAtStartup` extends the root YAML `Options` model and does not expose the separately bound `Mesh` section.
