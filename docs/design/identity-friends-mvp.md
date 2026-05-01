@@ -480,7 +480,7 @@ var bestEndpoint = endpoints.OrderBy(e => e.Priority).FirstOrDefault();
 - [x] "Create Invite" modal (link display)
 - [x] ShareGroups page (`/sharegroups`) with Contacts dropdown integration
 - [x] "Shared with me" page (`/shared`) showing contact nicknames
-- [ ] QR code scanner/display - **Placeholder** (requires QR library - can be added later)
+- [x] QR code scanner/display - Invite creation renders a QR data URL with the WebUI `qrcode` package, and Add Friend can scan QR invite images through the browser `BarcodeDetector` path when supported.
 
 ---
 
@@ -530,7 +530,7 @@ If you can do that, your MVP is real.
 
 **NuGet Packages:**
 - `Zeroconf` 3.0.30 (for mDNS browsing) ✅ Added
-- QR code library for WebUI (e.g., `qrcode.react` for React) - **Pending Phase 4**
+- `qrcode` for WebUI invite QR rendering ✅ Added
 
 **Existing:**
 - Mesh keypair (for signing profiles) or generate new Ed25519 keypair
