@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z255. Browser Fingerprints Must Normalize WebCrypto Digest Input
+
+**The Bug**: The release gate failed in frontend tests because `File.arrayBuffer()` can return a Buffer-like value under Node/jsdom, and Node WebCrypto rejects it unless it is normalized to an `ArrayBuffer` or typed-array view.
+
+**Files Affected**:
+- `src/web/src/lib/fileFingerprint.js`
+- `src/web/src/lib/fileFingerprint.test.js`
+
+**Wrong**:
+```javascript
+await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+```
+
+**Correct**:
+```javascript
+await globalThis.crypto.subtle.digest(
+  'SHA-256',
+  toDigestInput(await file.arrayBuffer()),
+);
+```
+
+**Why This Keeps Happening**: Browser `File` objects, jsdom `File` objects, and Node-backed test doubles do not always hand WebCrypto the same concrete buffer type. Normalize digest input at the file-fingerprint boundary instead of assuming `arrayBuffer()` returns a native browser `ArrayBuffer` in every runtime.
+
 ### 0z254. WebGPU Visualizer Mode Must Degrade To Native WebGL2
 
 **The Bug**: The compact player's MilkDrop3 WebGPU button treated WebGPU as a hard requirement, so HTTP LAN browsers, headless Chromium, or GPUs without `navigator.gpu` support dropped the tile into analyzer fallback bars even though native WebGL2 rendering was available.
