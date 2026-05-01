@@ -4,8 +4,8 @@
 - Last activity:
   - stopped `slskd.service` on `kspls0`
   - fixed stale obfuscation-only validation tests and documented ADR-0001 gotcha `0z266`
-  - built and published `0.0.0-slskdn.manual.20260501184708.7c7e8df32` for Linux x64
-  - deployed `/usr/lib/slskd/releases/manual-20260501184708.7c7e8df32` on `kspls0`
+  - built and published `0.0.0-slskdn.manual.20260501185541.9d639c7d3.dirty` for Linux x64 after the vendored runtime hardening changes landed in the checkout
+  - deployed `/usr/lib/slskd/releases/manual-20260501185541.9d639c7d3.dirty` on `kspls0`
   - corrected the stable launcher so it forwards `"$@"` and systemd keeps using `/etc/slskd/slskd.yml`; documented ADR-0001 gotcha `0z267`
   - verified live API runtime path, `/etc/slskd/slskd.yml`, Soulseek login, shares ready, DHT bootstrap, Web UI HTTP, and listeners on `5030`, `50300`, `50301`, and `50305`
   - validation passed: full `bin/publish --runtime linux-x64`, `bash ./bin/lint`
