@@ -1,5 +1,9 @@
 # LIFT vs REQUIREMENTS — Excluded slskd.Tests.Unit
 
+> Historical snapshot. This document may not reflect current defaults, test
+> counts, or code. Prefer GitHub Actions, `docs/dev/testing-policy.md`, and
+> current feature-specific docs for live status.
+
 **Purpose:** Classify each **excluded** test as:
 
 - **LIFT** — Unblocked by test-only or small impl changes (mocks, API alignment, relaxed asserts, skips, splitting). No new production types or large refactors.

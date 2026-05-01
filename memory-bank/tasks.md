@@ -2212,3 +2212,7 @@
 - [x] Add first-class Soulseek type-1 obfuscation feature options
   - Status: completed (2026-05-01)
   - Notes: Added validated Soulseek type-1 obfuscation options, a serializable runtime plan, startup/status API exposure, Network tab visibility, config examples, and a dedicated feature doc. Current Soulseek.NET support is surfaced honestly as `configured_unsupported` when enabled.
+
+- [x] Resolve current-doc broken links and stale documentation banners
+  - Status: completed (2026-05-01)
+  - Notes: Fixed the documentation audit state for the 25 tracked current-doc broken links, added historical snapshot banners to dated test/status planning docs, renamed pod-scoped tunnel docs in public prose to Pod Private Service Gateway with explicit host VPN-agent separation, and split host VPN guidance into focused companion pages for Linux/WireGuard, external tunnels, Windows/macOS, and the API contract.

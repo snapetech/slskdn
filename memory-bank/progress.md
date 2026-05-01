@@ -9173,6 +9173,25 @@ Code quality improvements were completed as part of Option A:
 - Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-Btm3_g7j.js`, `index-8RtCOAqk.css`, and `Messaging-BVqhWdEj.js`.
 - Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
 
+## 2026-05-01 03:05:00Z
+
+- Continued the feature-expansion documentation burn-down with current-doc link
+  and stale-status hygiene.
+- Marked the documentation audit's 25 tracked non-archive broken links as
+  resolved after fixing the current docs to point at real current or archived
+  targets.
+- Added historical snapshot banners to remaining dated test/status planning
+  docs so January/March counts and placeholder inventories are not presented as
+  live status.
+- Renamed the pod-scoped tunnel docs in user-facing prose to Pod Private
+  Service Gateway and added explicit guidance that it is not the host VPN agent
+  or an internet exit node.
+- Split the host VPN agent guide surface with focused Linux/WireGuard, external
+  tunnel, Windows/macOS, and API contract companion docs linked from the agent
+  README.
+- Validation: targeted broken-link/stale-audit scans passed with only expected
+  archive/code-span references remaining.
+
 ## 2026-05-01 01:44:11Z
 
 - Continued the feature-expansion burn-down after validating the T-939 source-feed history/audit backend slice.
@@ -9212,4 +9231,4 @@ Code quality improvements were completed as part of Option A:
 - Added validation for invalid only-mode combinations, privileged obfuscation ports, and reuse of the regular Soulseek listen port.
 - Added `SoulseekObfuscationSupport` runtime plans and exposed them through the slskdN capabilities API and System -> Network status.
 - Documented the modes, flags, current Soulseek.NET runtime limitation, proven research scope, and network-health caveats in config docs and a dedicated guide.
-- Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, and touched-file whitespace checks passed.
+- Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, frontend lint, repo lint, broad non-live `.NET` tests, and touched-file whitespace checks passed.

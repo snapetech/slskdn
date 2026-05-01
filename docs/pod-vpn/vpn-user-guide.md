@@ -1,8 +1,17 @@
-# slskdN Pod-Scoped Private Service Network (VPN-like Utility)
+# slskdN Pod Private Service Gateway
+
+> This guide covers pod-scoped private service tunnels over the slskdN mesh. It
+> is not the host VPN agent for Soulseek traffic and is not an internet exit
+> node. For fail-closed host VPN routing and forwarded-port integration, see
+> [slskdN VPN Host Integration](../../src/slskdN.VpnAgent/README.md).
 
 ## Overview
 
-The slskdN Pod-Scoped Private Service Network provides a secure, pod-based VPN-like utility that enables pod members to access private services through encrypted mesh tunnels. This feature allows trusted pod members to securely connect to services running on other pod members' machines without exposing those services to the public internet.
+The slskdN Pod Private Service Gateway provides a secure, pod-based private
+service tunnel utility that enables pod members to access explicit private
+services through encrypted mesh tunnels. This feature allows trusted pod members
+to securely connect to services running on other pod members' machines without
+exposing those services to the public internet.
 
 ## Key Features
 
@@ -18,9 +27,9 @@ The slskdN Pod-Scoped Private Service Network provides a secure, pod-based VPN-l
 
 ### Threat Model
 
-The VPN feature addresses the following security concerns:
+The private service gateway addresses the following security concerns:
 
-1. **Unauthorized Access**: Only pod members can access VPN services
+1. **Unauthorized Access**: Only pod members can access gateway services
 2. **Traffic Interception**: All traffic is encrypted through the mesh overlay
 3. **DNS Rebinding**: DNS resolution is validated and cached to prevent attacks
 4. **Resource Exhaustion**: Rate limiting and connection limits prevent DoS attacks
@@ -58,7 +67,8 @@ The VPN feature addresses the following security concerns:
 
 ### Pod Policy Configuration
 
-VPN functionality is controlled through pod policies. To enable VPN features for a pod:
+Gateway functionality is controlled through pod policies. To enable private
+service gateway features for a pod:
 
 ```json
 {
@@ -503,5 +513,4 @@ Implement network segmentation through pod policies:
 The slskdN Pod-Scoped Private Service Network provides a secure, flexible solution for accessing private services within trusted pod communities. By combining strong security controls with comprehensive audit capabilities, it enables organizations to safely extend their private networks through encrypted mesh tunnels while maintaining strict access controls and resource governance.
 
 For additional support or questions, consult the project documentation or community forums.
-
 

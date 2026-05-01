@@ -1,5 +1,9 @@
 # slskd.Tests.Unit — Completion Plan (Test-Refactor First)
 
+> Historical snapshot. This document may not reflect current defaults, test
+> counts, or code. Prefer GitHub Actions, `docs/dev/testing-policy.md`, and
+> current feature-specific docs for live status.
+
 **Principle:** Refactor **tests only**. Change test code: mocks, setup, asserts, split/merge, skip, point to current types/APIs.  
 **If app or build changes are required:** call out under **Discuss: app** or **Discuss: build**. Do not perform those without discussion.
 

@@ -1,3 +1,20 @@
+## Update 2026-05-01 03:05:00Z
+
+- Current task: Feature-expansion documentation hygiene is complete locally.
+- Last activity:
+  - fixed the documentation audit so the tracked current-doc broken-link list is
+    marked resolved instead of still actionable
+  - added historical snapshot banners to dated test/status planning docs
+  - renamed pod-scoped tunnel docs in public prose to Pod Private Service
+    Gateway and distinguished them from the host VPN agent
+  - added focused host VPN agent companion guides for Linux/WireGuard, external
+    tunnels, Windows/macOS, and the API contract
+  - added the Pod Private Service Gateway guide to the docs index
+  - verified targeted stale-link and stale-audit scans
+- Next steps:
+  1. Keep historical phase/audit docs clearly marked when they are retained in
+     current paths.
+
 ## Update 2026-05-01 02:41:29Z
 
 - Current task: Soulseek type-1 obfuscation feature options are integrated locally.
@@ -7,7 +24,7 @@
   - added validation and a runtime plan that reports the current Soulseek.NET activation gap as `configured_unsupported`
   - exposed the plan through the slskdN capabilities API and System -> Network status
   - updated config docs, example YAML, and the dedicated Soulseek type-1 obfuscation guide
-  - validated focused backend and Network tab tests plus touched-file whitespace checks
+  - validated focused backend and Network tab tests, frontend lint, repo lint, broad non-live `.NET` tests, and touched-file whitespace checks
 - Next steps:
   1. Runtime activation requires Soulseek.NET hooks or a slskdN-owned peer-message transport adapter for SetWaitPort metadata, obfuscated listener accept, and obfuscated outbound dial.
   2. Keep compatibility/prefer modes as the practical defaults; only mode remains explicit because it breaks clients that ignore obfuscated metadata.

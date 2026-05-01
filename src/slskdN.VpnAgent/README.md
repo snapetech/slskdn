@@ -10,6 +10,18 @@ interfaces are supported as externally-managed interfaces. The app entry point
 is `slskdN-vpn-agent`; it owns the Gluetun-compatible API, ingress forwarding,
 UID split routing, verification, status, watchdog behavior, and ingress cleanup.
 
+## Guide Map
+
+- [Manual Linux WireGuard setup](manual-linux-wireguard.md): full
+  WireGuard/NAT-PMP path with outbound routing, ingress configs, services, and
+  verification.
+- [External tunnel setup](external-tunnel.md): OpenVPN, Tailscale, static
+  forwarded ports, and externally-managed tunnel interfaces.
+- [Windows and macOS](windows-macos.md): platform fail-closed behavior,
+  required inputs, and limitations.
+- [API contract](api-contract.md): Gluetun-compatible endpoints, slskdN
+  port-forward summary endpoint, runtime state files, and command ownership.
+
 ## Supported Modes
 
 | Mode | Tunnel owner | Port forwarding | Best for |

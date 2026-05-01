@@ -7,9 +7,11 @@ unless explicitly called out.
 ## Executive Summary
 
 > Update 2026-05-01: The first-run port/credential issues, root README logo
-> TODO, docs index user-guide gaps, and missing System/Pods/SongID user-guide
-> entries were addressed. Remaining audit items are mostly broken-link cleanup,
-> VPN doc splitting, and historical snapshot banners.
+> TODO, docs index user-guide gaps, missing System/Pods/SongID user-guide
+> entries, tracked current-doc broken links, pod private-service terminology,
+> dated status banners, and host VPN guide-map splitting were addressed.
+> Remaining audit items are mostly broad historical/archive cleanup and
+> overstatement review.
 
 The user-facing docs have good coverage for the newest Lidarr and VPN work in
 `README.md`, `docs/FEATURES.md`, `docs/config.md`, `docs/lidarr-integration.md`,
@@ -22,11 +24,8 @@ different "VPN" concepts:
 
 The docs should be cleaned in this order:
 
-1. Fix broken links in non-archived tracked markdown.
-2. Split and rename VPN docs so host VPN binding and pod private-service
-   gateway docs cannot be mistaken for each other.
-3. Move stale phase/audit docs into archive or mark them clearly as historical.
-4. Soften or qualify public-readiness/security claims that overstate the
+1. Move stale phase/audit docs into archive or mark them clearly as historical.
+2. Soften or qualify public-readiness/security claims that overstate the
    current codebase.
 
 ## Overstatement Findings
@@ -175,48 +174,11 @@ Recommended fix:
 
 ### 1. Broken Links In Current Docs
 
-A tracked non-archive markdown link scan found 25 broken links.
-
-Current broken links:
-
-```text
-docs/DHT_RENDEZVOUS_DESIGN.md:641 -> ./MULTI_SOURCE.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:7 -> ./docs/archive/duplicates/MULTI_SWARM_ROADMAP.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1283 -> ./docs/archive/duplicates/MULTI_SWARM_ROADMAP.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1285 -> ./BRAINZ_PROTOCOL_SPEC.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1286 -> ./BRAINZ_CHUNK_TRANSFER.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1287 -> ./BRAINZ_STATE_MACHINES.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1288 -> ./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md
-docs/MULTI_SWARM_IMPLEMENTATION_GUIDE.md:1290 -> ./HASHDB_SCHEMA.md
-docs/MUSICBRAINZ_INTEGRATION.md:1203 -> ./docs/archive/duplicates/MULTI_SOURCE_DOWNLOADS.md
-docs/README.md:28 -> security/DOCUMENTATION_AUDIT_SECURITY_CLAIMS.md
-docs/anonymity/i2p-setup-guide.md:422 -> ../security/threat-model.md
-docs/anonymity/tor-setup-guide.md:404 -> ../security/threat-model.md
-docs/anonymity/tor-setup-guide.md:405 -> ../security/traffic-analysis.md
-docs/dev/SONGID_INTEGRATION_MAP.md:86 -> <repo-root>/src/web/src/components/Search/Searches.jsx
-docs/dev/release-checklist.md:18 -> <repo-root>/docs/dev/bugfix-verification-checklist.md
-docs/dev/release-copy.md:7 -> <repo-root>/.github/release-notes/main.md.tmpl
-docs/dev/release-copy.md:7 -> <repo-root>/.github/release-notes/dev.md.tmpl
-docs/dev/release-copy.md:8 -> <repo-root>/packaging/scripts/render-release-notes.sh
-docs/dev/release-copy.md:18 -> <repo-root>/packaging/winget/snapetech.slskdn.locale.en-US.yaml
-docs/dev/release-copy.md:19 -> <repo-root>/packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml
-docs/dev/testing-policy.md:18 -> <repo-root>/docs/dev/bugfix-verification-checklist.md
-docs/dev/testing-policy.md:46 -> <repo-root>/docs/dev/release-checklist.md
-docs/security/IMPLEMENTATION_EFFORT_ANALYSIS.md:168 -> docs/security/SECURITY_COMPARISON_ANALYSIS.md
-docs/virtualsoulfind-v2-design.md:10 -> ../../README.md
-tests/slskd.Tests.Performance/README.md:136 -> ../docs/dev/e2e-testing-guide.md
-```
-
-Recommended fixes:
-
-- For links that accidentally include `docs/` while already inside `docs/`,
-  change to relative paths like `archive/duplicates/...`.
-- Replace missing `BRAINZ_*` / `HASHDB_SCHEMA` links with the current docs that
-  actually exist, or mark them as removed historical specs.
-- Either restore `docs/security/DOCUMENTATION_AUDIT_SECURITY_CLAIMS.md` or
-  remove that index entry.
-- Replace `<repo-root>/...` pseudo-links with plain code spans; Markdown treats
-  them as real links.
+**Resolved 2026-05-01:** The tracked 25 broken non-archive links from the
+original scan were fixed. Historical design references now point into
+`docs/archive/...`, missing security/anonymity references point to current
+security guidance, repo-root pseudo-links in dev docs were replaced with
+relative links, and the performance test README path was corrected.
 
 ### 2. Getting Started Is Stale
 
@@ -253,6 +215,11 @@ Recommended update:
 
 ### 4. VPN Docs Need Terminology Separation
 
+**Addressed 2026-05-01:** The pod-scoped docs now lead with "Pod Private
+Service Gateway" and explicitly state that they are not the host VPN agent or an
+internet exit node. The host VPN agent README now has a guide map with separate
+WireGuard, external tunnel, Windows/macOS, and API contract pages.
+
 There are two different VPN-shaped features:
 
 - `src/slskdN.VpnAgent/README.md`: host VPN binding, fail-closed routing, and
@@ -284,6 +251,11 @@ Recommended split:
 - `external-tunnel.md`: OpenVPN/Tailscale/static-forward setup.
 - `windows-macos.md`: platform-specific fail-closed behavior and limitations.
 - `api-contract.md`: Gluetun compatibility and `/v1/slskdn/portforwards`.
+
+**Addressed 2026-05-01:** The host VPN agent README now links focused companion
+guides for Linux/WireGuard, external tunnels, Windows/macOS, and the API
+contract. The API contract guide documents the current single-public-pair
+boundary.
 
 Also document the recent single-public-pair decision:
 
@@ -336,6 +308,10 @@ Recommended update:
 
 ### 8. Test Coverage Docs Are Date- and Count-Sensitive
 
+**Addressed 2026-05-01:** The listed dated test/status docs now carry
+historical snapshot banners. They remain useful as records, but should not be
+linked as live CI status.
+
 These docs contain January counts and claims:
 
 - `docs/TEST_COVERAGE_ASSESSMENT.md`
@@ -350,6 +326,10 @@ Recommendation: move dated snapshots into `docs/archive/` or add a banner:
 "Historical snapshot; check CI for current test counts."
 
 ### 9. Placeholder/Stub Docs Contradict Recent Test Backfills
+
+**Addressed 2026-05-01:** The listed dev docs now carry historical snapshot
+banners so their placeholder and test-backlog language is not presented as live
+status.
 
 Several dev docs still describe tests as placeholders even after recent
 backfills:
@@ -433,11 +413,8 @@ Recommendation:
 
 ## Suggested Next Patch Set
 
-1. Fix all 25 broken non-archive links.
-2. Add status banners to remaining stale January test/status docs.
-3. Split or at least restructure `src/slskdN.VpnAgent/README.md`.
-4. Rename pod-VPN docs in link text to "Pod Private Service Gateway" without
-   moving files immediately.
+1. Keep pod-VPN link text as "Pod Private Service Gateway" until files can be
+   moved without breaking external links.
 
 ## Commands Used
 

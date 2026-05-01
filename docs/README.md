@@ -19,6 +19,7 @@ Complete guide to all slskdn documentation.
 - [SongID and Discovery](songid-discovery.md) - Native identification, Acquisition Review, and Discovery Graph workflows
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI for policies, integrations, diagnostics, source providers, and local preferences
 - [Pods, Rooms, and Messages](pods-and-rooms.md) - Gold Star, pod rooms, unified messages, and listen-along boundaries
+- [Pod Private Service Gateway](pod-vpn/vpn-user-guide.md) - Pod-scoped private service tunnels over mesh; not host VPN routing or internet egress
 - [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
 - [Listening Party and Player](listening-party.md) - Integrated player, streaming, visualizers, and listen-along behavior
 - [Virtual Soulfind User Guide](VIRTUAL_SOULFIND_USER_GUIDE.md) - Using Virtual Soulfind and Shadow Index

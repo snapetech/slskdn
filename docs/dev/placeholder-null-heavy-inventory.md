@@ -2,6 +2,10 @@
 
 Generated: 2026-03-22
 
+> Historical snapshot. This inventory may not reflect current defaults, test
+> counts, or code. Prefer GitHub Actions, `docs/dev/testing-policy.md`, and
+> current feature-specific docs for live status.
+
 ## Purpose
 
 This inventory tracks the remaining placeholder-heavy, null-heavy, and explicitly incomplete runtime areas in `src/slskd/` so they can be completed in larger batches instead of one-off bugfixes.

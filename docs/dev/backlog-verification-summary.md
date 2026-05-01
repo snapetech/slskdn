@@ -2,6 +2,10 @@
 
 > **Date**: 2026-01-27  
 > **Purpose**: Verify status of backlog items from tasks-audit-gaps.md
+>
+> **Historical snapshot**: This document may not reflect current defaults, test
+> counts, or code. Prefer GitHub Actions, `docs/dev/testing-policy.md`, and
+> current feature-specific docs for live status.
 
 ---
 

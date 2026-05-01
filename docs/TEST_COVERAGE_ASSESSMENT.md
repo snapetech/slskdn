@@ -1,5 +1,9 @@
 # Test Coverage Assessment: New Features (2026-01-27)
 
+> Historical snapshot. This document may not reflect current defaults, test
+> counts, or code. Prefer GitHub Actions, `docs/dev/testing-policy.md`, and
+> current feature-specific docs for live status.
+
 ## Executive Summary
 
 **Current Status**: ✅ **P0 Tests Complete** + ✅ **P1 Tests Complete** + ✅ **P2 Tests Complete**

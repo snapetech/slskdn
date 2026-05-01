@@ -1,4 +1,9 @@
-# Tier-1 Pod-Scoped Private Service Network (VPN-like Utility) — Agent Implementation Doc
+# Tier-1 Pod Private Service Gateway — Agent Implementation Doc
+
+> This document covers pod-scoped private service tunnels over the slskdN mesh.
+> It is not the host VPN agent for Soulseek traffic and is not an internet exit
+> node. For fail-closed host VPN routing and forwarded-port integration, see
+> [slskdN VPN Host Integration](../../src/slskdN.VpnAgent/README.md).
 
 ## PROJECT INTENT (FRAMING)
 
@@ -443,5 +448,4 @@ src/slskd/
 ## CONCLUSION
 
 This implementation provides a secure, pod-scoped private service access mechanism that gives users "VPN-like utility" without the risks and complexity of full internet egress. By maintaining strict controls and leveraging existing mesh infrastructure, it delivers meaningful functionality while preserving the system's security and performance characteristics.
-
 
