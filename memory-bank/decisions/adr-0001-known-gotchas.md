@@ -211,6 +211,30 @@ if ($pushText -match "already exists|Package already exists|409") {
 
 **Why This Keeps Happening**: Chocolatey package publishing is an external moderation/upload service, not a local pack step. A gateway timeout is not a deterministic package failure, so release scripts need slower backoff and must treat duplicate-package responses as a successful prior upload.
 
+### 0z274. External Package Mirrors Must Not Gate Core Release Success
+
+**The Bug**: The tag release workflow treated Chocolatey and Launchpad PPA publish jobs as required jobs. When either external service timed out or refused uploads, the whole release appeared failed even though core artifacts, GitHub release assets, Docker, AUR, COPR, and Nix metadata succeeded.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+
+**Wrong**:
+```yaml
+ppa-main:
+  name: Publish to PPA (Main)
+  needs: [parse, release-main]
+```
+
+**Correct**:
+```yaml
+ppa-main:
+  name: Publish to PPA (Main)
+  needs: [parse, release-main]
+  continue-on-error: true
+```
+
+**Why This Keeps Happening**: Release workflows tend to grow by adding package channels as peer jobs. Third-party package mirrors are useful distribution outputs, but they are not proof that the release artifacts are valid. Keep best-effort mirrors non-blocking unless the user explicitly asks to gate releases on that mirror.
+
 ### 0z268. Restart Arguments Must Not Reuse `Environment.CommandLine`
 
 **The Bug**: The admin restart endpoint passed `Environment.CommandLine` as the child process argument string. `Environment.CommandLine` includes argv[0], so the restarted process receives the executable path twice.
