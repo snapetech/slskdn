@@ -77,6 +77,37 @@ RUN bash ./bin/build --dotnet-only --skip-tests --version $VERSION
 
 **Why This Keeps Happening**: Dockerfiles often copy a narrowed build context for cache efficiency. Any new local `ProjectReference` outside `src/` must be copied into the build stage, or Docker becomes the only release path that cannot resolve the solution graph.
 
+### 0z272. Launchpad PPA FTP Fallback Should Use `dput`, Not Raw `curl`
+
+**The Bug**: The PPA workflow fell back from SFTP to raw anonymous FTP uploads with `curl`. When `ppa.launchpad.net` accepted TCP but delayed or failed its FTP greeting, `curl` retried the first file for minutes and then failed the whole job. Launchpad's documented upload path is `dput`, and the workflow already produces signed `.changes` input for it.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
+  curl --ftp-pasv --upload-file "$source_file" \
+    "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
+done
+```
+
+**Correct**:
+```bash
+cat > ~/.dput.cf << 'EOF'
+[slskdn-ppa-ftp]
+fqdn = ppa.launchpad.net
+method = ftp
+incoming = ~keefshape/ubuntu/slskdn/
+login = anonymous
+allow_unsigned_uploads = 0
+EOF
+timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-ftp "$CHANGES_FILE"
+```
+
+**Why This Keeps Happening**: FTP fallback looks simple because `.changes` lists the files, but Launchpad PPA uploads are a `dput` protocol workflow with signature checks, host profile handling, and source package semantics. If SFTP flakes, retry via the official `dput` FTP profile rather than reimplementing uploads file-by-file.
+
 ### 0z268. Restart Arguments Must Not Reuse `Environment.CommandLine`
 
 **The Bug**: The admin restart endpoint passed `Environment.CommandLine` as the child process argument string. `Environment.CommandLine` includes argv[0], so the restarted process receives the executable path twice.
