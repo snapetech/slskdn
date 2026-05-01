@@ -52,6 +52,58 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z241. WebGPU Raw Texture Upload Rows Must Be 256-Byte Aligned
+
+**The Bug**: WebGPU texture uploads can fail validation when small imported RGBA images use a tightly packed `bytesPerRow` such as `width * 4`, unlike WebGL `texImage2D` which accepts tightly packed rows.
+
+**Files Affected**:
+- `src/web/src/components/Player/visualizers/milkdrop/webgpuRenderer.js`
+
+**Wrong**:
+```javascript
+device.queue.writeTexture(
+  { texture },
+  data,
+  { bytesPerRow: width * 4, rowsPerImage: height },
+  [width, height],
+);
+```
+
+**Correct**:
+```javascript
+const sourceBytesPerRow = width * 4;
+const bytesPerRow = Math.ceil(sourceBytesPerRow / 256) * 256;
+const textureData = new Uint8Array(bytesPerRow * height);
+```
+
+**Why This Keeps Happening**: Browser WebGPU copy layout validation is stricter than the WebGL texture path used by the parity renderer. Imported MilkDrop texture assets are often tiny sprites or checker images, so a direct WebGL-to-WebGPU port will work for some widths and fail for small or odd image sizes unless rows are padded before `queue.writeTexture(...)`.
+
+### 0z240. Unified Messaging Must Not Duplicate Bridged Pod Direct Channels
+
+**The Bug**: The unified Messages workspace listed normal saved DMs and matching pod `DM` channels as separate conversations, then embedded chat/room/pod panels without preserving visible composers and room member rails.
+
+**Files Affected**:
+- `src/web/src/components/Messaging/Messaging.jsx`
+- `src/web/src/components/Messaging/Messaging.css`
+- `src/web/src/components/Messaging/Messaging.test.jsx`
+
+**Wrong**:
+```javascript
+{podChannels.map((channel) => (
+  <Button>{channelLabel(channel)}</Button>
+))}
+```
+
+**Correct**:
+```javascript
+const visiblePodChannels = podChannels.filter(
+  (channel) =>
+    !(isPodDirectChannel(channel) && savedChatNames.has(normalizeConversationName(channel.podName))),
+);
+```
+
+**Why This Keeps Happening**: Pods can expose a `DM` channel for the same peer that already has a Soulseek saved chat. A unified workspace must fold those bridged direct channels into the existing direct-message row and explicitly restyle embedded session composers/member lists, because the old standalone Chat/Rooms/Pods layouts assumed full-page width and their inputs can collapse or disappear when nested in cards.
+
 ### 0z239. Share Scans Need An Explicit Media-Attribute Probe Escape Hatch
 
 **The Bug**: Share scans always opened shared audio files with TagLib to extract bitrate, length, sample rate, and bit depth. On slow or remote storage this optional browse metadata could dominate scan runtime even though files can be shared without those attributes.
