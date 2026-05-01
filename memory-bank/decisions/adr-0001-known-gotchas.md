@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z260. Static Port Migration Notices Must Not Become Live Status Dashboards
+
+**The Bug**: The VPN ingress migration notice was supposed to explain that the required forwards changed from the old list to the new list, but the implementation added active/not-reported badges, public IP/port detection, and an extra obfuscation-listener row, making a simple configuration reminder noisy and misleading.
+
+**Files Affected**:
+- `src/web/src/components/App.jsx`
+- `src/web/src/components/App.test.jsx`
+
+**Wrong**:
+```jsx
+const status = getForwardStatus(expected, portForwards);
+
+<span className={status.active ? 'active' : 'inactive'}>
+  {status.active ? `active: ${status.endpoint}` : 'not reported'}
+</span>
+```
+
+**Correct**:
+```jsx
+<IngressPortList expectedPorts={LEGACY_INGRESS_PORTS} title="Used to need" />
+<IngressPortList expectedPorts={CURRENT_INGRESS_PORTS} title="Need now" />
+```
+
+**Why This Keeps Happening**: Migration notices answer "what changed?" and should stay static unless the user explicitly asked for diagnostics. Do not mix live reachability/status detection into old-versus-new configuration copy, and add negative UI tests for status words, public endpoints, and removed ports when simplifying these notices.
+
 ### 0z259. Launchpad PPA SFTP Preflight Must Also Pin IPv4
 
 **The Bug**: The SFTP-preferred PPA workflow added a port-22 preflight but let Python resolve `ppa.launchpad.net` normally. GitHub runners selected Launchpad's IPv6 address first and failed with `[Errno 101] Network is unreachable` before trying the reachable IPv4 address family.
