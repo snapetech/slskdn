@@ -34,6 +34,19 @@
   1. Commit and push the runtime shutdown fix plus memory-bank updates.
   2. Deploy the patched runtime to `kspls0` if we want the live instance to pick up the listener shutdown fix now.
 
+## Update 2026-05-01 19:59:47Z
+
+- Current task: Current repo build is deployed and smoke-tested on `kspls0`.
+- Last activity:
+  - built and deployed `0.0.0-slskdn.manual.20260501195252.8de0ba700dba` from commit `8de0ba700dba`
+  - verified deliberate restart no longer logs the vendored listener shutdown `Not listening` unobserved task exception
+  - found and fixed normal QUIC probe disconnects logging as warning stack traces
+  - documented ADR-0001 gotcha `0z275` and committed it separately
+  - verified live API version, Soulseek login, listeners on `5030`, `50300`, `50301`, `50305`, shared UDP `50305`, backend UDP `55305`, clean QUIC handshake through `50305`, and a live `test mp3` search returning `251` responses / `5379` files
+  - validation passed: full `bin/publish --runtime linux-x64`, including Web UI tests/build, Release backend build, unit/API/integration suites, and publish
+- Next steps:
+  1. Push local commits.
+
 ## Update 2026-05-01 18:55:00Z
 
 - Current task: Current repo code is built and running on `kspls0` for user testing.

@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **network**: Deploy current runtime/network build to kspls0 and validate live behavior.
+ - Status: completed (2026-05-01)
+ - Priority: P1
+ - Notes: Published and deployed commit `8de0ba700dba` to `kspls0` as `0.0.0-slskdn.manual.20260501195252.8de0ba700dba`, confirmed deliberate restart no longer logs the vendored runtime listener shutdown `Not listening` unobserved task exception, fixed normal QUIC handshake-only probe disconnects so they no longer emit warning stack traces, and verified live API version, Soulseek login, TCP listeners `5030`/`50300`/`50301`/`50305`, shared UDP `50305`, backend UDP `55305`, clean QUIC handshake through the shared port, and a live `test mp3` search returning `251` responses / `5379` files.
+
 - [x] **network**: Restore QUIC overlay on the reduced shared mesh/DHT port.
  - Status: completed (2026-05-01)
  - Priority: P1

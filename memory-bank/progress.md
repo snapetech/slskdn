@@ -9383,3 +9383,11 @@ Code quality improvements were completed as part of Option A:
 - kspls0 smoke passed for service health, listeners on `50300/tcp`, `50301/tcp`, `50305/tcp`, shared UDP `50305`, backend QUIC UDP `55305`, API health/options, native Soulseek global recommendations, and a single QUIC handshake through `50305`.
 - Found a vendored runtime listener shutdown bug in kspls0 logs: `Stop()` could race an outstanding accept and surface a fatal unobserved task exception. Documented it in ADR-0001, committed the gotcha separately, and patched the runtime to observe swallowed fire-and-forget task exceptions and exit stopped listener accepts cleanly.
 - Remaining gap: the runtime shutdown fix is committed locally but not deployed to kspls0 yet.
+
+## 2026-05-01 19:59:47Z
+
+- Built and deployed current `main` to `kspls0` as `0.0.0-slskdn.manual.20260501195252.8de0ba700dba` under `/usr/lib/slskd/releases/manual-20260501195252.8de0ba700dba`.
+- The first deployed pass confirmed the vendored listener shutdown fix: a deliberate restart no longer logged the previous `Not listening` unobserved task exception.
+- Live smoke then exposed normal QUIC handshake-only probes logging warning stack traces when the peer closed before opening a stream. Documented ADR-0001 gotcha `0z275`, quieted those expected QUIC disconnects for control/data servers, added focused coverage, and redeployed the committed fix.
+- Final live validation on `kspls0`: API reports the deployed version, Soulseek is `Connected, LoggedIn`, listeners are active on `5030/tcp`, `50300/tcp`, `50301/tcp`, `50305/tcp`, shared `50305/udp`, and backend `55305/udp`; QUIC handshake through `50305` closes cleanly without warning logs; live search for `test mp3` completed with `251` responses and `5379` files.
+- Validation: full `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501195252.8de0ba700dba` passed Web UI tests/build, Release backend build, `3820` unit tests, `46` API tests, `276` integration tests, and publish.
