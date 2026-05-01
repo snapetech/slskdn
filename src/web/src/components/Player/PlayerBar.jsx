@@ -6,7 +6,6 @@ import {
   getDiscoveryShelf,
   getDiscoveryShelfActionLabel,
   getDiscoveryShelfPolicyPreview,
-  getDiscoveryShelfPromoteItems,
   getDiscoveryShelfSummary,
   removeDiscoveryShelfItem,
   upsertDiscoveryShelfItem,
@@ -962,10 +961,6 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
     getListeningStats({ rangeDays: 30 }),
   );
   const recommendationSeeds = getListeningRecommendationSeeds(stats);
-  const discoverySeeds = buildListeningDiscoverySeeds(stats, {
-    acquisitionProfile: 'mesh-preferred',
-  });
-
   const refreshStats = useCallback((nextRangeDays = rangeDays) => {
     setStats(getListeningStats({ rangeDays: nextRangeDays }));
   }, [rangeDays]);

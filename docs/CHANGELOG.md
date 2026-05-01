@@ -30,6 +30,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   from the active Wishlist surface.
 - Removed remaining player, playlist-intake, and search-test references to
   Discovery Inbox actions after the active review surface cleanup.
+- Removed stale player and federated taste recommendation test references to
+  Discovery Inbox promotion paths.
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
   links, with focused UI coverage, constructor-compatible scanner tests, and
   browser capability checks.

@@ -3,7 +3,6 @@
 // </copyright>
 
 import FederatedTasteRecommendationsPanel from './FederatedTasteRecommendationsPanel';
-import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
 import {
   fetchTasteRecommendations,
   previewTasteRecommendationGraph,
@@ -63,30 +62,23 @@ describe('FederatedTasteRecommendationsPanel', () => {
     });
   });
 
-  it('loads privacy-filtered recommendations and sends one to Discovery Inbox', async () => {
+  it('loads privacy-filtered recommendations and direct handoff actions', async () => {
     render(<FederatedTasteRecommendationsPanel />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Load Recommendations' }));
 
     expect(await screen.findByText('Taste Artist - Taste Track')).toBeInTheDocument();
     expect(screen.getByText('trusted overlap')).toBeInTheDocument();
-
-    fireEvent.click(
+    expect(
       screen.getByRole('button', {
-        name: 'Send Taste Track taste recommendation to Discovery Inbox',
+        name: 'Promote Taste Track taste recommendation to Wishlist',
       }),
-    );
-
-    expect(screen.getByText(/Sent Taste Artist - Taste Track/)).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem(discoveryInboxStorageKey))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          acquisitionProfile: 'mesh-preferred',
-          source: 'Federated Taste',
-          title: 'Taste Artist - Taste Track',
-        }),
-      ]),
-    );
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Subscribe Taste Track taste recommendation to Release Radar',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('promotes recommendations to wishlist, release radar, and graph preview handoffs', async () => {
