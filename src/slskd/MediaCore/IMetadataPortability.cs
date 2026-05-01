@@ -175,7 +175,7 @@ public enum ConflictResolutionStrategy
     KeepExisting,
 
     /// <summary>
-    /// Prompt user for resolution (not implemented for automated imports).
+    /// Prompt user for resolution when an interactive import flow is available.
     /// </summary>
     Interactive
 }

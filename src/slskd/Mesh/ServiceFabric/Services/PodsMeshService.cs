@@ -8,6 +8,7 @@ using slskd.Mesh.ServiceFabric;
 using slskd.Mesh.Transport;
 using slskd.PodCore;
 using System;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +25,7 @@ public class PodsMeshService : IMeshService
     private readonly IPodService _podService;
     private readonly IPodMessaging _podMessaging;
     private readonly int _maxPayload;
+    private const int MaxMessageBodyBytes = 4096;
 
     public PodsMeshService(
         ILogger<PodsMeshService> logger,
@@ -299,7 +301,7 @@ public class PodsMeshService : IMeshService
             };
         }
 
-        if (request.Body?.Length > 4096)
+        if (Encoding.UTF8.GetByteCount(request.Body ?? string.Empty) > MaxMessageBodyBytes)
         {
             return new ServiceReply
             {

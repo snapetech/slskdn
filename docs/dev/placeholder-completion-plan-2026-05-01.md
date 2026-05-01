@@ -63,8 +63,15 @@ rg -n \
 Treat `FeatureNotImplementedException` itself as allowed infrastructure. The
 remaining uses should be feature gates with operator-facing messages and tests.
 
-## Current First Slice
+## Completion Status
 
-Start with P1 because it is isolated and removes fake analytics values without
-contacting peers, downloading files, mutating libraries, or changing public
-network behavior.
+Completed 2026-05-01.
+
+- P1 removed fake swarm analytics efficiency values and now derives metrics from
+  active downloads plus peer samples.
+- P2/P3/P4/P6/P7/P8/P9 wording now describes explicit capability gates,
+  request/response-only services, unavailable transport paths, or fetch-path
+  validation instead of production placeholders.
+- The production scan now leaves only `FeatureNotImplementedException`
+  infrastructure and its configured startup handling, which this plan treats as
+  allowed feature-gate infrastructure.
