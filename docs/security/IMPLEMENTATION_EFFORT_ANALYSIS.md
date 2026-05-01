@@ -165,7 +165,7 @@ Add API key requirement to all state-changing endpoints (similar to Service Fabr
 - **Peer Reputation** - Behavioral scoring
 - **Cryptographic Commitment** - Pre-transfer hash commitment
 
-See [SECURITY_COMPARISON_ANALYSIS.md](docs/security/SECURITY_COMPARISON_ANALYSIS.md) for details.
+See [SECURITY_COMPARISON_ANALYSIS.md](SECURITY_COMPARISON_ANALYSIS.md) for details.
 ```
 
 #### B. Create SECURITY.md (2-3 hours)
