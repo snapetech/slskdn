@@ -200,6 +200,7 @@ dotnet_diagnostic.CA2000.severity = none     # Existing tests use disposable fix
 dotnet_diagnostic.CA1416.severity = none     # Platform-specific runtime probes are intentionally covered in tests
 dotnet_diagnostic.xUnit1030.severity = none  # ConfigureAwait guidance overlaps with CA2007 policy
 dotnet_diagnostic.xUnit1031.severity = none  # Existing tests intentionally use some blocking helpers
+dotnet_diagnostic.xUnit1012.severity = none  # Null TheoryData rows intentionally exercise invalid-input paths
 dotnet_diagnostic.xUnit2009.severity = none  # Style-only assertion guidance
 dotnet_diagnostic.xUnit2012.severity = none  # Style-only assertion guidance
 dotnet_diagnostic.xUnit2013.severity = none  # Style-only assertion guidance

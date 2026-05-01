@@ -1978,6 +1978,7 @@ const PlayerVisualTile = ({
     spectrum: 'chart bar',
   };
   const tileRef = useRef(null);
+  const [visualizerRevision, setVisualizerRevision] = useState(0);
   const title = current?.title || current?.fileName || 'slskdN';
   const artist = current?.artist || '';
   const initials = (artist || title)
@@ -1999,6 +2000,9 @@ const PlayerVisualTile = ({
     onTileModeChange(nextMode);
     if (visualizerTileModes.includes(nextMode) && mode === 'off') {
       onModeChange('inline');
+    }
+    if (visualizerTileModes.includes(nextMode)) {
+      setVisualizerRevision((revision) => revision + 1);
     }
   };
   const switchTileMode = (event, nextMode) => {
@@ -2057,6 +2061,7 @@ const PlayerVisualTile = ({
                 audioElement={audioElement}
                 compactControls
                 engineOverride={normalizedTileMode}
+                key={`${normalizedTileMode}-${visualizerRevision}`}
                 mode={visualizerDisplayMode}
                 onEngineChange={onTileModeChange}
                 onModeChange={onModeChange}

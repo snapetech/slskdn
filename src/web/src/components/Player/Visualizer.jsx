@@ -955,6 +955,7 @@ const Visualizer = ({
 
     let cancelled = false;
     let resizeObserver = null;
+    let createdEngine = null;
 
     (async () => {
       try {
@@ -983,6 +984,7 @@ const Visualizer = ({
           pixelRatio: window.devicePixelRatio || 1,
           rendererBackend: getNativeRendererBackend(activeEngineType),
         });
+        createdEngine = engine;
         if (cancelled) {
           engine.dispose();
           return;
@@ -1021,6 +1023,17 @@ const Visualizer = ({
 
         rafRef.current = window.requestAnimationFrame(renderLoop);
       } catch (importError) {
+        if (createdEngine) {
+          try {
+            createdEngine.dispose();
+          } catch {
+            // The renderer may have failed while the browser was tearing down its context.
+          }
+        }
+        if (engineRef.current === createdEngine) {
+          engineRef.current = null;
+          engineAudioNodeRef.current = null;
+        }
         // eslint-disable-next-line no-console
         console.error('Failed to load Milkdrop visualizer', importError);
         setError(getVisualizerErrorMessage(activeEngineType, importError));
@@ -1535,6 +1548,7 @@ const Visualizer = ({
       <canvas
         className="player-visualizer-canvas"
         hidden={fallbackMode}
+        key={activeEngineType}
         ref={canvasRef}
       />
       {fallbackMode ? (

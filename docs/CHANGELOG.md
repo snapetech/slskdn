@@ -50,7 +50,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   and opening the native visualizer full-window view from spectrum mode.
 - Expanded the player visual tile controls into explicit analyzer/native
   visualizer mode buttons with window and fullscreen affordances, including
-  updated layout and regression coverage.
+  updated layout, engine remount handling, renderer disposal cleanup, and
+  regression coverage.
 - Fixed the startup mesh transport registration build break by reading the
   separately bound `Mesh:Transport` section directly instead of assuming it is
   present on `OptionsAtStartup`.
