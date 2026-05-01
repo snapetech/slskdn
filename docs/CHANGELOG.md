@@ -30,6 +30,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added Docker Hub publishing as a release image channel at `snapetech/slskdn`
   when `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are configured, while keeping
   GHCR publishing active.
+- Excluded the vendored `slskNet.Runtime` source tree from slskdN formatting
+  enforcement while keeping local builds pointed at the in-repo runtime project.
 - Added Launchpad SFTP upload support for PPA releases when
   `LAUNCHPAD_SFTP_KEY` is configured, pinning Launchpad SFTP to IPv4 and
   retaining the signed anonymous FTP upload path as a fallback.

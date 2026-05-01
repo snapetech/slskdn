@@ -5,11 +5,15 @@
   - vendored `slskNet.Runtime` under `vendor/slskNet.Runtime` and moved app/test project references to the in-repo project
   - simplified the ingress-port migration notice to plain old/new port lists and added the obfuscated listener to the new required list
   - rebuilt the Web UI bundle locally and started full `bin/build`; frontend tests, frontend production build, backend build, unit tests, and API tests passed before the integration test run was interrupted by the user
-  - added Docker Hub tags to release Docker jobs, gated on `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+  - added Docker Hub tags to release Docker jobs and configured `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` in `snapetech/slskdn`
+  - reran full `bin/build`; Web UI tests/build, backend build, unit tests, API tests, and integration tests passed
+  - deployed `/usr/lib/slskd/releases/manual-slsknet-repo-20260501173428` to `kspls0`
+  - confirmed live asset text no longer contains `PREVIOUS`, `CURRENT`, or the old explanatory copy
+  - confirmed live listeners on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`
+  - live-smoked Soulseek search and a small download; the download completed successfully
+  - updated `bin/lint` to exclude vendored runtime source from slskdN formatting enforcement while keeping the project reference for builds
 - Next steps:
-  1. Run focused workflow/YAML and build validation after the Docker Hub workflow edit.
-  2. Publish a fresh `linux-x64` artifact from this repo and redeploy `kspls0`.
-  3. Commit and push the complete repo state to `snapetech/slskdn`.
+  1. Commit and push the complete repo state to `snapetech/slskdn`.
 
 ## Update 2026-05-01 17:30:00Z
 

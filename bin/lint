@@ -23,8 +23,8 @@ done
 
 if [ "$fix" == false ]; then
   echo $'\n🛠️  dotnet format --verbosity normal --verify-no-changes --no-restore --severity error\n'
-  dotnet format --verbosity normal --verify-no-changes --no-restore --severity error
+  dotnet format --verbosity normal --verify-no-changes --no-restore --severity error --exclude vendor/slskNet.Runtime
 else
   echo $'\n🛠️  dotnet format --verbosity normal --no-restore --severity error\n'
-  dotnet format --verbosity normal --no-restore --severity error
+  dotnet format --verbosity normal --no-restore --severity error --exclude vendor/slskNet.Runtime
 fi
