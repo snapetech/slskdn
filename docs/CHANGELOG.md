@@ -25,7 +25,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and switched
   the transfer step from fragile `dput` passive FTP retries to signed source
   verification followed by bounded anonymous `curl` uploads with a longer
-  FTP greeting window for slow Launchpad responses.
+  FTP greeting/preflight window for slow Launchpad responses.
 - Fixed the standalone PPA retry workflow so rebuilt frontend assets are copied
   into a created `publish-linux-x64/wwwroot` directory.
 - Reworded the ingress-port migration notice to show plain old-versus-current

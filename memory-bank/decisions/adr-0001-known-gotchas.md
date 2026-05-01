@@ -72,7 +72,7 @@ echo "$LAUNCHPAD_PPA_FTP_IPV4 ppa.launchpad.net" | sudo tee -a /etc/hosts
 python3 - <<'PY'
 import socket
 
-with socket.create_connection(("ppa.launchpad.net", 21), timeout=15) as sock:
+with socket.create_connection(("ppa.launchpad.net", 21), timeout=120) as sock:
     print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
 PY
 
