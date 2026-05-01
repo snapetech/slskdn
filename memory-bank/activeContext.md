@@ -1,6 +1,6 @@
 ## Update 2026-05-01 17:35:00Z
 
-- Current task: slskdN runtime vendoring, ingress notice cleanup, and Docker Hub release-channel work are in progress.
+- Current task: slskdN runtime vendoring, ingress notice cleanup, Docker Hub release-channel work, and `kspls0` deployment are complete.
 - Last activity:
   - vendored `slskNet.Runtime` under `vendor/slskNet.Runtime` and moved app/test project references to the in-repo project
   - simplified the ingress-port migration notice to plain old/new port lists and added the obfuscated listener to the new required list
@@ -12,8 +12,10 @@
   - confirmed live listeners on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`
   - live-smoked Soulseek search and a small download; the download completed successfully
   - updated `bin/lint` to exclude vendored runtime source from slskdN formatting enforcement while keeping the project reference for builds
+  - committed and pushed the final cleanup as `306495389`
 - Next steps:
-  1. Commit and push the complete repo state to `snapetech/slskdn`.
+  1. Add/rotate Docker Hub credentials if the token ever needs replacement; the current `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are configured.
+  2. Trigger the next `build-main-*` tag only when a release build is intentionally wanted.
 
 ## Update 2026-05-01 17:30:00Z
 
