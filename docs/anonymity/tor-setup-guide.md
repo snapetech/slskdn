@@ -401,7 +401,6 @@ For issues:
 
 - [Tor Project Documentation](https://community.torproject.org/)
 - [Tor Manual](https://2019.www.torproject.org/docs/tor-manual.html.en)
-- [slskdN Security Documentation](../security/threat-model.md)
-- [Traffic Analysis Prevention](../security/traffic-analysis.md)
-
+- [slskdN Security Guidelines](../SECURITY-GUIDELINES.md)
+- [Adversarial Resilience Design](../phase12-adversarial-resilience-design.md)
 

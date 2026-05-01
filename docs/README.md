@@ -35,7 +35,7 @@ Complete guide to all slskdn documentation.
 - [Security Implementation Specs](SECURITY_IMPLEMENTATION_SPECS.md) - Detailed security feature specifications
 - [CSRF Testing Guide](security/CSRF_TESTING_GUIDE.md) - CSRF protection testing and validation
 - [Security Comparison Analysis](security/SECURITY_COMPARISON_ANALYSIS.md) - Comparison with upstream slskd
-- [Documentation Audit - Security Claims](security/DOCUMENTATION_AUDIT_SECURITY_CLAIMS.md) - Security claims review
+- [Documentation Audit - Security Claims](archive/audits/DOCUMENTATION_AUDIT_SECURITY_CLAIMS.md) - Security claims review
 
 ## 🔧 Implementation Guides
 

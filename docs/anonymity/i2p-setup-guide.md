@@ -419,7 +419,7 @@ For issues:
 - [I2P Documentation](https://geti2p.net/en/docs)
 - [I2P Forums](https://forum.i2p2.de/)
 - [Privacy Comparison: Tor vs I2P](https://www.privacytools.io/providers/tor-i2p/)
-- [slskdN Security Documentation](../security/threat-model.md)
+- [slskdN Security Guidelines](../SECURITY-GUIDELINES.md)
 
 ## Future Development
 
@@ -430,5 +430,4 @@ I2P integration in slskdN is currently in early stages. Future enhancements incl
 - I2P-only mesh networks
 - Bandwidth optimization
 - Mobile I2P router support
-
 
