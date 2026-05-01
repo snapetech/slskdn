@@ -1,3 +1,17 @@
+## Update 2026-05-01 02:41:29Z
+
+- Current task: Soulseek type-1 obfuscation feature options are integrated locally.
+- Last activity:
+  - inspected the sibling research workspace and confirmed public-server type-1 peer-message obfuscation metadata/transport is strong enough to design slskdN feature options
+  - added `soulseek.obfuscation` settings for enablement, mode, dedicated port, regular fallback advertisement, and outbound preference
+  - added validation and a runtime plan that reports the current Soulseek.NET activation gap as `configured_unsupported`
+  - exposed the plan through the slskdN capabilities API and System -> Network status
+  - updated config docs, example YAML, and the dedicated Soulseek type-1 obfuscation guide
+  - validated focused backend and Network tab tests plus touched-file whitespace checks
+- Next steps:
+  1. Runtime activation requires Soulseek.NET hooks or a slskdN-owned peer-message transport adapter for SetWaitPort metadata, obfuscated listener accept, and obfuscated outbound dial.
+  2. Keep compatibility/prefer modes as the practical defaults; only mode remains explicit because it breaks clients that ignore obfuscated metadata.
+
 ## Update 2026-05-01 02:41:03Z
 
 - Current task: Feature-expansion public docs and README listings are updated locally.
