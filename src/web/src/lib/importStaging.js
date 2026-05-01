@@ -28,6 +28,7 @@ const normalizeItem = (item) => {
     id: item.id || uuidv4(),
     lastModified: item.lastModified || null,
     metadataMatch: item.metadataMatch || null,
+    metadataOverride: item.metadataOverride || null,
     reason: item.reason || 'Added from local import staging picker.',
     size: Number.isFinite(item.size) ? item.size : 0,
     state: normalizeState(item.state),
@@ -210,6 +211,45 @@ export const updateImportStagingItemMetadataMatch = (
       ? {
           ...item,
           metadataMatch: buildMetadataMatch(item),
+          updatedAt: now(),
+        }
+      : item,
+  );
+
+  return saveImportStagingItems(updated, setItem);
+};
+
+export const overrideImportStagingItemMetadataMatch = (
+  id,
+  override,
+  {
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  const updated = getImportStagingItems(getItem).map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          metadataMatch: {
+            album: override.album || '',
+            artist: override.artist || '',
+            band: 'Auto',
+            confidence: 1,
+            evidence: ['Manual metadata override supplied by reviewer.'],
+            status: 'Manual Override',
+            strongestEvidence: 'Manual metadata override supplied by reviewer.',
+            title: override.title || item.fileName,
+            trackNumber: override.trackNumber || null,
+            warnings: [],
+            weakestEvidence: 'No weak evidence.',
+          },
+          metadataOverride: {
+            album: override.album || '',
+            artist: override.artist || '',
+            title: override.title || item.fileName,
+            trackNumber: override.trackNumber || null,
+          },
           updatedAt: now(),
         }
       : item,

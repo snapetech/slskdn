@@ -53,7 +53,7 @@ export async function login(page: Page, apiUrl: string, username: string, passwo
   const passwordSelector =
     '[data-testid="login-password"] input, input[placeholder="Password"], input[name="password"], input[type="password"]';
   const submitSelector = '[data-testid="login-submit"], button:has-text("Login")';
-  const lostConnectionSelector = 'text=Lost connection to slskd';
+  const lostConnectionSelector = 'text=Lost connection to slskdN';
 
   // Sometimes the app can boot into a transient "Lost connection" state while SignalR is negotiating.
   // For E2E, auto-retry once by reloading.

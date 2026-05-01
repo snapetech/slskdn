@@ -692,7 +692,7 @@ const SongIDPanel = ({ disabled }) => {
       <p style={{ marginTop: 0 }}>
         Identify a likely track, album, or artist from a YouTube URL, Spotify
         URL, server-side file path, or direct text query, then fan the result
-        out into slskdn actions.
+        out into slskdN actions.
       </p>
       <Form>
         <Form.Field>
@@ -891,7 +891,7 @@ const SongIDPanel = ({ disabled }) => {
                     artist: 'Create a discography job from the strongest artist candidate.',
                     option: 'Run this ranked SongID acquisition option.',
                     plan: 'Run this ranked SongID plan.',
-                    track: 'Start a regular slskdn search using the strongest SongID track candidate.',
+                    track: 'Start a regular slskdN search using the strongest SongID track candidate.',
                   }[action.type];
                   const onClick = () => {
                     if (action.type === 'track') {
@@ -1677,7 +1677,7 @@ const SongIDPanel = ({ disabled }) => {
                   <List.Item key={candidate.candidateId}>
                     <List.Content floated="right">
                       <Popup
-                        content="Start a regular slskdn search using this SongID track candidate so you can inspect sources and begin downloading."
+                        content="Start a regular slskdN search using this SongID track candidate so you can inspect sources and begin downloading."
                         position="top center"
                         trigger={
                           <Button
@@ -1748,7 +1748,7 @@ const SongIDPanel = ({ disabled }) => {
                     <List.Content floated="right">
                       <Button.Group size="small">
                         <Popup
-                          content="Resolve and cache this MusicBrainz release in slskdn so album completion and downstream download workflows can use it."
+                          content="Resolve and cache this MusicBrainz release in slskdN so album completion and downstream download workflows can use it."
                           position="top center"
                           trigger={
                             <Button onClick={() => handleAlbumPrepare(candidate)}>
@@ -1757,7 +1757,7 @@ const SongIDPanel = ({ disabled }) => {
                           }
                         />
                         <Popup
-                          content="Create a single-release job from this SongID album candidate so slskdn can plan album acquisition directly."
+                          content="Create a single-release job from this SongID album candidate so slskdN can plan album acquisition directly."
                           position="top center"
                           trigger={
                             <Button onClick={() => handleMbReleaseJob(candidate)}>
@@ -1819,7 +1819,7 @@ const SongIDPanel = ({ disabled }) => {
                   <List.Item key={candidate.candidateId}>
                     <List.Content floated="right">
                       <Popup
-                        content="Create a discography job from this SongID artist candidate so slskdn can plan a catalog-scale acquisition workflow."
+                        content="Create a discography job from this SongID artist candidate so slskdN can plan a catalog-scale acquisition workflow."
                         position="top center"
                         trigger={
                           <Button

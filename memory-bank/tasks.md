@@ -11,6 +11,16 @@
 
 *No high priority tasks currently active
 
+- [x] **maintenance**: Rename remaining app-facing slskd branding to slskdN.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Updated visible Web UI connection errors, Network/SongID/Playlist Intake labels and tooltips, metrics table heading, Web UI README title, notification default prefixes, and config examples. Left compatibility-sensitive names such as storage keys, metric keys, config file names, upstream attribution, API compatibility fields, and binary/service paths unchanged.
+
+- [x] **feature**: Add mobile setup-health diagnostics.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: System Info now has a mobile-friendly setup-health modal that summarizes local connection, identity, shares, downloads, restart, URL base, and remote-configuration readiness with pass/warn/fail cards and a copyable report. The check only reads already-loaded browser state/options; it does not contact peers, validate credentials, scan folders, write config, or mutate files.
+
 - [x] **feature**: Add Quarantine Jury pod routing attempts.
  - Status: completed (2026-04-30)
  - Priority: P3
@@ -90,6 +100,26 @@
  - Status: completed (2026-04-30)
  - Priority: P3
  - Notes: Library Health can now copy a read-only text report from the loaded scan summary, issue type counts, top artists, and issue sample. Report export does not start a scan, create remediation jobs, queue replacement searches, quarantine files, or mutate library files.
+
+- [x] **feature**: Add Library Health selected action-plan previews.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Selected Library Health issues can now copy a review-only action plan with safe-fix, replacement-search, and quarantine-review candidate counts plus item-level labels. The action plan does not create remediation jobs, queue searches, quarantine files, or mutate library files.
+
+- [x] **feature**: Add Library Health replacement search seed export.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Selected Library Health issues can now copy deduped replacement search seed queries from loaded artist, album, title, or path metadata. The export does not open Search, contact peers, browse, download, quarantine, create remediation jobs, or mutate files.
+
+- [x] **feature**: Add Library Health quarantine review packet export.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Selected risky Library Health issues can now copy a manual quarantine review packet with issue labels, reason text, and local evidence paths for offline review. The packet export does not change quarantine state, move files, send peer messages, create remediation jobs, search, download, or mutate files.
+
+- [x] **feature**: Add Library Health safe-fix manifest export.
+ - Status: completed (2026-04-30)
+ - Priority: P3
+ - Notes: Selected auto-fixable Library Health issues can now copy a safe-fix manifest with issue labels, reason text, and target paths for offline review. The manifest export does not create remediation jobs, execute safe fixes, change quarantine state, search, download, or mutate files.
 
 - [x] **feature**: Add visible acquisition profiles to Search.
  - Status: completed (2026-04-30)
@@ -195,6 +225,26 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Watchlists can now store manually supplied similar-artist expansion candidates, show pending/approved/rejected expansion status, and approve a candidate into a manual Artist watchlist. Expansion approval remains browser-local and does not call providers, search Soulseek, browse peers, download, schedule automation, or mutate files.
+
+- [x] **feature**: Add browser-local Playlist Intake surface.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Added a Playlist Intake route for pasted local playlist rows or provider URL/file-name sources, with browser-local parsing, source identity retention, mirror-review visibility, matched/unmatched row state, and Discovery Inbox review handoff. This first slice does not fetch providers, search Soulseek, browse peers, download, create slskd playlists, or mutate files.
+
+- [x] **feature**: Add Playlist Intake refresh diffs and row review controls.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Mirrored Playlist Intake items can now preview pasted refresh rows as added/removed/unchanged diffs, and playlist rows can be marked matched, unmatched, or rejected while preserving source evidence. The UI also shows partial completion status. This is review-only and does not fetch providers, search Soulseek, browse peers, download, create playlists, or mutate files.
+
+- [x] **feature**: Complete Playlist Intake review handoff and playlist-build previews.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Playlist Intake now detects changed rows during mirror refresh previews, shows explicit disabled refresh automation policy with cadence/cooldown intent, bulk-sends non-rejected rows to Discovery Inbox review, and previews matched rows as a slskdN playlist text plan. This remains review-only and does not fetch providers, search Soulseek, browse peers, download, schedule refreshes, create slskd playlists, or mutate files.
+
+- [x] **feature**: Enable Playlist Intake provider refresh, scheduled refresh, and playlist creation.
+ - Status: completed (2026-04-30)
+ - Priority: P1
+ - Notes: Playlist Intake can now fetch provider-backed refresh previews through the existing source-feed import API, apply pasted or provider refresh rows to mirrored intake state, enable scheduled refresh intent with due-run execution, and create actual slskdN Playlist collections from matched rows. Provider refreshes are explicit and bounded by the configured per-playlist limit; scheduled due runs execute sequentially. These paths do not search Soulseek, browse peers, or download files.
 
 - [x] **feature**: Unify Wishlist rows with acquisition request states.
  - Status: completed (2026-04-30)
@@ -335,6 +385,12 @@
  - Progress (2026-04-30): Added dense primitive-count validation with a curated 40-shape/20-wave fixture in compatibility reporting and native browser smoke coverage.
  - Progress (2026-04-30): Added native transition modes beyond the default crossfade, including cut, fade-through-black, and overlay modes selected by preset aliases or caller options.
  - Progress (2026-04-30): Expanded translated shader audio uniforms from 32 FFT bins to 64 FFT bins and added signed 64-bin waveform access via `get_waveform(pos)`.
+ - Progress (2026-04-30): Added active-preset `.shape` and `.wave` fragment summaries, selected-fragment export, and selected-fragment removal with edited preset persistence in the browser-local native library.
+ - Progress (2026-04-30): Added persisted native automation settings for beat-count and timed-interval preset changes, while preserving compatibility with the previous stored mode string.
+ - Progress (2026-04-30): Added first safe visual parameter editing for native presets, including decay, zoom, rotation, waveform color/alpha sliders, edited-preset persistence, and full active-preset text export.
+ - Progress (2026-04-30): Added native preset parameter randomization, pointer-driven mouse variable input, and a compact native debug snapshot overlay for title, format, primitive counts, and shader section visibility.
+ - Progress (2026-04-30): Added active native preset playlist rename support to round out the first browser-local playlist editing controls.
+ - Progress (2026-04-30): Added first Phase 4 polish with browser-local native FPS caps and debug frame-time readout.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -348,11 +404,11 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added optional Discovery Graph priority metadata to Discography Coverage results, including node/edge density, release gap scores, HashDb/Wishlist evidence scores, ranked release recommendations, and per-release priority reasons. The scoring is deterministic and local to existing graph/coverage evidence; it does not browse peers, search Soulseek, start downloads, or publish graph data.
 
-- [ ] **T-931**: Bloom-filter library diff.
- - Status: planned
+- [x] **T-931**: Bloom-filter library diff.
+ - Status: completed (2026-04-30)
  - Priority: P1
  - Design: `docs/design/music-discovery-federation-plan.md`
- - Notes: Add versioned MBID bloom snapshots for trusted contacts/pods/realms, compare inbound filters locally, and promote likely missing items to Wishlist. Do not publish filenames, paths, file hashes, exact holdings, or library exports.
+ - Notes: Added versioned salted MusicBrainz recording/release Bloom snapshots, preview metadata, inbound diff comparison against local cached MusicBrainz candidates, and review-only Wishlist promotion for likely missing tracks. Snapshots do not include filenames, paths, file hashes, or exact identifiers; diff suggestions keep probabilistic false-positive wording and do not publish or auto-search.
 
 - [x] **T-932**: Per-artist release radar.
  - Status: completed (2026-04-30)
@@ -360,15 +416,15 @@
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added a conservative local artist-radar service/API with artist MBID subscriptions, muted release-group suppression, SongID-confirmed WorkRef observation validation, deterministic notification dedupe, DI registration, and focused tests. This is network-presence radar only; it does not poll MusicBrainz, browse peers, search Soulseek, or download files.
 
-- [ ] **feature**: Persist artist release radar subscriptions and notifications.
- - Status: planned
+- [x] **feature**: Persist artist release radar subscriptions and notifications.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-932 by storing artist-radar subscriptions, muted release groups, seen-observation keys, and notifications across daemon restarts.
+ - Notes: Followed up T-932 with an atomic JSON state file for artist-radar subscriptions, muted release groups, seen-observation keys, and notifications. The persisted state reloads on service startup so duplicate observation suppression and unread notifications survive daemon restarts.
 
-- [ ] **feature**: Route signed artist radar observations through trusted federation/realm channels.
- - Status: planned
+- [x] **feature**: Route signed artist radar observations through trusted federation/realm channels.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Follow up T-932 by emitting and accepting signed SongID-confirmed WorkRef observations through LibraryActor outboxes or realm-scoped mesh messages, preserving user-controlled trust scope and rate limits.
+ - Notes: Followed up T-932 with explicit selected-peer PodCore route attempts for artist-radar notifications, safe opaque route metadata validation, signed local route envelopes, persisted route history, and API endpoints to dispatch/review attempts. Routing stays user-initiated and does not publish automatically, search Soulseek, browse peers, download, or mutate files.
 
 - [ ] **feature**: Add Web UI controls for artist release radar.
  - Status: planned
@@ -380,6 +436,11 @@
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
  - Notes: Added a local recommendation service/API over accepted inbound music WorkRefs from the ActivityPub inbox. The service filters to followed federation actors, groups candidates by MusicBrainz ID or normalized artist/title/year, enforces the default two-trusted-source reveal threshold before returning recommendations, and hides source actor IDs unless explicitly requested.
+
+- [x] **feature**: Add graph-aware and review-first handoffs for federated taste recommendations.
+ - Status: completed (2026-04-30)
+ - Priority: P2
+ - Notes: Expanded T-933 with optional Discovery Graph evidence/scoring, review-only Wishlist promotion, artist release radar subscription handoff, and Discovery Graph preview API endpoints. Handoffs validate safe music WorkRefs, keep k-anonymity in the recommendation service, and do not start Soulseek searches, browse peers, download, publish, or mutate files.
 
 - [ ] **feature**: Add a Web UI surface for federated taste recommendations.
  - Status: planned
@@ -439,10 +500,10 @@
  - Priority: P2
  - Notes: Added a persisted manual review/acceptance contract that returns request evidence, signed verdicts, route attempts, aggregate recommendations, acceptance eligibility, and prior acceptance decisions. Accepting is allowed only for release-candidate supermajorities, is idempotent, validates safe operator identifiers, and records a local decision without mutating quarantine state.
 
-- [ ] **feature**: Add frontend Quarantine Jury review UI.
- - Status: planned
+- [x] **feature**: Add frontend Quarantine Jury review UI.
+ - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Build the browser review surface on top of the Quarantine Jury review/acceptance API, including verdict evidence, dissent, route attempts, acceptance status, and tooltip-backed manual accept controls. Keep local quarantine authoritative until the user explicitly accepts a release-candidate recommendation.
+ - Notes: Added a System -> Quarantine Jury workspace that lists requests, loads review details, shows request evidence, juror verdicts, dissent, route attempts, acceptance status, explicit route dispatch controls, and modal-gated release-candidate acceptance. Local quarantine remains authoritative until the user explicitly accepts a release-candidate recommendation, and the UI does not move files or broadcast release state.
 
 - [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
  - Status: completed (2026-04-30)
@@ -704,10 +765,10 @@
 - 6. Audit every remaining `AllowAnonymous` controller individually; only true read-only or protocol-required surfaces should stay public.
 - 7. Add a dedicated regression test for intentionally-public protocol endpoints (`ActivityPub`, `WebFinger`, streaming token access, session login/enabled, public profile lookup) so the allowed anonymous surface is documented in code too.
 
-- [ ] **chore**: Align frontend peer dependency ranges after the Vite 8 security bump.
- - Status: pending
+- [x] **chore**: Align frontend peer dependency ranges after the Vite 8 security bump.
+ - Status: completed (2026-04-30)
  - Priority: P3
- - Notes: The March 2026 security dependency refresh cleared `npm audit`, but `@vitejs/plugin-react` still advertises support through Vite 7 and `@vitest/coverage-v8` still peers against the older Vitest line. Follow up with a deliberate toolchain alignment pass instead of mixing peer-range churn into security-only fixes.
+ - Notes: The tracked `src/web` toolchain is aligned on Vite 8.0.10, Vitest 4.1.5, `@vitejs/plugin-react` 6.0.1, and `@vitest/coverage-v8` 4.1.5, with `npm ls` clean for the Vite/Vitest peer set. The older security-only follow-up is closed without changing unrelated root-level package manifests.
 
 - [ ] **bug**: Trace the still-hanging full `dotnet test -v minimal` tail after the main suites report passing.
  - Status: pending
@@ -896,7 +957,7 @@
 - [ ] **Packaging follow-up: automate the NixOS VM smoke test**: The 2026-03-17 QEMU/KVM NixOS validation proved the stable flake now builds and the packaged `slskd` binary starts on real NixOS, but the flow is manual and the upstream NixOS module still needs explicit `domain`, `environmentFile`, and `settings.shares.directories` values for local validation. Script a reusable smoke test or CI-friendly VM harness so future Nix packaging changes are validated without hand-driving the guest.
 - [ ] **Repo-wide C# analyzer cleanup**: As of 2026-03-16 the packaging/test follow-up cleaned the touched files, but `bash ./bin/lint` / full-solution `dotnet format --verify-no-changes` still report broad existing analyzer/style debt across unrelated C# files. Triage and fix that separately from packaging work.
 - [x] **Security follow-up (2026-03-21): close remaining CodeQL alert clusters**: Fixed the true-positive clusters by removing cleartext secret logging from `Program` and `AsymmetricDisclosure`, constraining relay token validation to trusted server-side agent identities, rebuilding SQLite share-repo connection strings from validated data sources, and restricting HashDb query profiling to admin-only single-statement read-only SQL with regression tests. Remaining scanner-only findings should now be handled as justified dismissals after the next GitHub analysis refresh instead of by more code churn.
-- [ ] **Release regression follow-up: add a subpath-hosted web smoke test**: Add automated coverage that serves the built web UI under a non-root `web.url_base` such as `/slskd` and verifies the HTML references relative assets rather than root-relative `/assets/...` URLs, so future frontend build-tool changes cannot silently reintroduce blank white-page deployments.
+- [x] **Release regression follow-up: add a subpath-hosted web smoke test**: Added automated coverage that serves the built web UI under `/slskd`, loads the deep link `/slskd/system/info`, verifies built HTML uses relative `./assets/...` references instead of root-relative `/assets/...`, and checks bundled JS/CSS assets resolve under the mounted base. Backend HTML rewrite coverage now asserts non-root `web.url_base` injects a `<base href="/slskd/" />` tag while preserving relative built assets.
 - [x] **Testing hardening: add one repo-level release gate**: Added `packaging/scripts/run-release-gate.sh`, wired it into `ci.yml` and `build-on-tag.yml`, added built-web output verification for subpath-safe assets, and documented the policy in `docs/dev/testing-policy.md`. Validated locally with packaging checks, 91 frontend tests, 2619 unit tests, and 46 backend smoke/regression tests passing. Done.
 - [x] **Changelog discipline at commit time**: Added `scripts/validate-changelog-entry.sh`, wired it into `.githooks/pre-commit` and PR CI in `.github/workflows/ci.yml`, and updated `docs/CHANGELOG.md` so release-worthy changes must add a real `## [Unreleased]` bullet when the work lands instead of deferring summary writing to release time.
 - [x] **Git hook bootstrap**: Added `scripts/setup-git-hooks.sh` so clones can install `.githooks` with one command, and updated onboarding docs to require the hook-setup step during local development.

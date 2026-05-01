@@ -196,6 +196,25 @@ namespace slskd.Tests.Unit.SocialFederation
             Assert.True(isValid);
         }
 
+        [Fact]
+        public void ValidateSecurity_AllowsMusicBrainzArtistUuid()
+        {
+            var workRef = new WorkRef
+            {
+                Domain = "music",
+                Title = "Safe Song",
+                Creator = "Safe Artist",
+                ExternalIds = new Dictionary<string, string>
+                {
+                    ["musicbrainz_artist"] = "12345678-1234-1234-1234-123456789abc"
+                }
+            };
+
+            var isValid = workRef.ValidateSecurity();
+
+            Assert.True(isValid);
+        }
+
         [Theory]
         [InlineData("music")]
         [InlineData("books")]

@@ -18,6 +18,29 @@ const nativeEngine = {
     fileName: `active.${type}`,
     source: `[${type}]\nenabled=1\n`,
   })),
+  exportPresetText: vi.fn(() => ({
+    fileName: 'active.milk',
+    source: 'name=Active\nzoom=1\n',
+  })),
+  getPresetFragmentSummary: vi.fn(() => ({
+    shapes: [{ index: 0, label: 'Shape 1: 5 sides' }],
+    waves: [{ index: 0, label: 'Wave 1: 32 samples' }],
+  })),
+  getPresetDebugSnapshot: vi.fn(() => ({
+    format: 'milk',
+    parameters: { decay: 0.91, zoom: 1 },
+    presetCount: 1,
+    shaderSections: { comp: false, warp: true },
+    shapes: 1,
+    sprites: 0,
+    title: 'Native preset',
+    waves: 1,
+  })),
+  getPresetParameterSummary: vi.fn(() => ({
+    decay: 0.91,
+    wave_r: 0.4,
+    zoom: 1,
+  })),
   inspectPresetText: vi.fn(() => ({ title: 'Imported native preset' })),
   loadPresetFragmentText: vi.fn((_source, fileName) => ({
     source: `name=Imported native preset\n; merged ${fileName}`,
@@ -27,8 +50,28 @@ const nativeEngine = {
   nextPreset: vi.fn(() => 'Native next'),
   presetName: 'Native preset',
   render: vi.fn(),
+  removePresetFragment: vi.fn((type) => ({
+    source: `name=Edited\n; removed ${type}`,
+    title: `Edited without ${type}`,
+  })),
+  randomizePresetParameters: vi.fn(() => ({
+    source: 'name=Randomized\nzoom=1.2\nwave_r=0.8',
+    title: 'Randomized native preset',
+    values: {
+      wave_r: 0.8,
+      zoom: 1.2,
+    },
+  })),
   resize: vi.fn(),
   setPresetAutomation: vi.fn(),
+  setMouseState: vi.fn(),
+  updatePresetBaseValue: vi.fn((key, value) => ({
+    source: `name=Edited\n${key}=${value}`,
+    title: `Edited ${key}`,
+    values: {
+      [key]: value,
+    },
+  })),
   name: 'slskdN MilkDrop WebGL',
 };
 
@@ -64,14 +107,22 @@ describe('Visualizer', () => {
     butterchurnEngine.dispose.mockClear();
     nativeEngine.dispose.mockClear();
     nativeEngine.exportPresetFragment.mockClear();
+    nativeEngine.exportPresetText.mockClear();
+    nativeEngine.getPresetDebugSnapshot.mockClear();
+    nativeEngine.getPresetFragmentSummary.mockClear();
+    nativeEngine.getPresetParameterSummary.mockClear();
     nativeEngine.inspectPresetText.mockClear();
     nativeEngine.loadPresetFragmentText.mockClear();
     nativeEngine.loadPresetText.mockClear();
     nativeEngine.nextPreset.mockClear();
+    nativeEngine.randomizePresetParameters.mockClear();
+    nativeEngine.removePresetFragment.mockClear();
     nativeEngine.resize.mockClear();
     nativeEngine.render.mockReset();
     nativeEngine.render.mockImplementation(() => {});
+    nativeEngine.setMouseState.mockClear();
     nativeEngine.setPresetAutomation.mockClear();
+    nativeEngine.updatePresetBaseValue.mockClear();
   });
 
   it('switches to the native engine and imports a local preset', async () => {
@@ -272,15 +323,7 @@ describe('Visualizer', () => {
       configurable: true,
       value: revokeObjectUrl,
     });
-    const click = vi.fn();
-    const createElement = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((name) => {
-      const element = createElement(name);
-      if (name === 'a') {
-        element.click = click;
-      }
-      return element;
-    });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     render(
       <Visualizer
@@ -297,11 +340,240 @@ describe('Visualizer', () => {
     fireEvent.click(screen.getByTestId('visualizer-export-native-shape'));
     fireEvent.click(screen.getByTestId('visualizer-export-native-wave'));
 
-    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('shape');
-    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('wave');
+    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('shape', 0);
+    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('wave', 0);
     expect(createObjectUrl).toHaveBeenCalledTimes(2);
-    expect(click).toHaveBeenCalledTimes(2);
+    expect(clickSpy).toHaveBeenCalledTimes(2);
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:native-fragment');
+    clickSpy.mockRestore();
+  });
+
+  it('exports the active native preset text', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    const createObjectUrl = vi.fn(() => 'blob:native-preset');
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(window.URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectUrl,
+    });
+    Object.defineProperty(window.URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectUrl,
+    });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(nativeEngine.resize).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByTestId('visualizer-export-native-preset'));
+
+    expect(nativeEngine.exportPresetText).toHaveBeenCalled();
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:native-preset');
+    clickSpy.mockRestore();
+  });
+
+  it('selects and removes native shape and wave fragments from the active preset', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'editable.milk',
+        id: 'editable',
+        source: 'name=Editable\nshape00_sides=3\nshape01_sides=8\nwavecode_0_samples=32',
+        title: 'Editable',
+      }),
+    );
+    nativeEngine.getPresetFragmentSummary.mockReturnValue({
+      shapes: [
+        { index: 0, label: 'Shape 1: 3 sides' },
+        { index: 1, label: 'Shape 2: 8 sides' },
+      ],
+      waves: [
+        { index: 0, label: 'Wave 1: 32 samples' },
+        { index: 1, label: 'Wave 2: 64 samples' },
+      ],
+    });
+    nativeEngine.removePresetFragment.mockImplementation((type, index) => ({
+      source: `name=Editable\n; removed ${type} ${index}`,
+      title: `Editable without ${type} ${index}`,
+    }));
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('option', { name: 'Shape 2: 8 sides' })).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('visualizer-native-shape-fragment'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByTestId('visualizer-remove-native-shape'));
+
+    expect(nativeEngine.removePresetFragment).toHaveBeenCalledWith('shape', 1, {
+      textureAssets: undefined,
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+      'Editable without shape 1',
+    );
+
+    fireEvent.change(screen.getByTestId('visualizer-native-wave-fragment'), {
+      target: { value: '1' },
+    });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    fireEvent.click(screen.getByTestId('visualizer-export-native-wave'));
+    expect(nativeEngine.exportPresetFragment).toHaveBeenCalledWith('wave', 1);
+    clickSpy.mockRestore();
+  });
+
+  it('applies native preset parameter edits to a browser-local edited copy', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'editable.milk',
+        id: 'editable',
+        source: 'name=Editable\nzoom=1',
+        textureAssets: {
+          cover: { dataUrl: 'data:image/png;base64,fixture', fileName: 'cover.png' },
+        },
+        title: 'Editable',
+      }),
+    );
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByTestId('visualizer-native-parameter')).toHaveValue('decay');
+    fireEvent.change(screen.getByTestId('visualizer-native-parameter'), {
+      target: { value: 'zoom' },
+    });
+    fireEvent.change(screen.getByTestId('visualizer-native-parameter-value'), {
+      target: { value: '1.25' },
+    });
+    fireEvent.click(screen.getByTestId('visualizer-apply-native-parameter'));
+
+    expect(nativeEngine.updatePresetBaseValue).toHaveBeenCalledWith('zoom', 1.25, {
+      textureAssets: {
+        cover: { dataUrl: 'data:image/png;base64,fixture', fileName: 'cover.png' },
+      },
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+      'Edited zoom',
+    );
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary')).toContain(
+      'zoom=1.25',
+    );
+  });
+
+  it('randomizes native parameters and toggles debug details', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+    window.localStorage.setItem(
+      'slskdn.player.nativeMilkdropPreset',
+      JSON.stringify({
+        fileName: 'editable.milk',
+        id: 'editable',
+        source: 'name=Editable\nzoom=1',
+        title: 'Editable',
+      }),
+    );
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId('visualizer-randomize-native-parameters');
+    fireEvent.click(screen.getByTestId('visualizer-randomize-native-parameters'));
+    expect(nativeEngine.randomizePresetParameters).toHaveBeenCalledWith({
+      textureAssets: undefined,
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toContain(
+      'Randomized native preset',
+    );
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary')).toContain(
+      'wave_r=0.8',
+    );
+
+    fireEvent.click(screen.getByTestId('visualizer-toggle-native-debug'));
+    expect(screen.getByTestId('visualizer-native-debug')).toHaveTextContent('Native preset');
+    expect(screen.getByTestId('visualizer-native-debug')).toHaveTextContent('1 shapes');
+    fireEvent.change(screen.getByTestId('visualizer-native-fps-cap'), {
+      target: { value: '30' },
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropFpsCap')).toBe('30');
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropQuality')).toBe('custom');
+    fireEvent.change(screen.getByTestId('visualizer-native-quality'), {
+      target: { value: 'efficient' },
+    });
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropQuality')).toBe('efficient');
+    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropFpsCap')).toBe('30');
+  });
+
+  it('feeds normalized pointer state into the native engine', async () => {
+    window.localStorage.setItem('slskdn.player.visualizerEngine', 'native');
+
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="inline"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    const visualizer = await screen.findByTestId('player-visualizer');
+    vi.spyOn(visualizer, 'getBoundingClientRect').mockReturnValue({
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    fireEvent.pointerMove(visualizer, {
+      buttons: 1,
+      clientX: 150,
+      clientY: 25,
+    });
+    fireEvent.pointerUp(visualizer);
+
+    expect(nativeEngine.setMouseState).toHaveBeenCalledWith({
+      mouse_down: 1,
+      mouse_dx: 0.25,
+      mouse_dy: -0.25,
+      mouse_x: 0.75,
+      mouse_y: 0.25,
+    });
+    expect(nativeEngine.setMouseState).toHaveBeenLastCalledWith({
+      mouse_down: 0,
+      mouse_dx: 0,
+      mouse_dy: 0,
+    });
   });
 
   it('cycles and persists native automatic preset change modes', async () => {
@@ -316,23 +588,58 @@ describe('Visualizer', () => {
     );
 
     await waitFor(() => {
-      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'off' });
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({
+        beatsPerPreset: 8,
+        mode: 'off',
+        timedIntervalSeconds: 30,
+      });
     });
 
     fireEvent.click(screen.getByTestId('visualizer-native-automation'));
-    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetAutomation')).toBe(
-      'beat',
-    );
+    expect(
+      JSON.parse(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetAutomation')),
+    ).toEqual({
+      beatsPerPreset: 8,
+      mode: 'beat',
+      timedIntervalSeconds: 30,
+    });
     await waitFor(() => {
-      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'beat' });
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({
+        beatsPerPreset: 8,
+        mode: 'beat',
+        timedIntervalSeconds: 30,
+      });
+    });
+
+    fireEvent.change(screen.getByTestId('visualizer-native-automation-beats'), {
+      target: { value: '16' },
+    });
+    await waitFor(() => {
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({
+        beatsPerPreset: 16,
+        mode: 'beat',
+        timedIntervalSeconds: 30,
+      });
     });
 
     fireEvent.click(screen.getByTestId('visualizer-native-automation'));
-    expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetAutomation')).toBe(
-      'timed',
-    );
     await waitFor(() => {
-      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({ mode: 'timed' });
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({
+        beatsPerPreset: 16,
+        mode: 'timed',
+        timedIntervalSeconds: 30,
+      });
+    });
+
+    fireEvent.change(screen.getByTestId('visualizer-native-automation-interval'), {
+      target: { value: '60' },
+    });
+    await waitFor(() => {
+      expect(nativeEngine.setPresetAutomation).toHaveBeenCalledWith({
+        beatsPerPreset: 16,
+        mode: 'timed',
+        timedIntervalSeconds: 60,
+      });
     });
   });
 
@@ -864,7 +1171,9 @@ describe('Visualizer', () => {
     );
     nativeEngine.loadPresetText.mockImplementation((_source, fileName) =>
       fileName.replace(/\.milk$/, ''));
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Grid playlist');
+    const promptSpy = vi.spyOn(window, 'prompt')
+      .mockReturnValueOnce('Grid playlist')
+      .mockReturnValueOnce('Renamed grid');
 
     render(
       <Visualizer
@@ -898,6 +1207,14 @@ describe('Visualizer', () => {
     expect(
       window.localStorage.getItem('slskdn.player.nativeMilkdropActivePresetPlaylist'),
     ).toBe(storedPlaylists[0].id);
+
+    fireEvent.click(screen.getByTestId('visualizer-rename-native-playlist'));
+    const renamedPlaylists = JSON.parse(
+      window.localStorage.getItem('slskdn.player.nativeMilkdropPresetPlaylists'),
+    );
+    expect(renamedPlaylists[0]).toEqual(expect.objectContaining({
+      name: 'Renamed grid',
+    }));
 
     fireEvent.click(screen.getByTestId('visualizer-clear-native-preset-search'));
     expect(screen.queryByRole('option', { name: 'First' })).not.toBeInTheDocument();

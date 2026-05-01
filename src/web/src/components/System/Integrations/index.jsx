@@ -132,7 +132,7 @@ const buildNotificationForm = (options = {}) => {
       getOption(ntfy, 'notifyOnPrivateMessage', 'NotifyOnPrivateMessage') ?? true,
     ntfyNotifyOnRoomMention:
       getOption(ntfy, 'notifyOnRoomMention', 'NotifyOnRoomMention') ?? true,
-    ntfyPrefix: getOption(ntfy, 'notificationPrefix', 'NotificationPrefix') || 'slskd',
+    ntfyPrefix: getOption(ntfy, 'notificationPrefix', 'NotificationPrefix') || 'slskdN',
     ntfyUrl: getOption(ntfy, 'url', 'Url') || '',
     pushbulletAccessToken: '',
     pushbulletAccessTokenConfigured: isConfigured(
@@ -152,7 +152,7 @@ const buildNotificationForm = (options = {}) => {
       getOption(pushbullet, 'notifyOnRoomMention', 'NotifyOnRoomMention') ?? true,
     pushbulletPrefix:
       getOption(pushbullet, 'notificationPrefix', 'NotificationPrefix') ||
-      'From slskd:',
+      'From slskdN:',
     pushbulletRetryAttempts: String(
       getOption(pushbullet, 'retryAttempts', 'RetryAttempts') ?? 3,
     ),
@@ -166,7 +166,7 @@ const buildNotificationForm = (options = {}) => {
     pushoverNotifyOnRoomMention:
       getOption(pushover, 'notifyOnRoomMention', 'NotifyOnRoomMention') ?? true,
     pushoverPrefix:
-      getOption(pushover, 'notificationPrefix', 'NotificationPrefix') || 'slskd',
+      getOption(pushover, 'notificationPrefix', 'NotificationPrefix') || 'slskdN',
     pushoverToken: '',
     pushoverTokenConfigured: isConfigured(getOption(pushover, 'token', 'Token')),
     pushoverUserKey: '',

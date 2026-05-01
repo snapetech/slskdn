@@ -43,6 +43,7 @@ const DiscoveryGraphAtlasPage = lazy(() =>
 const ImportStaging = lazy(() => import('./ImportStaging/ImportStaging'));
 const Messaging = lazy(() => import('./Messaging/Messaging'));
 const Pods = lazy(() => import('./Pods/Pods'));
+const PlaylistIntake = lazy(() => import('./PlaylistIntake/PlaylistIntake'));
 const Searches = lazy(() => import('./Search/Searches'));
 const ShareGroups = lazy(() => import('./ShareGroups/ShareGroups'));
 const SharedWithMe = lazy(() => import('./Shares/SharedWithMe'));
@@ -771,7 +772,7 @@ class App extends Component {
           <ErrorSegment
             caption={
               <>
-                <span>Lost connection to slskd</span>
+                <span>Lost connection to slskdN</span>
                 <br />
                 <span>
                   {retriesExhausted ? 'Refresh to reconnect' : 'Retrying...'}
@@ -821,7 +822,7 @@ class App extends Component {
             }}
           >
             <Icon name="attention" />
-            Lost connection to slskd. {retriesExhausted ? 'Refresh to reconnect.' : 'Retrying...'}
+            Lost connection to slskdN. {retriesExhausted ? 'Refresh to reconnect.' : 'Retrying...'}
           </Segment>
         )}
         <PlayerProvider>
@@ -879,6 +880,12 @@ class App extends Component {
                     <Menu.Item data-testid="nav-import-staging">
                       <Icon name="archive" />
                       Import Staging
+                    </Menu.Item>
+                  </NavLink>
+                  <NavLink to="/playlist-intake">
+                    <Menu.Item data-testid="nav-playlist-intake">
+                      <Icon name="list alternate outline" />
+                      Playlist Intake
                     </Menu.Item>
                   </NavLink>
                   <NavLink to="/wishlist">
@@ -1230,6 +1237,16 @@ class App extends Component {
                       this.withTokenCheck(
                         <div className="view">
                           <ImportStaging />
+                        </div>,
+                      )
+                    }
+                  />
+                  <Route
+                    path="/playlist-intake"
+                    element={
+                      this.withTokenCheck(
+                        <div className="view">
+                          <PlaylistIntake />
                         </div>,
                       )
                     }

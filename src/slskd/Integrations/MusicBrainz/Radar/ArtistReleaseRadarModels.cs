@@ -43,6 +43,8 @@ public sealed class ArtistRadarObservation
     public WorkRef WorkRef { get; set; } = new();
 
     public DateTimeOffset ObservedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public string? Signature { get; set; }
 }
 
 public sealed class ArtistRadarNotification
@@ -79,4 +81,40 @@ public sealed class ArtistRadarObservationResult
     public List<ArtistRadarNotification> Notifications { get; set; } = new();
 
     public string? RejectionReason { get; set; }
+}
+
+public sealed class ArtistRadarRouteRequest
+{
+    public List<string> TargetPeerIds { get; set; } = new();
+
+    public string? PodId { get; set; }
+
+    public string? ChannelId { get; set; }
+
+    public string? SenderPeerId { get; set; }
+}
+
+public sealed class ArtistRadarRouteAttempt
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string NotificationId { get; set; } = string.Empty;
+
+    public string MessageId { get; set; } = string.Empty;
+
+    public string PodId { get; set; } = string.Empty;
+
+    public string ChannelId { get; set; } = string.Empty;
+
+    public List<string> TargetPeerIds { get; set; } = new();
+
+    public List<string> RoutedPeerIds { get; set; } = new();
+
+    public List<string> FailedPeerIds { get; set; } = new();
+
+    public bool Success { get; set; }
+
+    public string? ErrorMessage { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

@@ -99,5 +99,31 @@ describe('LibraryHealth', () => {
     expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
       'Library health report prepared for 1 loaded issues.',
     );
+
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    fireEvent.click(screen.getByTestId('library-health-copy-action-plan'));
+
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Library health action plan prepared for 1 selected issues.',
+    );
+
+    fireEvent.click(screen.getByTestId('library-health-copy-safe-fix-manifest'));
+
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Library health safe-fix manifest prepared for 1 selected issues.',
+    );
+
+    fireEvent.click(screen.getByTestId('library-health-copy-search-seeds'));
+
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Library health replacement search seeds prepared for 1 selected issues.',
+    );
+
+    fireEvent.click(screen.getByTestId('library-health-copy-quarantine-packet'));
+
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Library health quarantine review packet prepared for 1 selected issues.',
+    );
+    expect(libraryHealth.createRemediationJob).not.toHaveBeenCalled();
   });
 });

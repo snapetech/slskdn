@@ -1,5 +1,6 @@
 import { getVersion, restart, shutdown } from '../../../lib/application';
 import DiagnosticBundleModal from './DiagnosticBundleModal';
+import SetupHealthCheckModal from './SetupHealthCheckModal';
 import {
   CodeEditor,
   LoaderSegment,
@@ -51,6 +52,10 @@ const Info = ({ options, state, theme }) => {
             Get Privileges
           </ShrinkableButton>
           <DiagnosticBundleModal
+            options={options}
+            state={state}
+          />
+          <SetupHealthCheckModal
             options={options}
             state={state}
           />

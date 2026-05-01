@@ -119,7 +119,7 @@ const SlskdMetricsTable = ({ metrics }) => {
     <Segment>
       <Header size="small">
         <Icon name="table" />
-        All slskd Metrics
+        All slskdN Metrics
       </Header>
       <Table
         compact

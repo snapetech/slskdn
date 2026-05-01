@@ -1230,7 +1230,7 @@ integrations:
   pushbullet:
     enabled: false
     access_token: ~
-    notification_prefix: "From slskd:"
+    notification_prefix: "From slskdN:"
     notify_on_private_message: true
     notify_on_room_mention: true
     retry_attempts: 3

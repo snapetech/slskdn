@@ -1,0 +1,113 @@
+.playlist-intake {
+  margin: 15px auto 16px;
+  max-width: 1200px !important;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.playlist-intake-header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.playlist-intake-form {
+  margin-bottom: 1rem;
+}
+
+.playlist-intake-summary,
+.playlist-intake-actions,
+.playlist-intake-policy,
+.playlist-intake-track-actions,
+.playlist-intake-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.playlist-intake-summary {
+  margin: 0.75rem 0 1rem;
+}
+
+.playlist-intake-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.playlist-intake-card.ui.segment {
+  margin: 0 !important;
+}
+
+.playlist-intake-card-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.playlist-intake-title {
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.playlist-intake-meta,
+.playlist-intake-impact {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  line-height: 1.35;
+  margin-top: 0.35rem;
+}
+
+.playlist-intake-tracks {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.playlist-intake-refresh {
+  margin-top: 0.75rem;
+}
+
+.playlist-intake-actions,
+.playlist-intake-policy {
+  margin-top: 0.75rem;
+}
+
+.playlist-intake-preview {
+  border: 1px solid var(--slskd-border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  margin-top: 0.75rem;
+  padding: 0.65rem;
+}
+
+.playlist-intake-preview pre {
+  margin: 0.5rem 0 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.playlist-intake-track {
+  align-items: center;
+  border: 1px solid var(--slskd-border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.55rem;
+}
+
+@media only screen and (max-width: 760px) {
+  .playlist-intake-header,
+  .playlist-intake-card-head,
+  .playlist-intake-track {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .playlist-intake-actions,
+  .playlist-intake-track-actions {
+    justify-content: flex-start;
+  }
+}

@@ -6,6 +6,7 @@ import {
   getImportStagingDenylist,
   getImportStagingItems,
   matchAllImportStagingItems,
+  overrideImportStagingItemMetadataMatch,
   removeImportStagingDenylistEntry,
   updateImportStagingItemMetadataMatch,
   updateImportStagingItemState,
@@ -13,6 +14,7 @@ import {
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Button,
+  Form,
   Header,
   Icon,
   Label,
@@ -72,6 +74,12 @@ const renderMetadataMatch = (match) => {
         {[match.artist, match.album, match.title].filter(Boolean).join(' - ') ||
           'No parsed identity'}
       </div>
+      <div className="import-staging-meta">
+        Band {match.band || 'Review'} · Strongest: {match.strongestEvidence}
+      </div>
+      <div className="import-staging-meta">
+        Weakest: {match.weakestEvidence}
+      </div>
       {match.warnings.length > 0 && (
         <div className="import-staging-warning">
           {match.warnings.join(' ')}
@@ -116,6 +124,7 @@ const ImportStaging = () => {
   const [fingerprintOnAdd, setFingerprintOnAdd] = useState(false);
   const [denylist, setDenylist] = useState(() => getImportStagingDenylist());
   const [items, setItems] = useState(() => getImportStagingItems());
+  const [overrideInputs, setOverrideInputs] = useState({});
 
   const counts = useMemo(
     () =>
@@ -175,6 +184,28 @@ const ImportStaging = () => {
 
   const matchAll = () => {
     setItems(matchAllImportStagingItems());
+  };
+
+  const setOverrideInput = (item, field, value) => {
+    setOverrideInputs((current) => ({
+      ...current,
+      [item.id]: {
+        ...(current[item.id] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const applyOverride = (item) => {
+    const override = overrideInputs[item.id] || {};
+    setItems(
+      overrideImportStagingItemMetadataMatch(item.id, {
+        album: override.album,
+        artist: override.artist,
+        title: override.title,
+        trackNumber: Number.parseInt(override.trackNumber, 10) || null,
+      }),
+    );
   };
 
   return (
@@ -342,6 +373,26 @@ const ImportStaging = () => {
                 <Table.Cell data-label="Size">{formatBytes(item.size)}</Table.Cell>
                 <Table.Cell data-label="Metadata Match">
                   {renderMetadataMatch(item.metadataMatch)}
+                  <Form className="import-staging-override-form">
+                    <Form.Group widths="equal">
+                      <Form.Input
+                        aria-label={`Override artist for ${item.fileName}`}
+                        onChange={(event) =>
+                          setOverrideInput(item, 'artist', event.target.value)
+                        }
+                        placeholder="Artist"
+                        value={overrideInputs[item.id]?.artist || ''}
+                      />
+                      <Form.Input
+                        aria-label={`Override title for ${item.fileName}`}
+                        onChange={(event) =>
+                          setOverrideInput(item, 'title', event.target.value)
+                        }
+                        placeholder="Title"
+                        value={overrideInputs[item.id]?.title || ''}
+                      />
+                    </Form.Group>
+                  </Form>
                 </Table.Cell>
                 <Table.Cell data-label="Fingerprint">
                   {renderFingerprintVerification(item.fingerprintVerification)}
@@ -363,6 +414,25 @@ const ImportStaging = () => {
                         >
                           <Icon name="tags" />
                           Match
+                        </Button>
+                      }
+                    />
+                    <Popup
+                      content="Apply the manual artist/title override as the accepted metadata match for this staged file."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Apply metadata override for ${item.fileName}`}
+                          compact
+                          disabled={
+                            !overrideInputs[item.id]?.artist &&
+                            !overrideInputs[item.id]?.title
+                          }
+                          onClick={() => applyOverride(item)}
+                          size="tiny"
+                        >
+                          <Icon name="edit" />
+                          Override
                         </Button>
                       }
                     />

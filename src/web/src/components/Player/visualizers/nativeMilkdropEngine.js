@@ -204,6 +204,114 @@ const mergeFragmentIntoPresetSet = (parsed, fragment) => {
   return merged;
 };
 
+const removeFragmentFromPresetSet = (parsed, type, index) => {
+  const removed = cloneParsedPresetSet(parsed);
+  const targetEntries = type === 'wave'
+    ? removed.primary.waves
+    : removed.primary.shapes;
+  if (!targetEntries[index]) return null;
+  targetEntries.splice(index, 1);
+  removed.primary.source = serializeMilkdropPresetSet(removed);
+  return removed;
+};
+
+const updatePresetBaseValue = (parsed, key, value) => {
+  const updated = cloneParsedPresetSet(parsed);
+  updated.primary.baseValues[key] = value;
+  updated.primary.source = serializeMilkdropPresetSet(updated);
+  return updated;
+};
+
+const getFragmentEntryLabel = (entry, index, type) => {
+  const prefix = type === 'wave' ? 'Wave' : 'Shape';
+  const values = entry?.baseValues || {};
+  const labelParts = [
+    values.name,
+    values.label,
+    values.tex_name,
+    values.texname,
+    values.texture,
+    values.image,
+  ].filter(Boolean);
+  if (labelParts.length > 0) {
+    return `${prefix} ${index + 1}: ${labelParts[0]}`;
+  }
+  if (type === 'wave') {
+    const samples = values.samples ?? values.nsamples;
+    return samples ? `${prefix} ${index + 1}: ${samples} samples` : `${prefix} ${index + 1}`;
+  }
+  const sides = values.sides ?? values.numsides;
+  return sides ? `${prefix} ${index + 1}: ${sides} sides` : `${prefix} ${index + 1}`;
+};
+
+const getPresetFragmentSummary = (parsed) => ({
+  shapes: (parsed.primary?.shapes || []).map((entry, index) => ({
+    index,
+    label: getFragmentEntryLabel(entry, index, 'shape'),
+  })),
+  waves: (parsed.primary?.waves || []).map((entry, index) => ({
+    index,
+    label: getFragmentEntryLabel(entry, index, 'wave'),
+  })),
+});
+
+const editableParameterSpecs = {
+  decay: { defaultValue: 0.9, max: 1, min: 0.5 },
+  rot: { defaultValue: 0, max: 0.5, min: -0.5 },
+  wave_a: { defaultValue: 1, max: 1, min: 0 },
+  wave_b: { defaultValue: 0.7, max: 1, min: 0 },
+  wave_g: { defaultValue: 0.7, max: 1, min: 0 },
+  wave_r: { defaultValue: 0.7, max: 1, min: 0 },
+  zoom: { defaultValue: 1, max: 1.5, min: 0.5 },
+};
+const editableParameterKeys = Object.keys(editableParameterSpecs);
+
+const getPresetParameterSummary = (parsed) => {
+  const values = parsed.primary?.baseValues || {};
+  return editableParameterKeys.reduce((summary, key) => ({
+    ...summary,
+    [key]: Number.isFinite(Number(values[key])) ? Number(values[key]) : undefined,
+  }), {});
+};
+
+const getRandomizedPresetParameters = (parsed, random = Math.random) => {
+  const values = parsed.primary?.baseValues || {};
+  return editableParameterKeys.reduce((nextValues, key) => {
+    const spec = editableParameterSpecs[key];
+    const currentValue = Number.isFinite(Number(values[key]))
+      ? Number(values[key])
+      : spec.defaultValue;
+    const jitteredValue = spec.min + (random() * (spec.max - spec.min));
+    return {
+      ...nextValues,
+      [key]: Number(((currentValue + jitteredValue) / 2).toFixed(2)),
+    };
+  }, {});
+};
+
+const updatePresetBaseValues = (parsed, values) => {
+  const updated = cloneParsedPresetSet(parsed);
+  Object.entries(values).forEach(([key, value]) => {
+    updated.primary.baseValues[key] = value;
+  });
+  updated.primary.source = serializeMilkdropPresetSet(updated);
+  return updated;
+};
+
+const getPresetDebugSnapshot = (parsed, title) => ({
+  format: parsed.format,
+  parameters: getPresetParameterSummary(parsed),
+  presetCount: parsed.presets.length,
+  shaderSections: {
+    comp: Boolean(parsed.primary?.shaders?.comp),
+    warp: Boolean(parsed.primary?.shaders?.warp),
+  },
+  shapes: parsed.primary?.shapes?.length || 0,
+  sprites: parsed.primary?.sprites?.length || 0,
+  title,
+  waves: parsed.primary?.waves?.length || 0,
+});
+
 const defaultTransitionSeconds = 1.5;
 const defaultTransitionMode = 'crossfade';
 const defaultAutomation = {
@@ -411,6 +519,13 @@ export const createNativeMilkdropEngine = async ({
   let automation = normalizeAutomation();
   let beatState = {};
   let lastAutomatedPresetAt = 0;
+  let mouseState = {
+    mouse_down: 0,
+    mouse_dx: 0,
+    mouse_dy: 0,
+    mouse_x: 0.5,
+    mouse_y: 0.5,
+  };
   const frameReader = createFrameReader(audioContext, audioNode);
 
   const pruneRetiredRenderers = (now) => {
@@ -567,6 +682,13 @@ export const createNativeMilkdropEngine = async ({
         source: serializeMilkdropFragment(entry, { type }),
       };
     },
+    exportPresetText: () => ({
+      fileName: `${activePresetTitle.replace(/[^A-Za-z0-9._-]+/g, '_')}.${activeParsedPresetSet.format}`,
+      source: serializeMilkdropPresetSet(activeParsedPresetSet),
+    }),
+    getPresetDebugSnapshot: () => getPresetDebugSnapshot(activeParsedPresetSet, activePresetTitle),
+    getPresetFragmentSummary: () => getPresetFragmentSummary(activeParsedPresetSet),
+    getPresetParameterSummary: () => getPresetParameterSummary(activeParsedPresetSet),
     inspectPresetText: (source, fileName = '') => {
       const importedPresetSet = parseCompatiblePresetText(source, fileName);
       return {
@@ -580,12 +702,109 @@ export const createNativeMilkdropEngine = async ({
       lastAutomatedPresetAt = audioContext.currentTime || 0;
       return automation;
     },
+    setMouseState: (nextMouseState = {}) => {
+      mouseState = {
+        ...mouseState,
+        ...nextMouseState,
+      };
+      return mouseState;
+    },
+    removePresetFragment: (type = 'shape', index = 0, options = {}) => {
+      const normalizedType = type === 'wave' ? 'wave' : 'shape';
+      const mergedPresetSet = removeFragmentFromPresetSet(
+        activeParsedPresetSet,
+        normalizedType,
+        index,
+      );
+      if (!mergedPresetSet) return null;
+      const compatibilityErrors = getCompatibilityErrors(mergedPresetSet);
+      if (compatibilityErrors.length > 0) {
+        throw new Error(formatCompatibilityError(mergedPresetSet, compatibilityErrors));
+      }
+      const title = `${activePresetTitle} - ${normalizedType} ${index + 1}`;
+      activeParsedPresetSet = mergedPresetSet;
+      activePresetTitle = title;
+      const mergedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
+      activateRendererSet(
+        createRendererSet({
+          canvas,
+          parsed: activeParsedPresetSet,
+          textureAssets: options.textureAssets,
+          title,
+        }),
+        options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+        options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+      );
+      return {
+        source: mergedSource,
+        title,
+      };
+    },
+    randomizePresetParameters: (options = {}) => {
+      const randomizedValues = getRandomizedPresetParameters(activeParsedPresetSet, options.random);
+      const updatedPresetSet = updatePresetBaseValues(activeParsedPresetSet, randomizedValues);
+      const compatibilityErrors = getCompatibilityErrors(updatedPresetSet);
+      if (compatibilityErrors.length > 0) {
+        throw new Error(formatCompatibilityError(updatedPresetSet, compatibilityErrors));
+      }
+      const title = `${activePresetTitle} randomized`;
+      activeParsedPresetSet = updatedPresetSet;
+      activePresetTitle = title;
+      const updatedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
+      activateRendererSet(
+        createRendererSet({
+          canvas,
+          parsed: activeParsedPresetSet,
+          textureAssets: options.textureAssets,
+          title,
+        }),
+        options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+        options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+      );
+      return {
+        source: updatedSource,
+        title,
+        values: getPresetParameterSummary(activeParsedPresetSet),
+      };
+    },
+    updatePresetBaseValue: (key, value, options = {}) => {
+      if (!editableParameterKeys.includes(key)) return null;
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return null;
+      const updatedPresetSet = updatePresetBaseValue(activeParsedPresetSet, key, numericValue);
+      const compatibilityErrors = getCompatibilityErrors(updatedPresetSet);
+      if (compatibilityErrors.length > 0) {
+        throw new Error(formatCompatibilityError(updatedPresetSet, compatibilityErrors));
+      }
+      const title = `${activePresetTitle} edited`;
+      activeParsedPresetSet = updatedPresetSet;
+      activePresetTitle = title;
+      const updatedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
+      activateRendererSet(
+        createRendererSet({
+          canvas,
+          parsed: activeParsedPresetSet,
+          textureAssets: options.textureAssets,
+          title,
+        }),
+        options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
+        options.transitionMode ?? getPresetSetTransitionMode(activeParsedPresetSet),
+      );
+      return {
+        source: updatedSource,
+        title,
+        values: getPresetParameterSummary(activeParsedPresetSet),
+      };
+    },
     render: () => {
       const now = audioContext.currentTime || 0;
       pruneRetiredRenderers(now);
       const frame = frameReader.read();
       const renderFrame = {
         ...frame,
+        audio: {
+          ...mouseState,
+        },
         sampleRate: audioContext.sampleRate,
         time: now,
       };

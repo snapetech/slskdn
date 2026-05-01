@@ -76,4 +76,42 @@ public sealed class ArtistReleaseRadarControllerTests
         var notifications = Assert.IsAssignableFrom<IReadOnlyList<ArtistRadarNotification>>(ok.Value);
         Assert.Single(notifications);
     }
+
+    [Fact]
+    public async Task RouteNotification_ReturnsBadRequestForFailedRouteAttempt()
+    {
+        var radarService = new Mock<IArtistReleaseRadarService>();
+        radarService
+            .Setup(service => service.RouteNotificationAsync("notification-1", It.IsAny<ArtistRadarRouteRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ArtistRadarRouteAttempt
+            {
+                NotificationId = "notification-1",
+                Success = false,
+                ErrorMessage = "invalid",
+            });
+        var controller = new ArtistReleaseRadarController(radarService.Object);
+
+        var result = await controller.RouteNotification("notification-1", new ArtistRadarRouteRequest(), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetRouteAttempts_ReturnsServiceResult()
+    {
+        var radarService = new Mock<IArtistReleaseRadarService>();
+        radarService
+            .Setup(service => service.GetRouteAttemptsAsync("notification-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ArtistRadarRouteAttempt>
+            {
+                new() { NotificationId = "notification-1", Success = true },
+            });
+        var controller = new ArtistReleaseRadarController(radarService.Object);
+
+        var result = await controller.GetRouteAttempts("notification-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var attempts = Assert.IsAssignableFrom<IReadOnlyList<ArtistRadarRouteAttempt>>(ok.Value);
+        Assert.Single(attempts);
+    }
 }

@@ -273,7 +273,7 @@ const Network = ({ theme }) => {
           icon="sitemap"
           inverted={darkTheme}
           label="Mesh Peers"
-          subLabel="slskdn clients connected"
+          subLabel="slskdN clients connected"
           value={mesh?.connectedPeerCount ?? meshPeers.length ?? 0}
         />
         <StatCard
@@ -315,7 +315,7 @@ const Network = ({ theme }) => {
           <Header.Content>
             Our Capabilities
             <Header.Subheader>
-              What we advertise to other slskdn peers
+              What we advertise to other slskdN peers
             </Header.Subheader>
           </Header.Content>
         </Header>
@@ -323,7 +323,7 @@ const Network = ({ theme }) => {
         <Label.Group>
           <Label color="blue">
             <Icon name="code branch" />
-            {capabilities?.version ?? 'slskdn'}
+            {capabilities?.version ?? 'slskdN'}
           </Label>
           {capabilities?.features?.map((feature) => (
             <Label
@@ -364,7 +364,7 @@ const Network = ({ theme }) => {
               <Header.Content>
                 Mesh Peers
                 <Header.Subheader>
-                  Connected slskdn clients for hash sync
+                  Connected slskdN clients for hash sync
                 </Header.Subheader>
               </Header.Content>
             </Header>
@@ -379,7 +379,7 @@ const Network = ({ theme }) => {
                   <Icon name="users" />
                   No mesh peers connected
                 </Header>
-                <p>Other slskdn clients will appear here when discovered</p>
+                <p>Other slskdN clients will appear here when discovered</p>
               </Segment>
             ) : (
               <Table
@@ -435,9 +435,9 @@ const Network = ({ theme }) => {
             <Header as="h4">
               <Icon name="search" />
               <Header.Content>
-                Discovered slskdn Peers
+                Discovered slskdN Peers
                 <Header.Subheader>
-                  Peers with slskdn capabilities detected
+                  Peers with slskdN capabilities detected
                 </Header.Subheader>
               </Header.Content>
             </Header>
@@ -450,7 +450,7 @@ const Network = ({ theme }) => {
               >
                 <Header icon>
                   <Icon name="radar" />
-                  No slskdn peers discovered yet
+                  No slskdN peers discovered yet
                 </Header>
                 <p>Peers are discovered through searches and downloads</p>
               </Segment>
@@ -469,7 +469,7 @@ const Network = ({ theme }) => {
                     <List.Content>
                       <List.Header>{peer.username}</List.Header>
                       <List.Description>
-                        {peer.version ?? 'slskdn'} • Last seen:{' '}
+                        {peer.version ?? 'slskdN'} • Last seen:{' '}
                         {formatTimeAgo(peer.lastSeenAt)}
                       </List.Description>
                     </List.Content>
@@ -693,7 +693,7 @@ const Network = ({ theme }) => {
           <Header.Content>
             Backfill Scheduler
             <Header.Subheader>
-              Conservative discovery of hashes from non-slskdn peers
+              Conservative discovery of hashes from non-slskdN peers
             </Header.Subheader>
           </Header.Content>
         </Header>

@@ -1,5 +1,11 @@
 import * as libraryHealth from '../../../lib/libraryHealth';
-import { buildLibraryHealthReport } from '../../../lib/libraryHealthReport';
+import {
+  buildLibraryHealthActionPlan,
+  buildLibraryHealthQuarantinePacket,
+  buildLibraryHealthReport,
+  buildLibraryHealthSafeFixManifest,
+  buildLibraryHealthSearchSeeds,
+} from '../../../lib/libraryHealthReport';
 import { LoaderSegment } from '../../Shared';
 import React, { useEffect, useState } from 'react';
 import {
@@ -220,6 +226,66 @@ const LibraryHealth = () => {
     }
 
     setReportMessage(`Library health report prepared for ${issues.length} loaded issues.`);
+  };
+
+  const handleCopyActionPlan = () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const plan = buildLibraryHealthActionPlan({
+      issues: selectedIssueList,
+      libraryPath,
+    });
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(plan).catch(() => {});
+    }
+
+    setReportMessage(`Library health action plan prepared for ${selectedIssueList.length} selected issues.`);
+  };
+
+  const handleCopySafeFixManifest = () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const manifest = buildLibraryHealthSafeFixManifest({
+      issues: selectedIssueList,
+      libraryPath,
+    });
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(manifest).catch(() => {});
+    }
+
+    setReportMessage(`Library health safe-fix manifest prepared for ${selectedIssueList.length} selected issues.`);
+  };
+
+  const handleCopySearchSeeds = () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const seeds = buildLibraryHealthSearchSeeds({
+      issues: selectedIssueList,
+      libraryPath,
+    });
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(seeds).catch(() => {});
+    }
+
+    setReportMessage(`Library health replacement search seeds prepared for ${selectedIssueList.length} selected issues.`);
+  };
+
+  const handleCopyQuarantinePacket = () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const packet = buildLibraryHealthQuarantinePacket({
+      issues: selectedIssueList,
+      libraryPath,
+    });
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(packet).catch(() => {});
+    }
+
+    setReportMessage(`Library health quarantine review packet prepared for ${selectedIssueList.length} selected issues.`);
   };
 
   const OverviewPane = () => (
@@ -458,6 +524,66 @@ const LibraryHealth = () => {
                 >
                   Clear Selection
                 </Button>
+                <Popup
+                  content="Copy a selected-issue action plan for review. This does not create remediation jobs, queue searches, quarantine files, or mutate files."
+                  trigger={
+                    <Button
+                      basic
+                      data-testid="library-health-copy-action-plan"
+                      disabled={fixing}
+                      onClick={handleCopyActionPlan}
+                      type="button"
+                    >
+                      <Icon name="copy" />
+                      Copy Action Plan
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Copy an auto-fixable issue manifest for review. This does not create a remediation job, execute safe fixes, or mutate files."
+                  trigger={
+                    <Button
+                      basic
+                      data-testid="library-health-copy-safe-fix-manifest"
+                      disabled={fixing}
+                      onClick={handleCopySafeFixManifest}
+                      type="button"
+                    >
+                      <Icon name="check circle" />
+                      Copy Safe-Fix Manifest
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Copy replacement search seed queries for selected issues. This does not open Search, contact peers, download files, or mutate files."
+                  trigger={
+                    <Button
+                      basic
+                      data-testid="library-health-copy-search-seeds"
+                      disabled={fixing}
+                      onClick={handleCopySearchSeeds}
+                      type="button"
+                    >
+                      <Icon name="search" />
+                      Copy Search Seeds
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Copy a manual quarantine review packet for selected risky issues. This does not change quarantine state, move files, send peer messages, or mutate files."
+                  trigger={
+                    <Button
+                      basic
+                      data-testid="library-health-copy-quarantine-packet"
+                      disabled={fixing}
+                      onClick={handleCopyQuarantinePacket}
+                      type="button"
+                    >
+                      <Icon name="shield" />
+                      Copy Quarantine Packet
+                    </Button>
+                  }
+                />
               </Segment>
             )}
 

@@ -98,4 +98,53 @@ public sealed class ArtistReleaseRadarController : ControllerBase
         var notifications = await _radarService.GetNotificationsAsync(unreadOnly, cancellationToken).ConfigureAwait(false);
         return Ok(notifications);
     }
+
+    [HttpPost("notifications/{notificationId}/routes")]
+    [ProducesResponseType(typeof(ArtistRadarRouteAttempt), 200)]
+    public async Task<IActionResult> RouteNotification(
+        string notificationId,
+        [FromBody] ArtistRadarRouteRequest routeRequest,
+        CancellationToken cancellationToken)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(notificationId))
+        {
+            return BadRequest("notificationId is required");
+        }
+
+        var attempt = await _radarService.RouteNotificationAsync(
+            notificationId,
+            routeRequest ?? new ArtistRadarRouteRequest(),
+            cancellationToken).ConfigureAwait(false);
+        if (!attempt.Success)
+        {
+            return BadRequest(attempt);
+        }
+
+        return Ok(attempt);
+    }
+
+    [HttpGet("notifications/{notificationId}/routes")]
+    [ProducesResponseType(typeof(IReadOnlyList<ArtistRadarRouteAttempt>), 200)]
+    public async Task<IActionResult> GetRouteAttempts(
+        string notificationId,
+        CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(notificationId))
+        {
+            return BadRequest("notificationId is required");
+        }
+
+        var attempts = await _radarService.GetRouteAttemptsAsync(notificationId, cancellationToken).ConfigureAwait(false);
+        return Ok(attempts);
+    }
 }

@@ -1,3 +1,148 @@
+## Update 2026-04-30 22:08:39Z
+
+- Current task: Epic E7 provider refresh, scheduled refresh, and slskdN playlist creation are implemented locally.
+- Last activity:
+  - connected Playlist Intake provider refresh to the existing Source Feed Import preview API
+  - added Apply Refresh for pasted rows and provider refresh application for mirrored playlist intake rows
+  - added scheduled refresh enablement and Run Due Refreshes execution for mirrored playlists
+  - added actual Playlist collection creation through the Collections API from matched Playlist Intake rows
+  - kept refresh execution sequential and bounded by per-playlist provider limits, with no Soulseek search, peer browse, or download
+  - validated focused Playlist Intake helper/component tests, App route tests, frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test`
+- Next steps:
+  1. Continue from the next beginning-lane epic after E7.
+  2. Keep future Playlist Intake acquisition actions bounded by provider limits and explicit user controls.
+
+## Update 2026-04-30 21:57:06Z
+
+- Current task: Frontend Quarantine Jury review UI phase is implemented locally.
+- Last activity:
+  - added Quarantine Jury Web UI API client
+  - added System -> Quarantine Jury request/review workspace
+  - surfaced evidence, juror verdicts, dissent, route attempts, explicit route dispatch, acceptance status, and modal-gated release-candidate acceptance
+  - kept local quarantine authoritative with no file movement, release broadcast, search, browse, download, or library mutation
+  - documented and fixed the post-action success-message refresh gotcha
+  - validated focused Quarantine Jury Web UI test, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue only after checking active lanes; Playlist Intake, MilkDrop, and MusicBrainz remain concurrently edited.
+  2. Keep Quarantine Jury file-release or quarantine-state changes behind separate explicit backend contracts.
+
+## Update 2026-04-30 21:57:55Z
+
+- Current task: Epic E7 Playlist Intake review handoff and playlist-build previews are implemented locally.
+- Last activity:
+  - added changed-row detection to mirror refresh previews
+  - added visible refresh cadence, cooldown, and disabled automation policy to playlist intake cards
+  - added bulk Discovery Inbox handoff for non-rejected playlist rows
+  - added matched-row slskdN playlist text preview without creating or mutating playlists
+  - kept the batch local-only with no provider fetch, Soulseek search, peer browse, download, scheduler, slskd playlist creation, or file mutation
+  - validated focused Playlist Intake helper/component tests and App route tests, frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test`
+- Next steps:
+  1. Continue from the next beginning-lane epic after E7 unless another Playlist Intake gap appears during integration.
+  2. Defer provider-backed playlist refresh, scheduled refresh execution, and actual slskd playlist mutation until credentials, rate limits, and explicit confirmation flows are implemented.
+
+## Update 2026-04-30 21:49:21Z
+
+- Current task: Epic E12 Library Health safe-fix manifest export is implemented locally.
+- Last activity:
+  - added selected auto-fixable issue safe-fix manifest generation
+  - surfaced Copy Safe-Fix Manifest in the Library Health selected-issue toolbar
+  - kept manifest export review-only with no remediation job, safe-fix execution, quarantine state change, search, download, or file mutation
+  - validated focused Library Health helper/component tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue tail-side work only where ownership stays clear of active Playlist Intake, MilkDrop, and MusicBrainz lanes.
+  2. Keep any Library Health execution path separate from these copy/export review surfaces.
+
+## Update 2026-04-30 21:48:49Z
+
+- Current task: Epic E7 Playlist Intake refresh diffs and row review controls are implemented locally.
+- Last activity:
+  - added browser-local added/removed/unchanged refresh diff previews for mirrored playlist rows
+  - added matched, unmatched, and rejected row review controls
+  - added partial completion summaries for matched, unmatched, and rejected rows
+  - preserved source identity and row evidence across review changes
+  - kept the batch local-only with no provider fetch, Soulseek search, peer browse, download, slskd playlist creation, scheduler, or file mutation
+  - validated focused Playlist Intake helper/component tests and App route tests, frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test`
+- Next steps:
+  1. Continue E7 with slskd playlist creation previews or Discovery Inbox bulk handoff if ownership remains clear.
+  2. Defer provider-backed playlist refresh until credentials, rate limits, and per-provider preview contracts are explicit.
+
+## Update 2026-04-30 21:45:52Z
+
+- Current task: Epic E12 Library Health quarantine review packet export is implemented locally.
+- Last activity:
+  - added selected-risky-issue quarantine review packet generation
+  - surfaced Copy Quarantine Packet in the Library Health selected-issue toolbar
+  - kept packet export review-only with no quarantine state change, file movement, peer message, remediation job, search, download, or file mutation
+  - validated focused Library Health helper/component tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Keep future Library Health handoffs explicit-review-first with no automatic quarantine/remediation.
+  2. Continue tail-side work only where ownership stays clear of active Playlist Intake, MilkDrop, and MusicBrainz lanes.
+
+## Update 2026-04-30 21:43:23Z
+
+- Current task: Epic E12 Library Health replacement search seed export is implemented locally.
+- Last activity:
+  - added deduped replacement search seed generation from selected Library Health issues
+  - surfaced Copy Search Seeds in the Library Health selected-issue toolbar
+  - kept seed export review-only with no Search navigation, peer browse, download, quarantine, remediation job, rescan, or file mutation
+  - validated focused Library Health helper/component tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue E12 only with review-first handoff surfaces that avoid automatic remediation.
+  2. Keep any future replacement-search handoff behind explicit user confirmation and bounded network policy.
+
+## Update 2026-04-30 22:04:19Z
+
+- Current task: T-933 federated taste recommendation graph/handoff follow-up is implemented locally.
+- Last activity:
+  - added optional Discovery Graph evidence and proximity scoring for recommendations
+  - added explicit backend handoffs to create review-only Wishlist seeds, artist release radar subscriptions, and Discovery Graph preview summaries
+  - allowed MusicBrainz artist UUID external IDs in safe WorkRefs for MBID-backed radar subscriptions
+  - kept service-layer k-anonymity and avoided peer/source reveal unless explicitly requested
+  - kept all handoffs passive: no Soulseek search, peer browse, download, federation publish, or file-library mutation
+  - validated focused `TasteRecommendationServiceTests`, `TasteRecommendationsControllerTests`, and `WorkRefTests`
+- Next steps:
+  1. Continue middle-lane backend work only if another non-UI federation follow-up remains clear; the remaining T-933 UI surface should stay with a UI owner.
+  2. Leave concurrent System Integrations, Library Health, Playlist Intake, Quarantine Jury UI, MilkDrop/Visualizer, Discovery Inbox, Player, Watchlist, and Discovery Shelf edits untouched unless asked to integrate.
+
+## Update 2026-04-30 21:51:38Z
+
+- Current task: T-932 signed artist radar observation routing follow-up is implemented locally.
+- Last activity:
+  - added explicit selected-peer PodCore route attempts for artist-radar notifications
+  - added safe opaque route metadata validation, signed local route envelopes, and route attempt API dispatch/history endpoints
+  - persists route attempts with the artist radar state file so route history survives daemon restarts
+  - kept routing manual-only with no automatic publication, MusicBrainz polling, Soulseek search, peer browse, download, or file-library mutation
+  - validated focused `ArtistReleaseRadar` service/controller tests
+- Next steps:
+  1. Continue center-lane work only if another backend-only federation follow-up remains clear of active UI lanes.
+  2. Leave concurrent System Integrations, Library Health, Playlist Intake, MilkDrop/Visualizer, Discovery Inbox, Player, Watchlist, and Discovery Shelf edits untouched unless asked to integrate.
+
+## Update 2026-04-30 21:40:56Z
+
+- Current task: Epic E7 browser-local Playlist Intake first slice is implemented locally.
+- Last activity:
+  - added a Playlist Intake route and navigation entry
+  - added browser-local playlist intake storage and parsing for pasted text/CSV-style rows
+  - retained playlist name, source identity, inferred provider, mirror-review setting, and per-row source lines
+  - surfaced matched/unmatched row state and Discovery Inbox review handoff
+  - kept the slice local-only with no provider fetch, Soulseek search, peer browse, download, slskd playlist creation, scheduler, or file mutation
+  - validated focused Playlist Intake helper/component tests and App route tests
+- Next steps:
+  1. Continue E7 with refresh diff previews for mirrored playlists if ownership remains clear.
+  2. Defer provider-backed playlist refresh until credentials, rate limits, and per-provider preview contracts are explicit.
+
+## Update 2026-04-30 21:41:12Z
+
+- Current task: T-932 artist release radar persistence follow-up is implemented locally.
+- Last activity:
+  - added an atomic JSON state file for radar subscriptions, muted release groups, seen-observation keys, and notifications
+  - reloads persisted radar state on service startup so notification history and duplicate suppression survive daemon restarts
+  - kept the feature local-only with no MusicBrainz polling, Soulseek search, peer browse, mesh routing, download, or file-library mutation
+  - validated focused `ArtistReleaseRadarServiceTests`
+- Next steps:
+  1. Continue center-lane work with signed artist radar observation routing only if it can use explicit trusted peers/realms and avoid automatic publication.
+  2. Leave concurrent System Integrations, Library Health, Playlist Intake, Discovery Inbox, Player, Watchlist, and Discovery Shelf edits untouched unless asked to integrate.
+
 ## Update 2026-04-30 21:29:48Z
 
 - Current task: Epic E6 review-only Watchlist similar-artist expansion approval is implemented locally.
@@ -12,6 +157,37 @@
   1. Continue beginning-lane burn-down into Epic E7 Playlist Intake only if it stays browser-local/file-first and avoids active System/Integrations work.
   2. Defer provider-backed similar-artist discovery until credentials, rate limits, and explicit expansion evidence contracts are defined.
 
+## Update 2026-04-30 21:47Z
+
+- Current task: T-938 native MilkDrop fragment management is implemented locally.
+- Last activity:
+  - added active custom shape/wave summaries to the native MilkDrop engine
+  - added selected-fragment export and selected-fragment removal controls to the visualizer overlay
+  - persisted edited presets back into the browser-local native preset library after shape/wave removal
+  - added persisted beat-count and timed-interval settings for native automatic preset changes
+  - added first native parameter editing for decay, zoom, rotation, waveform color/alpha, and full active-preset text export
+  - added bounded parameter randomization, pointer-fed mouse variables, and a compact native debug snapshot overlay
+  - added active native preset playlist rename support
+  - added browser-local native FPS caps and a debug frame-time readout
+  - documented and committed the DOM factory spy gotcha after fixing recursive `document.createElement` test failures
+  - validated focused Visualizer, native MilkDrop engine, and preset parser tests
+- Next steps:
+  1. Continue T-938 with Phase 4 polish: WebGPU investigation, shader cache/precompile, broader performance presets, and WebGL context-loss smoke coverage.
+  2. Keep native MilkDrop as opt-in until real-pack compatibility and performance behavior are measured across more devices.
+
+## Update 2026-04-30 21:32:19Z
+
+- Current task: T-931 Bloom-filter library diff is implemented locally.
+- Last activity:
+  - added serializable Bloom filter export/import support
+  - added MusicBrainz library Bloom snapshot preview, inbound diff comparison, and Wishlist promotion API/service
+  - compared inbound salted recording/release Bloom filters against local cached MusicBrainz candidates and local held recordings
+  - kept suggestions probabilistic and review-only with no filenames, paths, file hashes, exact identifier lists, publishing, searches, browsing, or downloads
+  - validated focused `LibraryBloomDiffServiceTests`
+- Next steps:
+  1. Continue center-lane backend work with artist radar persistence or signed radar routing if it avoids active frontend/options lanes.
+  2. Leave concurrent System Integrations, OptionsOverlay, Discovery Inbox, Player, Watchlist, and Discovery Shelf edits untouched unless asked to integrate.
+
 ## Update 2026-04-30 21:20:12Z
 
 - Current task: T-937 Discography Concierge graph-density prioritization is implemented locally.
@@ -23,6 +199,18 @@
 - Next steps:
   1. Continue center-lane backend work with Bloom-filter library diff or artist radar persistence if it avoids active frontend/options lanes.
   2. Leave concurrent Discovery Inbox, Player, Watchlist, Discovery Shelf, and Options edits untouched unless asked to integrate.
+
+## Update 2026-04-30 21:37:54Z
+
+- Current task: Epic E12 Library Health selected action-plan previews are implemented locally.
+- Last activity:
+  - added selected-issue safe-fix, replacement-search, and quarantine-review preview classification
+  - surfaced Copy Action Plan in the Library Health selected-issue toolbar
+  - kept action plans review-only with no remediation job, replacement search, quarantine, rescan, download, or file mutation
+  - validated focused Library Health report helper/component tests, frontend lint, frontend production build, and whitespace checks
+- Next steps:
+  1. Continue E12 with queue/quarantine handoff surfaces only after explicit backend confirmation contracts exist.
+  2. Keep Library Health follow-up actions review-first and separate from automatic remediation.
 
 ## Update 2026-04-30 21:30:10Z
 
@@ -3411,3 +3599,40 @@ dotnet test
 - Next steps:
   1. Continue the audit burn-down into webhooks/scripts or Transfer Policy.
   2. Keep runtime-editable surfaces paired with YAML persistence and clear validation warnings.
+
+## Update 2026-04-30 22:04:33Z
+
+- Current task: Subpath Web UI release-regression hardening is complete locally.
+- Last activity:
+  - changed the Vite build to emit relative asset references
+  - tightened build-output verification against root-relative `/assets/...` regressions
+  - expanded the subpath smoke script to serve `/slskd/system/info`, inject a mounted base href, and fetch JS/CSS assets from the mounted path
+  - updated backend HTML rewrite rules and focused unit coverage for non-root `web.url_base` base-tag injection
+  - closed the tracked frontend Vite/Vitest peer-alignment follow-up
+- Next steps:
+  1. Continue burning down the expansion list with another self-contained phase that avoids the concurrent MusicBrainz radar, Playlist Intake, and MilkDrop/native visualizer lanes.
+  2. Prefer changes with deterministic smoke coverage so future release regressions fail before tagging.
+
+## Update 2026-04-30 22:08:00Z
+
+- Current task: Mobile setup-health diagnostics are complete locally.
+- Last activity:
+  - added a browser-local setup health evaluator and copyable report formatter
+  - added System Info setup-health modal cards for connection, identity, shares, downloads, restart, URL base, and remote-configuration readiness
+  - styled the modal for narrow screens and dark mode while keeping actions tooltip-backed
+  - kept the feature observational with no peer contact, credential validation, scans, config writes, downloads, or file mutation
+- Next steps:
+  1. Continue tail-side feature-expansion work into more E23 mobile workflows or E22/E21 evidence surfaces, avoiding concurrent MusicBrainz radar, Playlist Intake, and MilkDrop/native visualizer files.
+  2. Add deterministic focused tests for each slice before moving on.
+
+## Update 2026-04-30 22:55:36Z
+
+- Current task: App-facing slskd branding rename is implemented locally.
+- Last activity:
+  - audited remaining `slskd` references and avoided blanket replacement
+  - updated visible Web UI labels/tooltips/errors to use `slskdN`
+  - updated notification default prefixes, config examples, docs, and related tests
+  - intentionally left compatibility-sensitive identifiers and upstream attribution unchanged
+- Next steps:
+  1. Run focused frontend tests and diff/grep validation.
+  2. Keep future branding edits scoped to user-visible slskdN-owned copy unless compatibility migration is explicitly planned.

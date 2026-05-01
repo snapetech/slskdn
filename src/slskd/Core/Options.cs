@@ -3541,7 +3541,7 @@ namespace slskd
                 [Argument(default, "pushbullet-prefix")]
                 [EnvironmentVariable("PUSHBULLET_NOTIFICATION_PREFIX")]
                 [Description("prefix for Pushbullet notification titles")]
-                public string NotificationPrefix { get; init; } = "From slskd:";
+                public string NotificationPrefix { get; init; } = "From slskdN:";
 
                 /// <summary>
                 ///     Gets a value indicating whether a Pushbullet notification should be sent when a private message is received.
@@ -3631,7 +3631,7 @@ namespace slskd
                 [Argument(default, "ntfy-prefix")]
                 [EnvironmentVariable("NTFY_NOTIFICATION_PREFIX")]
                 [Description("prefix for Ntfy notification titles")]
-                public string NotificationPrefix { get; init; } = "slskd";
+                public string NotificationPrefix { get; init; } = "slskdN";
 
                 /// <summary>
                 ///     Gets a value indicating whether an Ntfy notification should be sent when a private message is received.
@@ -3704,7 +3704,7 @@ namespace slskd
                 [Argument(default, "pushover-prefix")]
                 [EnvironmentVariable("PUSHOVER_NOTIFICATION_PREFIX")]
                 [Description("prefix for Pushover notification titles")]
-                public string NotificationPrefix { get; init; } = "slskd";
+                public string NotificationPrefix { get; init; } = "slskdN";
 
                 /// <summary>
                 ///     Gets a value indicating whether a Pushover notification should be sent when a private message is received.

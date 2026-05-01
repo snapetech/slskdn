@@ -258,13 +258,13 @@ describe('Integrations', () => {
           integration: {
             ntfy: {
               enabled: false,
-              notificationPrefix: 'slskd',
+              notificationPrefix: 'slskdN',
             },
             pushbullet: {
               accessToken: '*****',
               cooldownTime: 900000,
               enabled: false,
-              notificationPrefix: 'From slskd:',
+              notificationPrefix: 'From slskdN:',
               retryAttempts: 3,
             },
             pushover: {
@@ -294,7 +294,7 @@ describe('Integrations', () => {
         integration: {
           ntfy: {
             enabled: true,
-            notificationPrefix: 'slskd',
+            notificationPrefix: 'slskdN',
             notifyOnPrivateMessage: true,
             notifyOnRoomMention: true,
             url: 'https://ntfy.sh/slskdn',
@@ -302,14 +302,14 @@ describe('Integrations', () => {
           pushbullet: {
             cooldownTime: 900000,
             enabled: true,
-            notificationPrefix: 'From slskd:',
+            notificationPrefix: 'From slskdN:',
             notifyOnPrivateMessage: true,
             notifyOnRoomMention: true,
             retryAttempts: 3,
           },
           pushover: {
             enabled: false,
-            notificationPrefix: 'slskd',
+            notificationPrefix: 'slskdN',
             notifyOnPrivateMessage: true,
             notifyOnRoomMention: true,
           },

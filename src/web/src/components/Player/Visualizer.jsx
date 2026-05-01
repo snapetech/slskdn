@@ -15,6 +15,8 @@ const nativePresetStorageKey = 'slskdn.player.nativeMilkdropPreset';
 const nativePresetLibraryStorageKey = 'slskdn.player.nativeMilkdropPresetLibrary';
 const nativePresetAutomationStorageKey = 'slskdn.player.nativeMilkdropPresetAutomation';
 const nativePresetFavoritesStorageKey = 'slskdn.player.nativeMilkdropPresetFavorites';
+const nativePresetFpsCapStorageKey = 'slskdn.player.nativeMilkdropFpsCap';
+const nativePresetQualityStorageKey = 'slskdn.player.nativeMilkdropQuality';
 const nativePresetLibraryModeStorageKey = 'slskdn.player.nativeMilkdropPresetLibraryMode';
 const nativePresetSearchStorageKey = 'slskdn.player.nativeMilkdropPresetSearch';
 const nativePresetPlaylistsStorageKey = 'slskdn.player.nativeMilkdropPresetPlaylists';
@@ -23,6 +25,64 @@ const nativePresetLibraryLimit = 20;
 const nativePresetHistoryLimit = 12;
 const nativePresetPlaylistLimit = 12;
 const nativeTextureAssetMaxBytes = 1024 * 1024;
+const nativeEditableParameters = [
+  {
+    defaultValue: 0.9,
+    key: 'decay',
+    label: 'Decay',
+    max: 1,
+    min: 0.5,
+    step: 0.01,
+  },
+  {
+    defaultValue: 1,
+    key: 'zoom',
+    label: 'Zoom',
+    max: 1.5,
+    min: 0.5,
+    step: 0.01,
+  },
+  {
+    defaultValue: 0,
+    key: 'rot',
+    label: 'Rotation',
+    max: 0.5,
+    min: -0.5,
+    step: 0.01,
+  },
+  {
+    defaultValue: 0.7,
+    key: 'wave_r',
+    label: 'Wave red',
+    max: 1,
+    min: 0,
+    step: 0.01,
+  },
+  {
+    defaultValue: 0.7,
+    key: 'wave_g',
+    label: 'Wave green',
+    max: 1,
+    min: 0,
+    step: 0.01,
+  },
+  {
+    defaultValue: 0.7,
+    key: 'wave_b',
+    label: 'Wave blue',
+    max: 1,
+    min: 0,
+    step: 0.01,
+  },
+  {
+    defaultValue: 1,
+    key: 'wave_a',
+    label: 'Wave alpha',
+    max: 1,
+    min: 0,
+    step: 0.01,
+  },
+];
 
 const readStoredEngine = () => {
   return getLocalStorageItem(visualizerEngineStorageKey) === 'native'
@@ -46,10 +106,83 @@ const getNativeAutomationLabel = (mode) => {
   return 'Off';
 };
 
-const readStoredNativeAutomationMode = () => {
-  const mode = getLocalStorageItem(nativePresetAutomationStorageKey);
-  return ['beat', 'timed'].includes(mode) ? mode : 'off';
+const defaultNativeAutomationSettings = {
+  beatsPerPreset: 8,
+  mode: 'off',
+  timedIntervalSeconds: 30,
 };
+
+const normalizeNativeAutomationSettings = (settings = {}) => ({
+  ...defaultNativeAutomationSettings,
+  ...settings,
+  beatsPerPreset: [4, 8, 16].includes(Number(settings.beatsPerPreset))
+    ? Number(settings.beatsPerPreset)
+    : defaultNativeAutomationSettings.beatsPerPreset,
+  mode: ['beat', 'timed'].includes(settings.mode) ? settings.mode : 'off',
+  timedIntervalSeconds: [15, 30, 60].includes(Number(settings.timedIntervalSeconds))
+    ? Number(settings.timedIntervalSeconds)
+    : defaultNativeAutomationSettings.timedIntervalSeconds,
+});
+
+const readStoredNativeAutomationSettings = () => {
+  const stored = getLocalStorageItem(nativePresetAutomationStorageKey);
+  if (['beat', 'timed', 'off'].includes(stored)) {
+    return normalizeNativeAutomationSettings({ mode: stored });
+  }
+  try {
+    return normalizeNativeAutomationSettings(JSON.parse(stored || '{}'));
+  } catch {
+    return defaultNativeAutomationSettings;
+  }
+};
+
+const writeStoredNativeAutomationSettings = (settings) => {
+  setLocalStorageItem(
+    nativePresetAutomationStorageKey,
+    JSON.stringify(normalizeNativeAutomationSettings(settings)),
+  );
+};
+
+const getNativeEditableParameter = (key) =>
+  nativeEditableParameters.find((parameter) => parameter.key === key)
+  || nativeEditableParameters[0];
+
+const readStoredNativeFpsCap = () => {
+  const value = getLocalStorageItem(nativePresetFpsCapStorageKey, 'full');
+  return ['full', '60', '30', '24'].includes(value) ? value : 'full';
+};
+
+const getNativeFpsCapMs = (fpsCap) => {
+  if (fpsCap === '60') return 1000 / 60;
+  if (fpsCap === '30') return 1000 / 30;
+  if (fpsCap === '24') return 1000 / 24;
+  return 0;
+};
+
+const nativeQualityPresets = {
+  balanced: {
+    fpsCap: '60',
+    label: 'Balanced',
+  },
+  efficient: {
+    fpsCap: '30',
+    label: 'Efficient',
+  },
+  full: {
+    fpsCap: 'full',
+    label: 'Full',
+  },
+};
+
+const readStoredNativeQuality = () => {
+  const value = getLocalStorageItem(nativePresetQualityStorageKey, 'balanced');
+  return Object.keys(nativeQualityPresets).includes(value) || value === 'custom'
+    ? value
+    : 'balanced';
+};
+
+const supportsNativeWebGpu = () =>
+  typeof navigator !== 'undefined' && Boolean(navigator.gpu);
 
 const getVisualizerErrorMessage = (engineType, error) => {
   const detail = error?.message ? ` ${error.message}` : '';
@@ -363,14 +496,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const directoryInputRef = useRef(null);
   const engineRef = useRef(null);
   const fileInputRef = useRef(null);
+  const lastNativeMouseRef = useRef({ x: 0.5, y: 0.5 });
+  const lastNativeRenderAtRef = useRef(0);
   const rafRef = useRef(null);
   const engineAudioNodeRef = useRef(null);
-  const nativeAutomationModeRef = useRef(readStoredNativeAutomationMode());
+  const nativeAutomationSettingsRef = useRef(readStoredNativeAutomationSettings());
   const [fallbackMode, setFallbackMode] = useState(false);
   const [engineType, setEngineType] = useState(readStoredEngine);
   const [engineName, setEngineName] = useState('');
-  const [nativeAutomationMode, setNativeAutomationMode] = useState(
-    () => nativeAutomationModeRef.current,
+  const [nativeAutomationSettings, setNativeAutomationSettings] = useState(
+    () => nativeAutomationSettingsRef.current,
   );
   const [activeNativePresetId, setActiveNativePresetId] = useState(
     () => readStoredNativePreset()?.id || '',
@@ -383,10 +518,26 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   );
   const [nativePresetHistory, setNativePresetHistory] = useState([]);
   const [nativePresetLibrary, setNativePresetLibrary] = useState(readStoredNativePresetLibrary);
+  const [nativeFpsCap, setNativeFpsCap] = useState(readStoredNativeFpsCap);
+  const [nativeFrameMs, setNativeFrameMs] = useState(0);
+  const [nativeQualityPreset, setNativeQualityPreset] = useState(readStoredNativeQuality);
   const [nativePresetSearch, setNativePresetSearch] = useState(readStoredNativePresetSearch);
   const [nativePresetPlaylists, setNativePresetPlaylists] = useState(
     readStoredNativePresetPlaylists,
   );
+  const [nativeFragmentSummary, setNativeFragmentSummary] = useState({
+    shapes: [],
+    waves: [],
+  });
+  const [nativeParameterValues, setNativeParameterValues] = useState({});
+  const [nativeParameterDrafts, setNativeParameterDrafts] = useState({});
+  const [selectedNativeParameter, setSelectedNativeParameter] = useState(
+    nativeEditableParameters[0].key,
+  );
+  const [showNativeDebug, setShowNativeDebug] = useState(false);
+  const [nativeDebugSnapshot, setNativeDebugSnapshot] = useState(null);
+  const [selectedNativeShapeIndex, setSelectedNativeShapeIndex] = useState(0);
+  const [selectedNativeWaveIndex, setSelectedNativeWaveIndex] = useState(0);
   const [activeNativePlaylistId, setActiveNativePlaylistId] = useState(
     readStoredActiveNativePresetPlaylistId,
   );
@@ -424,11 +575,51 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     && nativePresetLibrary.length > 0
     && visibleNativePresetLibrary.length === 0;
   const canSaveNativePlaylist = visibleNativePresetLibrary.length > 0;
+  const hasNativeShapes = nativeFragmentSummary.shapes.length > 0;
+  const hasNativeWaves = nativeFragmentSummary.waves.length > 0;
+  const nativeAutomationMode = nativeAutomationSettings.mode;
+  const nativeParameter = getNativeEditableParameter(selectedNativeParameter);
+  const nativeParameterValue = Number(
+    nativeParameterDrafts[selectedNativeParameter]
+    ?? nativeParameterValues[selectedNativeParameter]
+    ?? nativeParameter.defaultValue,
+  );
 
-  const renderLoop = useCallback(() => {
+  const refreshNativeFragmentSummary = useCallback(() => {
+    const summary = engineRef.current?.getPresetFragmentSummary?.() || {
+      shapes: [],
+      waves: [],
+    };
+    setNativeFragmentSummary(summary);
+    setSelectedNativeShapeIndex((index) =>
+      Math.min(index, Math.max(0, summary.shapes.length - 1)));
+    setSelectedNativeWaveIndex((index) =>
+      Math.min(index, Math.max(0, summary.waves.length - 1)));
+    setNativeParameterValues(engineRef.current?.getPresetParameterSummary?.() || {});
+    setNativeParameterDrafts({});
+    setNativeDebugSnapshot(engineRef.current?.getPresetDebugSnapshot?.() || null);
+  }, []);
+
+  const renderLoop = useCallback((timestamp = performance.now()) => {
     if (!engineRef.current) return;
     try {
+      const fpsCapMs = engineType === 'native' ? getNativeFpsCapMs(nativeFpsCap) : 0;
+      if (
+        fpsCapMs > 0
+        && lastNativeRenderAtRef.current
+        && timestamp - lastNativeRenderAtRef.current < fpsCapMs
+      ) {
+        rafRef.current = window.requestAnimationFrame(renderLoop);
+        return;
+      }
+      const startedAt = performance.now();
       const renderResult = engineRef.current.render();
+      if (engineType === 'native') {
+        lastNativeRenderAtRef.current = timestamp;
+        if (showNativeDebug) {
+          setNativeFrameMs(Number((performance.now() - startedAt).toFixed(1)));
+        }
+      }
       if (renderResult?.presetName) {
         setPresetName(renderResult.presetName);
       }
@@ -442,11 +633,71 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       return;
     }
     rafRef.current = window.requestAnimationFrame(renderLoop);
-  }, [engineType]);
+  }, [engineType, nativeFpsCap, showNativeDebug]);
 
   const cycleNativeAutomationMode = useCallback(() => {
-    setNativeAutomationMode((current) => getNextNativeAutomationMode(current));
+    setNativeAutomationSettings((current) =>
+      normalizeNativeAutomationSettings({
+        ...current,
+        mode: getNextNativeAutomationMode(current.mode),
+      }));
   }, []);
+
+  const updateNativeAutomationBeats = useCallback((event) => {
+    setNativeAutomationSettings((current) =>
+      normalizeNativeAutomationSettings({
+        ...current,
+        beatsPerPreset: Number(event.target.value),
+      }));
+  }, []);
+
+  const updateNativeAutomationInterval = useCallback((event) => {
+    setNativeAutomationSettings((current) =>
+      normalizeNativeAutomationSettings({
+        ...current,
+        timedIntervalSeconds: Number(event.target.value),
+      }));
+  }, []);
+
+  const updateNativeFpsCap = useCallback((event) => {
+    const fpsCap = event.target.value;
+    setNativeFpsCap(fpsCap);
+    setNativeQualityPreset('custom');
+    setLocalStorageItem(nativePresetQualityStorageKey, 'custom');
+    if (fpsCap === 'full') {
+      removeLocalStorageItem(nativePresetFpsCapStorageKey);
+    } else {
+      setLocalStorageItem(nativePresetFpsCapStorageKey, fpsCap);
+    }
+    lastNativeRenderAtRef.current = 0;
+  }, []);
+
+  const updateNativeQualityPreset = useCallback((event) => {
+    const quality = event.target.value;
+    const preset = nativeQualityPresets[quality];
+    if (!preset) return;
+    setNativeQualityPreset(quality);
+    setLocalStorageItem(nativePresetQualityStorageKey, quality);
+    setNativeFpsCap(preset.fpsCap);
+    if (preset.fpsCap === 'full') {
+      removeLocalStorageItem(nativePresetFpsCapStorageKey);
+    } else {
+      setLocalStorageItem(nativePresetFpsCapStorageKey, preset.fpsCap);
+    }
+    lastNativeRenderAtRef.current = 0;
+  }, []);
+
+  const selectNativeParameter = useCallback((event) => {
+    setSelectedNativeParameter(event.target.value);
+  }, []);
+
+  const updateNativeParameterDraft = useCallback((event) => {
+    const value = Number(event.target.value);
+    setNativeParameterDrafts((drafts) => ({
+      ...drafts,
+      [selectedNativeParameter]: value,
+    }));
+  }, [selectedNativeParameter]);
 
   const sizeCanvas = useCallback(() => {
     const container = containerRef.current;
@@ -481,6 +732,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       }
       setActiveNativePresetId(preset.id);
       setPresetName(loadedPresetName);
+      refreshNativeFragmentSummary();
       sizeCanvas();
       return true;
     } catch (presetError) {
@@ -489,7 +741,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       setError(presetError?.message || 'Native preset load failed.');
       return false;
     }
-  }, [activeNativePresetId, sizeCanvas]);
+  }, [activeNativePresetId, refreshNativeFragmentSummary, sizeCanvas]);
 
   const loadNativePresetByOffset = useCallback((offset) => {
     if (visibleNativePresetLibrary.length === 0) return false;
@@ -615,6 +867,23 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     removeLocalStorageItem(activeNativePresetPlaylistStorageKey);
   }, []);
 
+  const renameActiveNativePlaylist = useCallback(() => {
+    const activePlaylist = nativePresetPlaylists.find(
+      (playlist) => playlist.id === activeNativePlaylistId,
+    );
+    if (!activePlaylist) return;
+    const nextName = window.prompt?.('Rename native MilkDrop playlist', activePlaylist.name);
+    if (!nextName || !nextName.trim()) return;
+    setNativePresetPlaylists((playlists) => {
+      const nextPlaylists = playlists.map((playlist) =>
+        (playlist.id === activePlaylist.id
+          ? { ...playlist, name: nextName.trim(), updatedAt: new Date().toISOString() }
+          : playlist));
+      writeStoredNativePresetPlaylists(nextPlaylists);
+      return nextPlaylists;
+    });
+  }, [activeNativePlaylistId, nativePresetPlaylists]);
+
   const removeActiveNativePlaylist = useCallback(() => {
     if (!activeNativePlaylistId) return;
     setNativePresetPlaylists((playlists) => {
@@ -668,7 +937,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         setEngineName(engine.name);
         setPresetName(engine.presetName);
         if (engineType === 'native' && engine.setPresetAutomation) {
-          engine.setPresetAutomation({ mode: nativeAutomationModeRef.current });
+          engine.setPresetAutomation(nativeAutomationSettingsRef.current);
+        }
+        if (engineType === 'native') {
+          refreshNativeFragmentSummary();
         }
         const storedNativePreset = engineType === 'native' ? readStoredNativePreset() : null;
         if (storedNativePreset?.source && engine.loadPresetText) {
@@ -679,6 +951,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           );
           setActiveNativePresetId(storedNativePreset.id || '');
           setPresetName(importedPresetName);
+          refreshNativeFragmentSummary();
         }
         sizeCanvas();
 
@@ -716,19 +989,19 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       engineAudioNodeRef.current = null;
       setEngineName('');
     };
-  }, [mode, audioElement, engineType, renderLoop, sizeCanvas]);
+  }, [mode, audioElement, engineType, refreshNativeFragmentSummary, renderLoop, sizeCanvas]);
 
   useEffect(() => {
     setLocalStorageItem(visualizerEngineStorageKey, engineType);
   }, [engineType]);
 
   useEffect(() => {
-    nativeAutomationModeRef.current = nativeAutomationMode;
-    setLocalStorageItem(nativePresetAutomationStorageKey, nativeAutomationMode);
+    nativeAutomationSettingsRef.current = nativeAutomationSettings;
+    writeStoredNativeAutomationSettings(nativeAutomationSettings);
     if (engineType === 'native' && engineRef.current?.setPresetAutomation) {
-      engineRef.current.setPresetAutomation({ mode: nativeAutomationMode });
+      engineRef.current.setPresetAutomation(nativeAutomationSettings);
     }
-  }, [engineType, nativeAutomationMode]);
+  }, [engineType, nativeAutomationSettings]);
 
   useEffect(() => {
     setNativeFavoritePresetIds((favoriteIds) => {
@@ -856,6 +1129,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       activePresetEntry = activePreset;
       setLocalStorageItem(nativePresetStorageKey, JSON.stringify(activePreset));
       setActiveNativePresetId(activePreset.id);
+      refreshNativeFragmentSummary();
       setNativePresetLibrary((library) => {
         const nextLibrary = imported.reduce(
           (next, entry) => upsertNativePresetLibraryEntry(next, entry),
@@ -901,6 +1175,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         importedFragmentCount += 1;
         setLocalStorageItem(nativePresetStorageKey, JSON.stringify(mergedPreset));
         setActiveNativePresetId(mergedPreset.id);
+        refreshNativeFragmentSummary();
         setNativePresetLibrary((library) => {
           const nextLibrary = upsertNativePresetLibraryEntry(library, mergedPreset);
           writeStoredNativePresetLibrary(nextLibrary);
@@ -926,12 +1201,13 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     if (importMessage) {
       setError(importMessage);
     }
-  }, [sizeCanvas]);
+  }, [refreshNativeFragmentSummary, sizeCanvas]);
 
   const exportNativeFragment = useCallback((type) => {
     if (!engineRef.current?.exportPresetFragment) return;
     try {
-      const exported = engineRef.current.exportPresetFragment(type);
+      const selectedIndex = type === 'wave' ? selectedNativeWaveIndex : selectedNativeShapeIndex;
+      const exported = engineRef.current.exportPresetFragment(type, selectedIndex);
       if (!exported) {
         setError(`No ${type} fragment is available in the active native preset.`);
         return;
@@ -943,7 +1219,145 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       console.error('Failed to export native MilkDrop fragment', exportError);
       setError(exportError?.message || 'Native fragment export failed.');
     }
+  }, [selectedNativeShapeIndex, selectedNativeWaveIndex]);
+
+  const exportNativePreset = useCallback(() => {
+    if (!engineRef.current?.exportPresetText) return;
+    try {
+      const exported = engineRef.current.exportPresetText();
+      if (!exported) {
+        setError('No native preset is available to export.');
+        return;
+      }
+      downloadTextFile(exported.fileName, exported.source);
+      setError(null);
+    } catch (exportError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to export native MilkDrop preset', exportError);
+      setError(exportError?.message || 'Native preset export failed.');
+    }
   }, []);
+
+  const removeNativeFragment = useCallback((type) => {
+    if (!engineRef.current?.removePresetFragment) return;
+    const selectedIndex = type === 'wave' ? selectedNativeWaveIndex : selectedNativeShapeIndex;
+    try {
+      const storedPreset = readStoredNativePreset();
+      const result = engineRef.current.removePresetFragment(type, selectedIndex, {
+        textureAssets: storedPreset?.textureAssets,
+      });
+      if (!result) {
+        setError(`No ${type} fragment is available in the active native preset.`);
+        return;
+      }
+      const editedPreset = {
+        fileName: storedPreset?.fileName || 'edited-native.milk',
+        id: storedPreset?.id || `edited:${Date.now().toString(36)}`,
+        source: result.source,
+        textureAssets: storedPreset?.textureAssets || {},
+        title: result.title,
+      };
+      setLocalStorageItem(nativePresetStorageKey, JSON.stringify(editedPreset));
+      setActiveNativePresetId(editedPreset.id);
+      setNativePresetLibrary((library) => {
+        const nextLibrary = upsertNativePresetLibraryEntry(library, editedPreset);
+        writeStoredNativePresetLibrary(nextLibrary);
+        return nextLibrary;
+      });
+      setPresetName(result.title);
+      refreshNativeFragmentSummary();
+      setError(null);
+      sizeCanvas();
+    } catch (removeError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to remove native MilkDrop fragment', removeError);
+      setError(removeError?.message || 'Native fragment removal failed.');
+    }
+  }, [
+    refreshNativeFragmentSummary,
+    selectedNativeShapeIndex,
+    selectedNativeWaveIndex,
+    sizeCanvas,
+  ]);
+
+  const applyNativeParameterEdit = useCallback(() => {
+    if (!engineRef.current?.updatePresetBaseValue) return;
+    try {
+      const storedPreset = readStoredNativePreset();
+      const result = engineRef.current.updatePresetBaseValue(
+        selectedNativeParameter,
+        nativeParameterValue,
+        {
+          textureAssets: storedPreset?.textureAssets,
+        },
+      );
+      if (!result) {
+        setError('Native parameter editing is not available for this value.');
+        return;
+      }
+      const editedPreset = {
+        fileName: storedPreset?.fileName || 'edited-native.milk',
+        id: storedPreset?.id || `edited:${Date.now().toString(36)}`,
+        source: result.source,
+        textureAssets: storedPreset?.textureAssets || {},
+        title: result.title,
+      };
+      setLocalStorageItem(nativePresetStorageKey, JSON.stringify(editedPreset));
+      setActiveNativePresetId(editedPreset.id);
+      setNativePresetLibrary((library) => {
+        const nextLibrary = upsertNativePresetLibraryEntry(library, editedPreset);
+        writeStoredNativePresetLibrary(nextLibrary);
+        return nextLibrary;
+      });
+      setPresetName(result.title);
+      setNativeParameterValues(result.values || {});
+      setNativeParameterDrafts({});
+      setError(null);
+      sizeCanvas();
+    } catch (editError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to edit native MilkDrop parameter', editError);
+      setError(editError?.message || 'Native parameter edit failed.');
+    }
+  }, [nativeParameterValue, selectedNativeParameter, sizeCanvas]);
+
+  const randomizeNativePresetParameters = useCallback(() => {
+    if (!engineRef.current?.randomizePresetParameters) return;
+    try {
+      const storedPreset = readStoredNativePreset();
+      const result = engineRef.current.randomizePresetParameters({
+        textureAssets: storedPreset?.textureAssets,
+      });
+      if (!result) {
+        setError('Native parameter randomization is not available for this preset.');
+        return;
+      }
+      const editedPreset = {
+        fileName: storedPreset?.fileName || 'randomized-native.milk',
+        id: storedPreset?.id || `randomized:${Date.now().toString(36)}`,
+        source: result.source,
+        textureAssets: storedPreset?.textureAssets || {},
+        title: result.title,
+      };
+      setLocalStorageItem(nativePresetStorageKey, JSON.stringify(editedPreset));
+      setActiveNativePresetId(editedPreset.id);
+      setNativePresetLibrary((library) => {
+        const nextLibrary = upsertNativePresetLibraryEntry(library, editedPreset);
+        writeStoredNativePresetLibrary(nextLibrary);
+        return nextLibrary;
+      });
+      setPresetName(result.title);
+      setNativeParameterValues(result.values || {});
+      setNativeParameterDrafts({});
+      refreshNativeFragmentSummary();
+      setError(null);
+      sizeCanvas();
+    } catch (randomizeError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to randomize native MilkDrop preset', randomizeError);
+      setError(randomizeError?.message || 'Native parameter randomization failed.');
+    }
+  }, [refreshNativeFragmentSummary, sizeCanvas]);
 
   const loadNativeLibraryPreset = useCallback((event) => {
     const preset = nativePresetLibrary.find((entry) => entry.id === event.target.value);
@@ -960,6 +1374,10 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     removeLocalStorageItem(activeNativePresetPlaylistStorageKey);
     setActiveNativePresetId('');
     setNativeFavoritePresetIds([]);
+    setNativeFragmentSummary({ shapes: [], waves: [] });
+    setNativeDebugSnapshot(null);
+    setNativeParameterDrafts({});
+    setNativeParameterValues({});
     setNativeLibraryMode('all');
     setNativePresetHistory([]);
     setNativePresetLibrary([]);
@@ -992,12 +1410,46 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     setError(null);
   }, [activeNativePresetId, nativeFavoritePresetIds]);
 
+  const updateNativeMouseState = useCallback((event) => {
+    if (engineType !== 'native' || !engineRef.current?.setMouseState) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect?.width || !rect?.height) return;
+    const mouseX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const mouseY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    const previous = lastNativeMouseRef.current;
+    lastNativeMouseRef.current = { x: mouseX, y: mouseY };
+    engineRef.current.setMouseState({
+      mouse_down: event.buttons > 0 ? 1 : 0,
+      mouse_dx: mouseX - previous.x,
+      mouse_dy: mouseY - previous.y,
+      mouse_x: mouseX,
+      mouse_y: mouseY,
+    });
+  }, [engineType]);
+
+  const clearNativeMouseState = useCallback(() => {
+    if (engineType !== 'native' || !engineRef.current?.setMouseState) return;
+    engineRef.current.setMouseState({
+      mouse_down: 0,
+      mouse_dx: 0,
+      mouse_dy: 0,
+    });
+  }, [engineType]);
+
   if (mode === 'off') return null;
 
   const className = `player-visualizer player-visualizer-${mode}`;
 
   return (
-    <div className={className} ref={containerRef}>
+    <div
+      className={className}
+      data-testid="player-visualizer"
+      onPointerDown={updateNativeMouseState}
+      onPointerLeave={clearNativeMouseState}
+      onPointerMove={updateNativeMouseState}
+      onPointerUp={clearNativeMouseState}
+      ref={containerRef}
+    >
       <canvas
         className="player-visualizer-canvas"
         hidden={fallbackMode}
@@ -1015,6 +1467,44 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         {mode !== 'inline' && (engineName || presetName) ? (
           <div className="player-visualizer-preset" title={presetName}>
             {[engineName, presetName].filter(Boolean).join(' · ')}
+          </div>
+          ) : null}
+        {showNativeDebug && nativeDebugSnapshot ? (
+          <div className="player-visualizer-debug" data-testid="visualizer-native-debug">
+            <div title={nativeDebugSnapshot.title}>{nativeDebugSnapshot.title}</div>
+            <div>
+              {nativeDebugSnapshot.format}
+              {' · '}
+              {nativeDebugSnapshot.presetCount}
+              {' preset'}
+              {nativeDebugSnapshot.presetCount === 1 ? '' : 's'}
+            </div>
+            <div>
+              {nativeDebugSnapshot.shapes}
+              {' shapes · '}
+              {nativeDebugSnapshot.waves}
+              {' waves · '}
+              {nativeDebugSnapshot.sprites}
+              {' sprites'}
+            </div>
+            <div>
+              {nativeDebugSnapshot.shaderSections.warp ? 'warp' : 'no warp'}
+              {' / '}
+              {nativeDebugSnapshot.shaderSections.comp ? 'comp' : 'no comp'}
+            </div>
+            <div>
+              {nativeFpsCap === 'full' ? 'uncapped' : `${nativeFpsCap} fps`}
+              {' · '}
+              {nativeFrameMs.toFixed(1)}
+              {' ms'}
+            </div>
+            <div>
+              {nativeQualityPreset === 'custom'
+                ? 'custom quality'
+                : `${nativeQualityPresets[nativeQualityPreset]?.label || 'Balanced'} quality`}
+              {' · '}
+              {supportsNativeWebGpu() ? 'WebGPU available' : 'WebGL2 baseline'}
+            </div>
           </div>
         ) : null}
         <div
@@ -1122,6 +1612,22 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                       size="mini"
                     >
                       <Icon name="save outline" />
+                    </Button>
+                  }
+                />
+              ) : null}
+              {activeNativePlaylistId ? (
+                <Popup
+                  content="Rename the active native playlist in this browser."
+                  trigger={
+                    <Button
+                      aria-label="Rename active native playlist"
+                      data-testid="visualizer-rename-native-playlist"
+                      icon
+                      onClick={renameActiveNativePlaylist}
+                      size="mini"
+                    >
+                      <Icon name="edit outline" />
                     </Button>
                   }
                 />
@@ -1336,11 +1842,158 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                 }
               />
               <Popup
-                content="Export the first custom shape in the active native preset as a .shape fragment."
+                content="Choose a global native MilkDrop parameter to edit on the active preset."
+                trigger={
+                  <select
+                    aria-label="Native MilkDrop editable parameter"
+                    className="player-visualizer-native-library"
+                    data-testid="visualizer-native-parameter"
+                    onChange={selectNativeParameter}
+                    value={selectedNativeParameter}
+                  >
+                    {nativeEditableParameters.map((parameter) => (
+                      <option key={parameter.key} value={parameter.key}>
+                        {parameter.label}
+                      </option>
+                    ))}
+                  </select>
+                }
+              />
+              <Popup
+                content={`Adjust ${nativeParameter.label.toLowerCase()} for the active native preset before applying the edited copy locally.`}
+                trigger={
+                  <input
+                    aria-label={`Adjust native MilkDrop ${nativeParameter.label}`}
+                    className="player-visualizer-native-range"
+                    data-testid="visualizer-native-parameter-value"
+                    max={nativeParameter.max}
+                    min={nativeParameter.min}
+                    onChange={updateNativeParameterDraft}
+                    step={nativeParameter.step}
+                    type="range"
+                    value={nativeParameterValue}
+                  />
+                }
+              />
+              <Popup
+                content="Apply the selected native MilkDrop parameter value and save the edited preset in this browser."
+                trigger={
+                  <Button
+                    aria-label="Apply native MilkDrop parameter edit"
+                    data-testid="visualizer-apply-native-parameter"
+                    icon
+                    onClick={applyNativeParameterEdit}
+                    size="mini"
+                  >
+                    <Icon name="sliders horizontal" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Randomize the active native MilkDrop preset's common visual parameters and save the edited copy locally."
+                trigger={
+                  <Button
+                    aria-label="Randomize native MilkDrop visual parameters"
+                    data-testid="visualizer-randomize-native-parameters"
+                    icon
+                    onClick={randomizeNativePresetParameters}
+                    size="mini"
+                  >
+                    <Icon name="shuffle" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Show or hide native MilkDrop debug details for the active preset."
+                trigger={
+                  <Button
+                    aria-label={showNativeDebug ? 'Hide native MilkDrop debug details' : 'Show native MilkDrop debug details'}
+                    active={showNativeDebug}
+                    data-testid="visualizer-toggle-native-debug"
+                    icon
+                    onClick={() => setShowNativeDebug((current) => !current)}
+                    size="mini"
+                  >
+                    <Icon name="bug" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Cap native MilkDrop rendering for lower GPU load, or leave it uncapped for maximum smoothness."
+                trigger={
+                  <select
+                    aria-label="Native MilkDrop FPS cap"
+                    className="player-visualizer-native-library"
+                    data-testid="visualizer-native-fps-cap"
+                    onChange={updateNativeFpsCap}
+                    value={nativeFpsCap}
+                  >
+                    <option value="full">Full FPS</option>
+                    <option value="60">60 FPS</option>
+                    <option value="30">30 FPS</option>
+                    <option value="24">24 FPS</option>
+                  </select>
+                }
+              />
+              <Popup
+                content="Choose a native MilkDrop quality preset. Efficient lowers GPU load, Balanced caps at 60 FPS, and Full leaves rendering uncapped."
+                trigger={
+                  <select
+                    aria-label="Native MilkDrop quality preset"
+                    className="player-visualizer-native-library"
+                    data-testid="visualizer-native-quality"
+                    onChange={updateNativeQualityPreset}
+                    value={nativeQualityPreset}
+                  >
+                    <option value="balanced">Balanced</option>
+                    <option value="efficient">Efficient</option>
+                    <option value="full">Full</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                }
+              />
+              <Popup
+                content="Export the active native MilkDrop preset text after any local edits."
+                trigger={
+                  <Button
+                    aria-label="Export active native MilkDrop preset"
+                    data-testid="visualizer-export-native-preset"
+                    icon
+                    onClick={exportNativePreset}
+                    size="mini"
+                  >
+                    <Icon name="file alternate outline" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Choose which custom shape from the active native preset should be exported or removed."
+                trigger={
+                  <select
+                    aria-label="Native MilkDrop shape fragment"
+                    className="player-visualizer-native-library"
+                    data-testid="visualizer-native-shape-fragment"
+                    disabled={!hasNativeShapes}
+                    onChange={(event) => setSelectedNativeShapeIndex(Number(event.target.value))}
+                    value={hasNativeShapes ? selectedNativeShapeIndex : 0}
+                  >
+                    {hasNativeShapes ? nativeFragmentSummary.shapes.map((shape) => (
+                      <option key={shape.index} value={shape.index}>
+                        {shape.label}
+                      </option>
+                    )) : (
+                      <option value={0}>No shapes</option>
+                    )}
+                  </select>
+                }
+              />
+              <Popup
+                content="Export the selected custom shape in the active native preset as a .shape fragment."
                 trigger={
                   <Button
                     aria-label="Export native MilkDrop shape fragment"
                     data-testid="visualizer-export-native-shape"
+                    disabled={!hasNativeShapes}
                     icon
                     onClick={() => exportNativeFragment('shape')}
                     size="mini"
@@ -1350,16 +2003,68 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                 }
               />
               <Popup
-                content="Export the first custom wave in the active native preset as a .wave fragment."
+                content="Remove the selected custom shape from the active native preset and persist the edited copy locally."
+                trigger={
+                  <Button
+                    aria-label="Remove native MilkDrop shape fragment"
+                    data-testid="visualizer-remove-native-shape"
+                    disabled={!hasNativeShapes}
+                    icon
+                    onClick={() => removeNativeFragment('shape')}
+                    size="mini"
+                  >
+                    <Icon name="erase" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Choose which custom wave from the active native preset should be exported or removed."
+                trigger={
+                  <select
+                    aria-label="Native MilkDrop wave fragment"
+                    className="player-visualizer-native-library"
+                    data-testid="visualizer-native-wave-fragment"
+                    disabled={!hasNativeWaves}
+                    onChange={(event) => setSelectedNativeWaveIndex(Number(event.target.value))}
+                    value={hasNativeWaves ? selectedNativeWaveIndex : 0}
+                  >
+                    {hasNativeWaves ? nativeFragmentSummary.waves.map((wave) => (
+                      <option key={wave.index} value={wave.index}>
+                        {wave.label}
+                      </option>
+                    )) : (
+                      <option value={0}>No waves</option>
+                    )}
+                  </select>
+                }
+              />
+              <Popup
+                content="Export the selected custom wave in the active native preset as a .wave fragment."
                 trigger={
                   <Button
                     aria-label="Export native MilkDrop wave fragment"
                     data-testid="visualizer-export-native-wave"
+                    disabled={!hasNativeWaves}
                     icon
                     onClick={() => exportNativeFragment('wave')}
                     size="mini"
                   >
                     <Icon name="download" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Remove the selected custom wave from the active native preset and persist the edited copy locally."
+                trigger={
+                  <Button
+                    aria-label="Remove native MilkDrop wave fragment"
+                    data-testid="visualizer-remove-native-wave"
+                    disabled={!hasNativeWaves}
+                    icon
+                    onClick={() => removeNativeFragment('wave')}
+                    size="mini"
+                  >
+                    <Icon name="erase" />
                   </Button>
                 }
               />
@@ -1378,6 +2083,42 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                   </Button>
                 }
               />
+              {nativeAutomationMode === 'beat' ? (
+                <Popup
+                  content="Choose how many detected bass beats should pass before native MilkDrop advances to another preset."
+                  trigger={
+                    <select
+                      aria-label="Native MilkDrop beats per preset"
+                      className="player-visualizer-native-library"
+                      data-testid="visualizer-native-automation-beats"
+                      onChange={updateNativeAutomationBeats}
+                      value={nativeAutomationSettings.beatsPerPreset}
+                    >
+                      <option value={4}>4 beats</option>
+                      <option value={8}>8 beats</option>
+                      <option value={16}>16 beats</option>
+                    </select>
+                  }
+                />
+              ) : null}
+              {nativeAutomationMode === 'timed' ? (
+                <Popup
+                  content="Choose how long native MilkDrop should wait before timed preset changes."
+                  trigger={
+                    <select
+                      aria-label="Native MilkDrop timed preset interval"
+                      className="player-visualizer-native-library"
+                      data-testid="visualizer-native-automation-interval"
+                      onChange={updateNativeAutomationInterval}
+                      value={nativeAutomationSettings.timedIntervalSeconds}
+                    >
+                      <option value={15}>15 sec</option>
+                      <option value={30}>30 sec</option>
+                      <option value={60}>60 sec</option>
+                    </select>
+                  }
+                />
+              ) : null}
             </>
           ) : null}
           <Popup

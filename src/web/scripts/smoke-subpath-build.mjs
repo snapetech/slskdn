@@ -7,6 +7,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const buildDir = path.resolve(scriptDir, '..', 'build');
 const indexPath = path.join(buildDir, 'index.html');
 const mountPath = '/slskd/';
+const deepLinkPath = '/slskd/system/info';
 
 const contentTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -58,8 +59,8 @@ function resolveFilePath(requestPath) {
   return filePath;
 }
 
-function rewriteHtmlForMountPath(html) {
-  return html.replace(/((?:src|href)=["'])\/(?!\/)/g, `$1${mountPath}`);
+function injectBaseHref(html) {
+  return html.replace('<head>', `<head><base href="${mountPath}" />`);
 }
 
 if (!fs.existsSync(indexPath)) {
@@ -70,6 +71,14 @@ const server = http.createServer((req, res) => {
   const requestPath = normalizeRequestPath(req.url ?? mountPath);
   const filePath = resolveFilePath(requestPath);
 
+  const extension = path.extname(requestPath);
+
+  if ((!filePath || !fs.existsSync(filePath)) && !extension && requestPath.startsWith(mountPath)) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(injectBaseHref(fs.readFileSync(indexPath, 'utf8')));
+    return;
+  }
+
   if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not Found');
@@ -78,7 +87,7 @@ const server = http.createServer((req, res) => {
 
   if (filePath === indexPath) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(rewriteHtmlForMountPath(fs.readFileSync(filePath, 'utf8')));
+    res.end(injectBaseHref(fs.readFileSync(filePath, 'utf8')));
     return;
   }
 
@@ -93,7 +102,8 @@ server.listen(0, '127.0.0.1', async () => {
     fail('Failed to bind subpath smoke test server');
   }
 
-  const baseUrl = `http://127.0.0.1:${address.port}${mountPath}`;
+  const origin = `http://127.0.0.1:${address.port}`;
+  const baseUrl = `${origin}${deepLinkPath}`;
 
   try {
     const indexResponse = await fetch(baseUrl);
@@ -103,15 +113,23 @@ server.listen(0, '127.0.0.1', async () => {
     }
 
     const indexHtml = await indexResponse.text();
-    const mountedAssetMatches = [...indexHtml.matchAll(/(?:src|href)="(\/slskd\/[^"]+)"/g)];
-    const mountedAssetPaths = [...new Set(mountedAssetMatches.map((match) => match[1]))];
-
-    if (mountedAssetPaths.length === 0) {
-      fail('Expected rewritten index.html to expose mount-prefixed asset references under a subpath');
+    if (/(?:src|href)="\/assets\//.test(indexHtml)) {
+      fail('Expected built index.html to avoid root-relative /assets references');
     }
 
-    for (const mountedAssetPath of mountedAssetPaths) {
-      const assetUrl = new URL(mountedAssetPath, `http://127.0.0.1:${address.port}`);
+    if (!indexHtml.includes(`<base href="${mountPath}" />`)) {
+      fail('Expected served index.html to inject a mount base href for deep-link asset resolution');
+    }
+
+    const assetMatches = [...indexHtml.matchAll(/(?:src|href)="(\.\/assets\/[^"]+)"/g)];
+    const assetPaths = [...new Set(assetMatches.map((match) => match[1]))];
+
+    if (assetPaths.length === 0) {
+      fail('Expected built index.html to expose relative asset references under a subpath');
+    }
+
+    for (const assetPath of assetPaths) {
+      const assetUrl = new URL(assetPath, `${origin}${mountPath}`);
       const assetResponse = await fetch(assetUrl);
 
       if (!assetResponse.ok) {
@@ -120,16 +138,16 @@ server.listen(0, '127.0.0.1', async () => {
 
       const contentType = assetResponse.headers.get('content-type') ?? '';
 
-      if (mountedAssetPath.endsWith('.js') && contentType.includes('text/html')) {
+      if (assetPath.endsWith('.js') && contentType.includes('text/html')) {
         fail(`Expected ${assetUrl} to resolve to JavaScript, got ${contentType}`);
       }
 
-      if (mountedAssetPath.endsWith('.css') && contentType.includes('text/html')) {
+      if (assetPath.endsWith('.css') && contentType.includes('text/html')) {
         fail(`Expected ${assetUrl} to resolve to CSS, got ${contentType}`);
       }
     }
 
-    console.log('Verified built web output loads correctly when mounted under /slskd/ with backend-style HTML rewriting.');
+    console.log('Verified built web output loads correctly from a deep link under /slskd/ with relative assets and a mounted base href.');
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
   } finally {

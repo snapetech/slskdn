@@ -119,7 +119,7 @@ namespace slskd.SocialFederation
         /// <summary>Keys where a UUID-like value is expected (e.g. MusicBrainz, Discogs) and should not be rejected.</summary>
         private static readonly HashSet<string> ExternalIdKeysAllowUuid = new(StringComparer.OrdinalIgnoreCase)
         {
-            "musicbrainz", "discogs"
+            "musicbrainz", "musicbrainz_artist", "musicbrainzArtist", "discogs"
         };
 
         public bool ValidateSecurity()

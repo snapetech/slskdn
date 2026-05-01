@@ -26,20 +26,57 @@
   gap: 14px;
 }
 
+.quarantine-jury {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .source-providers-header,
-.source-provider-title-row {
+.source-provider-title-row,
+.quarantine-jury-header,
+.quarantine-jury-detail-head {
   align-items: center;
   display: flex;
   gap: 10px;
   justify-content: space-between;
 }
 
-.source-providers-header .ui.header {
+.source-providers-header .ui.header,
+.quarantine-jury-header .ui.header,
+.quarantine-jury-detail-head .ui.header {
   margin: 0 !important;
 }
 
-.source-providers-summary.ui.statistics {
+.source-providers-summary.ui.statistics,
+.quarantine-jury-summary.ui.statistics {
   margin: 12px 0 0 !important;
+}
+
+.quarantine-jury-layout {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 2fr);
+}
+
+.quarantine-jury-list,
+.quarantine-jury-detail {
+  min-width: 0;
+}
+
+.quarantine-jury-request.ui.card {
+  cursor: pointer;
+}
+
+.quarantine-jury-request.ui.card.active {
+  border-color: var(--slskdn-accent-purple, #a277ff);
+  box-shadow: 0 0 0 1px var(--slskdn-accent-purple, #a277ff);
+}
+
+@media only screen and (max-width: 900px) {
+  .quarantine-jury-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .source-provider-grid.ui.cards,
@@ -219,6 +256,90 @@
   font-family: monospace;
   min-height: 360px;
   width: 100%;
+}
+
+.setup-health-summary.ui.message {
+  margin-bottom: 14px;
+}
+
+.setup-health-stats.ui.statistics {
+  margin: 0 0 14px !important;
+}
+
+.setup-health-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
+.setup-health-card {
+  background: var(--slskd-card-background, #fff);
+  border: 1px solid var(--slskd-border-color, rgba(34, 36, 38, 0.15));
+  border-left: 4px solid var(--slskdn-accent-purple, #a277ff);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  min-width: 0;
+  padding: 12px;
+}
+
+.setup-health-card-pass {
+  border-left-color: #21ba45;
+}
+
+.setup-health-card-warn {
+  border-left-color: var(--slskdn-accent-warm, #f0b35a);
+}
+
+.setup-health-card-fail {
+  border-left-color: #db2828;
+}
+
+.setup-health-card-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.setup-health-card-title.ui.header {
+  margin: 0 !important;
+}
+
+.setup-health-card-summary {
+  color: var(--slskd-color, rgba(0, 0, 0, 0.87));
+  font-weight: 700;
+  margin: 10px 0 4px;
+}
+
+.setup-health-card-evidence,
+.setup-health-card-action {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  margin: 4px 0 0;
+}
+
+:root.dark .setup-health-card {
+  background: var(--slskd-card-background) !important;
+  border-color: var(--slskd-border-color) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28) !important;
+}
+
+:root.dark .setup-health-card-summary {
+  color: var(--slskd-color) !important;
+}
+
+:root.dark .setup-health-card-evidence,
+:root.dark .setup-health-card-action {
+  color: var(--slskd-color-subtle) !important;
+}
+
+@media only screen and (max-width: 760px) {
+  .setup-health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-health-card {
+    padding: 14px;
+  }
 }
 
 .header-buttons {

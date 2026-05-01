@@ -118,6 +118,45 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.resize).toHaveBeenCalledWith(320, 180);
   });
 
+  it('feeds mouse state into native preset render frames', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 12,
+        sampleRate: 48000,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    renderer.render.mockClear();
+
+    engine.setMouseState({
+      mouse_down: 1,
+      mouse_dx: 0.2,
+      mouse_dy: -0.1,
+      mouse_x: 0.75,
+      mouse_y: 0.25,
+    });
+    engine.render();
+
+    expect(renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audio: expect.objectContaining({
+          mouse_down: 1,
+          mouse_dx: 0.2,
+          mouse_dy: -0.1,
+          mouse_x: 0.75,
+          mouse_y: 0.25,
+        }),
+      }),
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
+    );
+  });
+
   it('cycles presets by replacing the renderer and disposes audio taps', async () => {
     const analyser = createAnalyser();
     const audioNode = {
@@ -641,6 +680,145 @@ describe('createNativeMilkdropEngine', () => {
     expect(engine.exportPresetFragment('wave')).toEqual(expect.objectContaining({
       fileName: 'Fragment_base_star.shape_scope.wave.wave',
       source: expect.stringContaining('samples=32'),
+    }));
+    expect(engine.exportPresetText()).toEqual(expect.objectContaining({
+      fileName: 'Fragment_base_star.shape_scope.wave.milk',
+      source: expect.stringContaining('wavecode_0_samples=32'),
+    }));
+    expect(engine.getPresetFragmentSummary()).toEqual({
+      shapes: [{ index: 0, label: 'Shape 1: 7 sides' }],
+      waves: [{ index: 0, label: 'Wave 1: 32 samples' }],
+    });
+  });
+
+  it('removes selected shape and wave fragments from the active preset', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+
+    engine.loadPresetText(`
+      name=Editable fragments
+      shape00_enabled=1
+      shape00_sides=3
+      shape01_enabled=1
+      shape01_sides=8
+      wavecode_0_enabled=1
+      wavecode_0_samples=32
+      wavecode_1_enabled=1
+      wavecode_1_samples=64
+    `, 'editable.milk', { blendSeconds: 0 });
+
+    const shapeResult = engine.removePresetFragment('shape', 1, { blendSeconds: 0 });
+    expect(shapeResult.title).toBe('Editable fragments - shape 2');
+    expect(shapeResult.source).toContain('shape00_sides=3');
+    expect(shapeResult.source).not.toContain('shape01_sides=8');
+    expect(engine.getPresetFragmentSummary().shapes).toEqual([
+      { index: 0, label: 'Shape 1: 3 sides' },
+    ]);
+
+    const waveResult = engine.removePresetFragment('wave', 0, { blendSeconds: 0 });
+    expect(waveResult.title).toBe('Editable fragments - shape 2 - wave 1');
+    expect(waveResult.source).toContain('wavecode_0_samples=64');
+    expect(waveResult.source).not.toContain('wavecode_1_samples=64');
+    expect(engine.removePresetFragment('wave', 3)).toBeNull();
+  });
+
+  it('updates supported global preset parameters and serializes the edited preset', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+    createMilkdropRenderer.mockClear();
+
+    engine.loadPresetText(`
+      name=Editable globals
+      zoom=1
+      wave_r=0.2
+    `, 'editable.milk', { blendSeconds: 0 });
+    const result = engine.updatePresetBaseValue('zoom', 1.25, { blendSeconds: 0 });
+
+    expect(result.title).toBe('Editable globals edited');
+    expect(result.source).toContain('zoom=1.25');
+    expect(result.values).toEqual(expect.objectContaining({
+      wave_r: 0.2,
+      zoom: 1.25,
+    }));
+    expect(engine.getPresetParameterSummary()).toEqual(expect.objectContaining({
+      wave_r: 0.2,
+      zoom: 1.25,
+    }));
+    expect(createMilkdropRenderer).toHaveBeenLastCalledWith(expect.objectContaining({
+      preset: expect.objectContaining({
+        baseValues: expect.objectContaining({ zoom: 1.25 }),
+      }),
+    }));
+    expect(engine.updatePresetBaseValue('unsupported', 1)).toBeNull();
+    expect(engine.updatePresetBaseValue('zoom', Number.NaN)).toBeNull();
+  });
+
+  it('randomizes editable parameters and exposes debug snapshots', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 0,
+        sampleRate: 44100,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+    });
+
+    engine.loadPresetText(`
+      name=Debug fixture
+      decay=0.9
+      zoom=1
+      warp_shader=ret = vec3(uv, 1.0);
+      shape00_enabled=1
+      shape00_sides=4
+      wavecode_0_enabled=1
+      wavecode_0_samples=32
+    `, 'debug.milk', { blendSeconds: 0 });
+    const result = engine.randomizePresetParameters({
+      blendSeconds: 0,
+      random: () => 1,
+    });
+
+    expect(result.title).toBe('Debug fixture randomized');
+    expect(result.values).toEqual(expect.objectContaining({
+      decay: 0.95,
+      rot: 0.25,
+      zoom: 1.25,
+    }));
+    expect(result.source).toContain('zoom=1.25');
+    expect(engine.getPresetDebugSnapshot()).toEqual(expect.objectContaining({
+      format: 'milk',
+      presetCount: 1,
+      shaderSections: { comp: false, warp: true },
+      shapes: 1,
+      title: 'Debug fixture randomized',
+      waves: 1,
     }));
   });
 

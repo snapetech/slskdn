@@ -1,3 +1,73 @@
+## 2026-04-30 22:08:39Z - Enabled Playlist Intake refresh and playlist creation
+
+- Continued Epic E7 after removing the earlier deferral around provider refresh, scheduled execution, and playlist mutation.
+- Wired Playlist Intake provider refresh to the existing Source Feed Import preview API, including optional bearer-token use and provider request counts.
+- Added Apply Refresh for pasted rows and provider refresh application for mirrored playlists, preserving existing matched/rejected row review state where rows remain unchanged.
+- Added scheduled refresh enablement and due-run execution for mirrored playlists; due refreshes run sequentially and remain bounded by the playlist provider limit.
+- Added actual slskdN Playlist collection creation from matched rows through the Collections API, recording planned playlist entries when local library content IDs are not available yet.
+- Kept acquisition network impact bounded: no Soulseek search, peer browse, or download is started by these paths.
+- Validation: focused Playlist Intake helper/component tests and App route tests passed; frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test` also passed.
+
+## 2026-04-30 21:57:55Z - Completed larger Playlist Intake review batch
+
+- Continued the beginning-lane Epic E7 Playlist Intake and Mirroring burn-down with a larger completion-oriented slice.
+- Added changed-row detection to mirrored playlist refresh previews, alongside added, removed, and unchanged counts.
+- Added visible refresh automation policy on playlist cards, including cadence, cooldown, and explicit disabled automation state.
+- Added bulk Discovery Inbox handoff for every non-rejected playlist row.
+- Added a matched-row slskdN playlist text preview so users can review what would be created before any playlist mutation exists.
+- Kept the batch review-only: no provider fetch, Soulseek search, peer browse, download, scheduler, slskd playlist creation, or file mutation is started.
+- Validation: focused Playlist Intake helper/component tests and App route tests passed; frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test` also passed.
+
+## 2026-04-30 21:48:49Z - Added Playlist Intake refresh diffs and row review controls
+
+- Continued the beginning-lane Epic E7 Playlist Intake and Mirroring burn-down with a larger review batch.
+- Added browser-local refresh diff previews for mirrored playlist rows, including added, removed, and unchanged counts.
+- Added matched, unmatched, and rejected row review controls while retaining imported source evidence.
+- Added partial completion summaries so playlists can proceed even when some rows remain unmatched or rejected.
+- Kept the batch review-only: no provider fetch, Soulseek search, peer browse, download, slskd playlist creation, scheduler, or file mutation is started.
+- Validation: focused Playlist Intake helper/component tests and App route tests passed; frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test` also passed.
+
+## 2026-04-30 21:47Z - Added native MilkDrop fragment selectors
+
+- Continued T-938 browser-native MilkDrop3-compatible visualizer work.
+- Added active-preset custom shape and wave summaries to the native engine.
+- Added selected shape/wave export and selected shape/wave removal controls in the player visualizer overlay.
+- Persisted edited presets back into the browser-local native preset library after fragment removal.
+- Added persisted native automation settings for beat-count and timed-interval preset changes.
+- Added first safe parameter editing for decay, zoom, rotation, and waveform color/alpha, plus full active-preset text export.
+- Added bounded native parameter randomization for local mashup/edit creation.
+- Added pointer-fed native mouse variables (`mouse_x/y`, deltas, and button state) for preset equations.
+- Added a compact native debug overlay with active title, format, primitive counts, and shader section visibility.
+- Added active native preset playlist rename support.
+- Added browser-local native FPS caps and a debug frame-time readout for visible GPU-load tuning.
+- Documented the DOM factory spy gotcha after fixing recursive `document.createElement` test failures.
+- Validation: focused Visualizer, native MilkDrop engine, and preset parser tests passed.
+
+## 2026-04-30 22:04:19Z
+
+- Continued the center-lane federation epic with the T-933 taste recommendation graph/handoff follow-up.
+- Added optional Discovery Graph evidence and proximity scoring to federated taste recommendations while keeping service-layer k-anonymity intact.
+- Added explicit backend handoffs for review-only Wishlist seeds, artist release radar subscriptions, and Discovery Graph preview summaries.
+- Allowed MusicBrainz artist UUID external IDs in safe WorkRefs so radar subscriptions can use MBID-backed recommendations without treating public catalog IDs as sensitive local identifiers.
+- Kept the slice passive and review-first: no Soulseek search, peer browse, download, federation publish, or file-library mutation is started.
+- Validation: focused `TasteRecommendationServiceTests`, `TasteRecommendationsControllerTests`, and `WorkRefTests` passed.
+
+## 2026-04-30 21:51:38Z
+
+- Continued the center-lane T-932 follow-ups with explicit artist release radar routing.
+- Added selected-peer PodCore route attempts for artist-radar notifications, including safe opaque route metadata validation and signed local route envelopes.
+- Route attempts now persist with the existing artist radar state file and can be reviewed through API history endpoints.
+- Kept routing manual and scoped: no automatic publication, MusicBrainz polling, Soulseek search, peer browse, download, or file-library mutation was added.
+- Validation: focused `ArtistReleaseRadar` unit/controller tests passed.
+
+## 2026-04-30 21:40:56Z - Added browser-local Playlist Intake surface
+
+- Continued the beginning-lane burn-down into Epic E7 Playlist Intake and Mirroring.
+- Added a browser-local Playlist Intake route for pasted playlist rows with source identity, provider/source inference, mirror-review visibility, and matched/unmatched row state.
+- Added row handoff to Discovery Inbox review while retaining playlist source evidence.
+- Kept the slice local-only: no provider fetch, Soulseek search, peer browse, download, slskd playlist creation, scheduler, or file mutation is started.
+- Validation: focused Playlist Intake helper/component tests and App route tests passed.
+
 ## 2026-04-30 21:29:48Z - Added Watchlist similar-artist expansion approval
 
 - Continued the beginning-lane Epic E6 Watchlists and Release Radar burn-down.
@@ -8355,6 +8425,48 @@ Code quality improvements were completed as part of Option A:
 - Extended the source-provider catalog with per-acquisition-profile provider priority policies.
 - Source Providers now shows Lossless Exact, Fast Good Enough, Album Complete, Rare Hunt, Conservative Network, Mesh Preferred, and Metadata Strict routing order.
 - Every profile policy is explicitly manual-only for now, so users can inspect fallback order without enabling unattended acquisition.
+
+## 2026-04-30 21:43:23Z
+
+- Continued Epic E12 Library Health with replacement-search seed exports.
+- Added a helper that derives deduped search seed queries from selected replacement-candidate issues using loaded artist, album, title, or path metadata.
+- Added Copy Search Seeds beside the existing selected-issue action-plan control in Library Health.
+- Kept the export review-only: no Search navigation, peer browse, download, quarantine, remediation job, rescan, or file mutation is started.
+- Validation: focused Library Health tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 21:45:52Z
+
+- Continued Epic E12 Library Health with quarantine review packet exports.
+- Added a helper that filters selected risky issues into a manual quarantine review checklist with issue labels, reason text, and local evidence paths.
+- Added Copy Quarantine Packet beside the existing selected-issue exports in Library Health.
+- Kept the packet review-only: no quarantine state change, file movement, peer message, remediation job, search, download, or file mutation is started.
+- Validation: focused Library Health tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 21:49:21Z
+
+- Continued Epic E12 Library Health with safe-fix manifest exports.
+- Added a helper that filters selected auto-fixable issues into a safe-fix manifest with issue labels, reason text, and target paths.
+- Added Copy Safe-Fix Manifest beside the existing selected-issue exports in Library Health.
+- Kept the manifest review-only: no remediation job, safe-fix execution, quarantine state change, search, download, or file mutation is started.
+- Validation: focused Library Health tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 21:57:06Z
+
+- Completed the pending frontend Quarantine Jury review UI phase.
+- Added a Web UI API client for Quarantine Jury request, review, route, and release-candidate acceptance endpoints.
+- Added System -> Quarantine Jury with request listing, aggregate recommendation summary, request evidence, juror verdicts, dissent display, route-attempt history, explicit route-dispatch controls, and modal-gated release-candidate acceptance.
+- Kept local quarantine authoritative: the UI records route attempts or local acceptance only through explicit user actions and does not move files, broadcast release state, search, browse, download, or mutate library files.
+- Fixed and documented a UI gotcha where post-action success messages were cleared by the follow-up review refresh.
+- Validation: focused Quarantine Jury Web UI test, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-04-30 21:37:54Z
+
+- Continued Epic E12 Library Health with selected-issue action-plan previews.
+- Added a report helper that classifies selected issues into safe-fix, replacement-search, and quarantine-review preview buckets.
+- Added Copy Action Plan beside the existing selected-issue controls in Library Health.
+- Kept the plan review-only: no remediation job, replacement search, quarantine, rescan, download, or file mutation is started.
+- Validation: focused Library Health tests, frontend lint, frontend production build, and whitespace checks passed.
+
 ## 2026-04-30 21:30:10Z
 
 - Continued the tail-side burn-down into Epic E12 Library Health.
@@ -8412,6 +8524,13 @@ Code quality improvements were completed as part of Option A:
 - `RealmSubjectIndexService` now records proposal and review governance documents when a realm governance client is available, keeps proposed revisions out of resolution while pending or rejected, and publishes accepted revisions into the existing recording-MBID resolver only after a trusted governance-root review.
 - Validation: focused `RealmSubjectIndexServiceTests` passed (`10/10`).
 
+## 2026-04-30 21:32:19Z
+
+- Continued center-lane work with T-931 Bloom-filter library diff.
+- Added serializable Bloom filters plus a MusicBrainz library Bloom service/API for salted versioned snapshot previews, inbound likely-gap comparison, and review-only Wishlist promotion.
+- Kept snapshots limited to salted Bloom membership metadata and namespace counts; no filenames, paths, file hashes, exact identifiers, publishing, Soulseek searches, peer browsing, or downloads are triggered.
+- Validation: focused `LibraryBloomDiffServiceTests` passed (`5/5`).
+
 ## 2026-04-30 21:20:12Z
 
 - Continued center-lane work with T-937 Discography Concierge graph-density prioritization.
@@ -8443,6 +8562,14 @@ Code quality improvements were completed as part of Option A:
 - Search detail smart ranking now uses the explained candidate score, and result cards show the score with concise reasons in the existing star badge tooltip.
 - Kept the slice local to already-returned search results: no new searches, downloads, peer probes, or provider lookups are triggered by ranking.
 - Validation: focused Search ranking/Search page tests and `npm run lint` passed.
+
+## 2026-04-30 21:41:12Z
+
+- Continued the center-lane federation work with the artist release radar persistence follow-up.
+- Added an atomic JSON state file for radar subscriptions, muted release groups, notifications, and seen-observation keys under the app directory.
+- Radar state now reloads on service startup, preserving notification history and duplicate observation suppression across daemon restarts.
+- Kept the slice local and passive: no MusicBrainz polling, Soulseek search, peer browse, mesh routing, download, or file-library mutation was added.
+- Validation: focused `ArtistReleaseRadarServiceTests` passed.
 
 ## 2026-04-30 19:58:42Z
 
@@ -8524,3 +8651,28 @@ Code quality improvements were completed as part of Option A:
 - Extended the runtime options overlay so FTP integration settings can apply to the running daemon when remote configuration is enabled.
 - Updated the changelog, Web UI audit, task list, and active context for the FTP settings slice.
 - Validation: focused System Integrations frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-04-30 22:04:33Z
+
+- Continued the feature-expansion burn-down with a release-regression hardening phase for non-root Web UI deployments.
+- Changed the built Vite Web UI to emit relative asset references and tightened build-output verification so root-relative `/assets/...` regressions fail fast.
+- Added a subpath smoke script that serves the production build under `/slskd`, loads a deep link, verifies the mounted `<base>` behavior, and fetches bundled JS/CSS assets from the subpath.
+- Updated backend HTML rewrite rules so non-root `web.url_base` injects a mounted `<base href="/slskd/" />` tag while keeping relative built assets intact and retaining legacy root-path compatibility rewrites.
+- Closed the tracked frontend peer-alignment follow-up after confirming the tracked web toolchain is on the current Vite 8 / Vitest 4 peer set.
+- Validation: `npm run build`, `npm run test:build-output`, `node src/web/scripts/smoke-subpath-build.mjs`, focused `ProgramPathNormalizationTests`, frontend lint, and `git diff --check` passed.
+
+## 2026-04-30 22:08:00Z
+
+- Continued the tail-side mobile/diagnostics feature-expansion lane with a System Info setup-health check.
+- Added a reusable browser-local setup health evaluator and formatter for connection, identity, shares, downloads, restart, URL base, and remote-configuration readiness.
+- Added a mobile-friendly modal with pass/warn/fail cards, summary counts, tooltip-backed open/copy/close buttons, and a copyable report.
+- Kept the check observational only: it reads already-loaded options/state and does not contact peers, validate credentials, scan folders, write config, start downloads, or mutate files.
+- Validation: focused setup-health tests, frontend lint, frontend production build, build-output verification, and subpath smoke passed.
+
+## 2026-04-30 22:55:36Z
+
+- Audited app-facing `slskd` branding without doing a blanket replacement.
+- Updated visible Web UI copy to say `slskdN` for connection-loss messages, playlist intake actions, Network peer labels, SongID action descriptions, and the metrics table title.
+- Changed notification provider default prefixes from `slskd` / `From slskd:` to `slskdN` / `From slskdN:` in backend options, Web UI defaults, tests, and config documentation.
+- Left compatibility and technical identifiers intentionally unchanged, including `slskd.yml`, `SLSKD_*`, `slskd_*` metrics, localStorage keys, upstream attribution, API compatibility fields, and binary/service paths.
+- Validation pending: focused frontend tests, grep audit, and whitespace check.

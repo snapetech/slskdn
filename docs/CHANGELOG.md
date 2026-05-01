@@ -22,10 +22,20 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added a mobile-friendly System Info setup-health check with local pass/warn/fail
+  readiness cards and a copyable report for connection, identity, shares,
+  downloads, restart, URL base, and remote-configuration state.
+- Fixed built Web UI hosting under non-root `web.url_base` deployments by
+  emitting relative Vite asset references, injecting a mounted `<base>` tag
+  for subpath deep links, and adding a subpath smoke test for `/slskd/...`
+  routes.
 - Added Quarantine Jury route attempts over PodCore, including route attempt
   persistence and API endpoints for dispatch history.
 - Added Quarantine Jury manual review and acceptance API endpoints that record
   explicit local release-candidate acceptance without mutating quarantine state.
+- Added a System -> Quarantine Jury review workspace for request evidence,
+  verdicts, dissent, route attempts, explicit juror routing, and modal-gated
+  release-candidate acceptance without moving files.
 - Added MusicBrainz overlay export review and approval API endpoints for manual
   upstream submission workflows without auto-submitting edits.
 - Added opt-in MusicBrainz overlay edit route attempts over PodCore for selected
@@ -35,6 +45,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added Discography Concierge priority metadata from Discovery Graph density,
   release gaps, and existing HashDb/Wishlist evidence without starting network
   discovery.
+- Added versioned MusicBrainz library Bloom snapshot preview, inbound likely-gap
+  comparison, and review-only Wishlist promotion without exposing filenames,
+  paths, file hashes, or exact holdings.
 - Added browser-local listening history and player listening stats for recent
   plays, top artists, and top tracks.
 - Added listening stats time-range filters and browser-local forgotten-favorite
@@ -52,6 +65,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
   promote/archive/expiry action exists.
 - Added copyable Library Health text reports from loaded scan summaries and
   issue samples without starting remediation.
+- Added copyable Library Health selected-issue action plans for safe-fix,
+  replacement-search, and quarantine-review previews without applying actions.
+- Added copyable Library Health replacement search seed exports from selected
+  issues without opening Search, browsing peers, or downloading files.
+- Added copyable Library Health quarantine review packets from selected risky
+  issues without changing quarantine state or moving files.
+- Added copyable Library Health safe-fix manifests from selected auto-fixable
+  issues without creating remediation jobs or applying fixes.
 - Added browser-local Watchlist release, country, and format filters in
   Discovery Inbox.
 - Added browser-local listening history import/export for media-server CSV/JSON
@@ -72,6 +93,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
   SongID-confirmed federated WorkRef observations into local notifications
   without polling MusicBrainz, browsing peers, searching Soulseek, or starting
   downloads.
+- Added restart-safe persistence for artist release radar subscriptions,
+  muted release groups, notifications, and duplicate observation suppression.
+- Added explicit selected-peer route attempts for artist release radar
+  notifications over PodCore, with signed local envelopes and persisted route
+  history.
+- Added graph-aware federated taste recommendations plus explicit review-only
+  handoffs to Wishlist, artist release radar subscriptions, and Discovery Graph
+  previews.
 - Added a local source-feed import preview parser that turns artist/title rows
   into deduped suggestions with skipped-row reporting.
 - Expanded source-feed imports with Spotify provider fetching for public
@@ -167,6 +196,19 @@ For dev or build tags, use the same logical version string embedded in the tag.
   overlay behavior in addition to the default crossfade.
 - Expanded native MilkDrop shader-side audio access to 64 FFT bins plus signed
   waveform bins through `get_waveform(pos)`.
+- Added native MilkDrop active `.shape` and `.wave` fragment selectors with
+  selected-fragment export and remove actions that persist edited presets
+  locally.
+- Added persisted native MilkDrop automation settings for beat-count and timed
+  preset interval selection.
+- Added first native MilkDrop parameter editing for decay, zoom, rotation, and
+  waveform color/alpha, plus full active-preset text export for edited presets.
+- Added native MilkDrop bounded parameter randomization, pointer-fed mouse
+  variables, and a compact debug snapshot overlay for active native presets.
+- Added browser-local native MilkDrop playlist rename support for active preset
+  playlists.
+- Added browser-local native MilkDrop FPS caps with debug frame-time readout
+  for visible GPU-load tuning.
 - Added app-wide interaction affordances for hover, focus-visible, disabled,
   and clickable row states.
 - Added acquisition-profile request plumbing, documentation audit notes, and

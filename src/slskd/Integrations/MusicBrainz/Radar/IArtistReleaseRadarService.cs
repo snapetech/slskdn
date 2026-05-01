@@ -18,4 +18,13 @@ public interface IArtistReleaseRadarService
     Task<IReadOnlyList<ArtistRadarNotification>> GetNotificationsAsync(
         bool unreadOnly = false,
         CancellationToken cancellationToken = default);
+
+    Task<ArtistRadarRouteAttempt> RouteNotificationAsync(
+        string notificationId,
+        ArtistRadarRouteRequest routeRequest,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ArtistRadarRouteAttempt>> GetRouteAttemptsAsync(
+        string notificationId,
+        CancellationToken cancellationToken = default);
 }

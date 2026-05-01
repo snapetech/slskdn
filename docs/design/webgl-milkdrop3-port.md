@@ -146,17 +146,22 @@ Current parser/VM scope:
 - Native mode exposes a local file import button for `.milk` and `.milk2` text presets. Imported preset text is loaded into the native renderer, the preset name is surfaced in the overlay, and the last imported preset is persisted in browser local storage for the next native-engine session.
 - Native mode exposes a separate folder import affordance for preset packs. Browsers that support directory file inputs provide relative paths for presets and image assets, which feed the scoped texture lookup path without requiring users to flatten pack folders manually.
 - Native mode accepts standalone `.shape` and `.wave` fragments, merges them into the active native preset, reserializes the merged preset for browser-local persistence, and can export the first active custom shape or wave back to a fragment file.
+- Native mode summarizes active custom shape and wave fragments, lets users choose which fragment to export, and can remove a selected fragment from the active preset while persisting the edited preset locally.
+- Native mode includes first safe parameter editing for common global values such as decay, zoom, rotation, and waveform color/alpha. Edits rebuild the active renderer, persist as an edited browser-local preset, and can be exported as preset text.
+- Native mode can randomize the same bounded visual parameter set to create a local mashup/edit, exposes pointer position/delta/button state as MilkDrop-style mouse variables, and has a compact debug snapshot overlay for preset format, primitive counts, shader sections, and active title.
+- Native mode includes first browser-local FPS caps plus a debug frame-time readout so users can trade smoothness for lower GPU load.
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
 - Imported native presets are now compatibility-scanned before they replace the active renderer. The report identifies unsupported equation functions across global, shape, and wave equations, and flags `warp_shader` / `comp_shader` sections only when the shader body is outside the current safe translator subset.
 - `.milk2` imports compatibility-scan every preserved preset body before storing or rendering the file. Compatible double presets now instantiate one renderer per preset body, draw the primary body normally, and blend secondary bodies over it. Secondary presets default to half opacity and can opt into `blend_alpha` / `blendalpha` / `composite_alpha` values plus `blend_mode` / `composite_mode` aliases for alpha, additive, screen, or multiply final compositing. Primary preset `transition_seconds` / `transition_time` / `blend_time` aliases can set the renderer-set transition duration when the caller does not override it.
 - Native preset switches and imported preset loads now use a renderer-set transition scheduler. The default crossfade keeps the outgoing renderer alive while fading it down, the incoming set fades up with an eased progress curve, and expired outgoing renderers are disposed after the transition. Presets and callers can also select `cut`, `fade`, or `overlay` transition modes through `transition_mode` aliases or engine options.
-- Native mode has first automatic preset change controls. Beat mode uses low-frequency spectrum energy to count detected bass beats before advancing, timed mode advances on an interval, and the selected mode is persisted in browser storage.
+- Native mode has automatic preset change controls. Beat mode uses low-frequency spectrum energy to count detected bass beats before advancing, timed mode advances on an interval, and the selected mode plus beat/interval settings are persisted in browser storage.
 - Native imports support multi-select batches. Compatible presets are added to a capped browser-local library and can be reloaded from a compact overlay selector; incompatible presets are skipped with a count and sample filenames instead of aborting the whole batch.
 - The browser-local native preset library now has first preset-bank controls. Users can favorite the active imported preset, filter the selector to favorites, move forward through the imported bank, jump back through recent manual selections, and pick a random imported preset without dropping back to built-in native presets.
 - Native preset-bank search filters imported presets by title or filename, persists the current query locally, and scopes next/random navigation to the filtered set so users can treat a search result as a lightweight playlist.
 - Native preset playlists persist named browser-local lists of imported preset IDs. Users can save the current visible bank as a playlist, switch the active bank to a playlist, clear the playlist scope without deleting it, or delete the active playlist; search/favorites still compose on top of the active playlist.
+- Native preset playlist editing includes browser-local active-playlist rename support so users can refine saved banks without recreating them.
 - Native mode has clear-library and remove-selected affordances for pruning imported presets from this browser without requiring manual local-storage cleanup.
 - The first shader translator accepts simple shader bodies that assign `ret = ...` using GLSL-like expressions, `tex2D(sampler_main, uv)` sampling, `saturate`, and `lerp`. It also accepts safe `shader_body { ... }` wrappers, straight-line `float/float2/float3/float4` temp declarations, reassignment of declared temp variables, simple `if (...) ret = ...; else ret = ...;` conditionals translated to ternaries, and aliases common HLSL helpers such as `frac`, `fmod`, `rsqrt`, and `atan2` to GLSL equivalents. Supported `warp_shader` bodies run in the feedback pass; supported `comp_shader` bodies run during the screen composite. Loops, complex control flow, matrix types, assignment to undeclared or non-local variables, general HLSL, and unknown texture/sampler forms remain explicitly unsupported.
 - The first procedural textured-shape path renders parsed `textured`, `texture`, `tex`, or `tex_name` shape references through a generated checker texture and texture-coordinate shader. This proves the texture pipeline without bundling external preset assets yet.
@@ -174,24 +179,25 @@ Current parser/VM scope:
 - [x] Add richer `.milk2` transition/composite controls beyond first secondary alpha support.
 - [x] Add deeper q1-q64 compatibility coverage against real MilkDrop3 presets.
 - [x] Add increased wave/shape count validation against real MilkDrop3 preset packs.
-- Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
+- [x] Add richer `.shape` and `.wave` library management beyond the first import/export affordances.
 - [x] Add additional MilkDrop3 transition modes beyond the first smooth renderer-set crossfade.
-- Add richer beat-driven/random/history preset selection modes beyond the first beat/timed automation and local-bank navigation controls.
+- [x] Add richer beat-driven/random/history preset selection modes beyond the first beat/timed automation and local-bank navigation controls.
 - [x] Add richer shader-side texture/audio access beyond the first 32-bin FFT uniform path.
 
 ### Phase 3: Editing And VJ Controls
 
-- Add richer playlist editing and richer favorites/history views.
-- Add visual parameter editing and safe save-as/export.
-- Add mashup/randomize controls.
-- Add mouse variables and user texture/image support.
-- Add debug variable overlays and shader error reporting.
+- [x] Add richer playlist editing and richer favorites/history views.
+- [x] Add visual parameter editing and safe save-as/export.
+- [x] Add mashup/randomize controls.
+- [x] Add mouse variables and user texture/image support.
+- [x] Add debug variable overlays and shader error reporting.
 
 ### Phase 4: WebGPU And Native-Like Polish
 
 - Add optional WebGPU renderer for heavier shaders and better texture pipelines.
 - Add shader cache/precompile where browser APIs allow it.
 - Add performance quality presets, FPS caps, and GPU load indicators.
+- [x] Add first browser-local FPS caps and debug frame-time indicator.
 - Keep WebGL2 as the compatibility baseline.
 
 ## Risks

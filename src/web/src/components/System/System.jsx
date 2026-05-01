@@ -15,6 +15,7 @@ import Mesh from './Mesh';
 import Metrics from './Metrics';
 import Network from './Network';
 import Options from './Options';
+import QuarantineJury from './QuarantineJury';
 import Security from './Security';
 import Shares from './Shares';
 import SourceProviders from './SourceProviders';
@@ -251,6 +252,19 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'library-health',
+    },
+    {
+      menuItem: {
+        content: 'Quarantine Jury',
+        icon: 'shield',
+        key: 'quarantine-jury',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <QuarantineJury />
+        </Tab.Pane>
+      ),
+      route: 'quarantine-jury',
     },
     {
       menuItem: {

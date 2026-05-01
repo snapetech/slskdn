@@ -18,10 +18,14 @@ if (!fs.existsSync(indexPath)) {
 const html = fs.readFileSync(indexPath, 'utf8');
 
 const requiredPatterns = [
-  { pattern: /(?:src|href)="\/assets\//, reason: 'expected root-relative built asset URL for deep-link refreshes' },
+  { pattern: /(?:src|href)="\.\/assets\//, reason: 'expected relative built asset URLs for reverse-proxy subpaths' },
   { pattern: /href="\.\/favicon\.ico"/, reason: 'expected relative favicon path for reverse-proxy subpaths' },
   { pattern: /href="\.\/manifest\.json"/, reason: 'expected relative manifest path for reverse-proxy subpaths' },
   { pattern: /href="\.\/logo192\.png"/, reason: 'expected relative icon path for reverse-proxy subpaths' },
+];
+
+const forbiddenPatterns = [
+  { pattern: /(?:src|href)="\/assets\//, reason: 'root-relative assets break non-root web.url_base deployments' },
 ];
 
 for (const { pattern, reason } of requiredPatterns) {
@@ -30,4 +34,10 @@ for (const { pattern, reason } of requiredPatterns) {
   }
 }
 
-console.log('Verified built web output uses proxy-safe asset references.');
+for (const { pattern, reason } of forbiddenPatterns) {
+  if (pattern.test(html)) {
+    fail(`Built index.html contains a forbidden path (${pattern}): ${reason}`);
+  }
+}
+
+console.log('Verified built web output uses subpath-safe relative asset references.');

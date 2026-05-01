@@ -389,9 +389,13 @@ namespace slskd
                 : (urlBase.StartsWith("/") ? urlBase : "/" + urlBase).TrimEnd('/');
 
             string Prefix(string path) => string.IsNullOrEmpty(normalizedUrlBase) ? path : $"{normalizedUrlBase}{path}";
+            string BaseTag() => string.IsNullOrEmpty(normalizedUrlBase)
+                ? "<head>"
+                : $"<head><base href=\"{normalizedUrlBase}/\" />";
 
             return new List<(string Pattern, string Replacement)>
             {
+                ("<head>", BaseTag()),
                 ("((?:src|href)=\")/assets/", $"$1{Prefix("/assets/")}"),
                 ("((?:src|href)=\")/manifest\\.json", $"$1{Prefix("/manifest.json")}"),
                 ("((?:src|href)=\")/logo192\\.png", $"$1{Prefix("/logo192.png")}"),
