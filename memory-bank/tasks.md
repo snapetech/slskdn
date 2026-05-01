@@ -2225,3 +2225,7 @@
 - [x] Fix standalone PPA web asset staging
   - Status: completed (2026-05-01)
   - Notes: The manual `.215` PPA rerun rebuilt frontend assets into `src/web/build`, but failed because `publish-linux-x64/wwwroot` did not exist. `release-ppa.yml` now creates the web root before copying assets.
+
+- [x] Fix PPA FTP reachability on GitHub runners
+  - Status: completed (2026-05-01)
+  - Notes: Historical successful PPA releases used anonymous FTP, not SFTP. The failed `.215` rerun signed the source package but `dput` hit `[Errno 101] Network is unreachable`, consistent with an unreachable IPv6 path. Both PPA workflows now pin `ppa.launchpad.net` to a resolved IPv4 address and preflight TCP port 21 before upload.

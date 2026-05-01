@@ -713,6 +713,28 @@ jobs:
 
       - name: Configure dput
         run: |
+          LAUNCHPAD_PPA_FTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
+          if [ -z "$LAUNCHPAD_PPA_FTP_IPV4" ]; then
+            echo "::error::Unable to resolve an IPv4 address for ppa.launchpad.net"
+            getent ahosts ppa.launchpad.net || true
+            exit 1
+          fi
+
+          echo "Pinning ppa.launchpad.net to IPv4 ${LAUNCHPAD_PPA_FTP_IPV4} for dput FTP upload"
+          echo "${LAUNCHPAD_PPA_FTP_IPV4} ppa.launchpad.net" | sudo tee -a /etc/hosts
+          getent ahosts ppa.launchpad.net
+
+          if ! python3 - <<'PY'
+          import socket
+
+          with socket.create_connection(("ppa.launchpad.net", 21), timeout=15) as sock:
+              print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
+          PY
+          then
+            echo "::error::Launchpad PPA FTP endpoint is not reachable over IPv4"
+            exit 1
+          fi
+
           cat > ~/.dput.cf << 'EOF'
           [slskdn-ppa]
           fqdn = ppa.launchpad.net

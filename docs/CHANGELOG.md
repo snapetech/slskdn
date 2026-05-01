@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and added a
+  TCP preflight so GitHub runner address-family failures are diagnosed before
+  `dput` retries.
 - Fixed the standalone PPA retry workflow so rebuilt frontend assets are copied
   into a created `publish-linux-x64/wwwroot` directory.
 - Reworded the ingress-port migration notice to show plain old-versus-current

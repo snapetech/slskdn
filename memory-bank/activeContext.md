@@ -1,3 +1,19 @@
+## Update 2026-05-01 16:09:39Z
+
+- Current task: PPA reachability fix is complete locally.
+- Last activity:
+  - confirmed the successful `.197` PPA release used Launchpad anonymous FTP, so SFTP/SSH secrets were not the historical requirement
+  - confirmed local and `kspls0` TCP reachability to `ppa.launchpad.net:21`
+  - documented the IPv4 reachability gotcha in ADR-0001 and committed it separately
+  - updated `build-on-tag.yml` and `release-ppa.yml` to pin `ppa.launchpad.net` to a resolved IPv4 address before `dput`
+  - added a Python TCP preflight so runner logs fail early if Launchpad FTP is unreachable
+- Validation:
+  - Python TCP connect to Launchpad FTP passed locally
+  - PyYAML parsed both edited workflows
+  - `git diff --check`
+- Next steps:
+  1. Push the workflow fix and rerun the standalone PPA workflow for `2026050100-slskdn.215` to verify upload.
+
 ## Update 2026-05-01 03:30:00Z
 
 - Current task: Obsolete slskdn-dev package channel cleanup is complete locally.

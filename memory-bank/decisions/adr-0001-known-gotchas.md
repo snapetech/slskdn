@@ -74,7 +74,12 @@ passive_ftp = 1
 ```bash
 LAUNCHPAD_PPA_FTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
 echo "$LAUNCHPAD_PPA_FTP_IPV4 ppa.launchpad.net" | sudo tee -a /etc/hosts
-timeout 15 bash -c 'exec 3<>/dev/tcp/ppa.launchpad.net/21; IFS= read -r banner <&3; [[ "$banner" == 220* ]]'
+python3 - <<'PY'
+import socket
+
+with socket.create_connection(("ppa.launchpad.net", 21), timeout=15) as sock:
+    print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
+PY
 ```
 
 **Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address and preflight port 21 so the logs separate runner reachability from package signing or Launchpad rejection.

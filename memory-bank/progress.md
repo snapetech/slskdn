@@ -1,3 +1,10 @@
+## 2026-05-01 16:09:39Z
+
+- Diagnosed the PPA failure as runner reachability, not missing Launchpad SSH credentials: the last known successful `.197` PPA upload used anonymous FTP to `ppa.launchpad.net`.
+- Reverted the incorrect SFTP/Launchpad-secret change and documented the actual gotcha: `dput` can choose an unreachable IPv6 FTP path on GitHub-hosted runners.
+- Updated both tag-driven and standalone PPA workflows to resolve and pin `ppa.launchpad.net` to IPv4, then preflight TCP port 21 before invoking `dput`.
+- Validation: local Launchpad TCP connect to `185.125.190.80:21` passed, workflow YAML parsed with PyYAML, and `git diff --check` passed.
+
 ## 2026-05-01 03:45:00Z
 
 - Removed the active `slskdn-dev` package channel from release automation by making `build-on-tag.yml` main-only and dropping the embedded dev release/package jobs.
