@@ -67,6 +67,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private long _totalCandidatesSkippedReconnectBackoff;
     private long _totalConnectionsAttempted;
     private long _totalConnectionsSucceeded;
+    private int _loadedSavedNodeCount;
     private CancellationTokenSource? _backgroundInitializationCts;
     private Task? _backgroundInitializationTask;
     private bool _backgroundServiceStarted;
@@ -259,9 +260,16 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             return;
         }
 
-        // Wait for DHT to bootstrap
-        _logger.LogInformation("Waiting for DHT to bootstrap...");
-        var bootstrapTimeout = TimeSpan.FromSeconds(120);
+        // Wait for DHT to bootstrap. Cold public-DHT starts routinely need longer
+        // than warm saved-node starts; LAN-only mode should fail fast because it
+        // intentionally skips public routers.
+        var bootstrapTimeoutSeconds = GetBootstrapTimeoutSeconds(_options, _loadedSavedNodeCount);
+        _logger.LogInformation(
+            "Waiting up to {TimeoutSeconds}s for DHT to bootstrap (savedNodes={SavedNodes}, lanOnly={LanOnly})...",
+            bootstrapTimeoutSeconds,
+            _loadedSavedNodeCount,
+            _options.LanOnly);
+        var bootstrapTimeout = TimeSpan.FromSeconds(bootstrapTimeoutSeconds);
         sw.Restart();
 
         while (_dhtEngine?.State != DhtState.Ready && sw.Elapsed < bootstrapTimeout && !stoppingToken.IsCancellationRequested)
@@ -276,13 +284,15 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         else
         {
             _logger.LogWarning(
-                "DHT bootstrap did not reach Ready within {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}). " +
+                "DHT bootstrap did not reach Ready within adaptive {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}, savedNodes: {SavedNodes}, lanOnly: {LanOnly}). " +
                 "Peer announce/discovery will stay disabled until bootstrap succeeds. If the DHT still has not reached Ready after this grace period, " +
                 "verify that UDP port {Port} is reachable, forwarded, and allowed through the host firewall.",
                 (int)bootstrapTimeout.TotalSeconds,
                 _options.DhtPort,
                 _dhtEngine?.State,
                 _dhtEngine?.NodeCount ?? 0,
+                _loadedSavedNodeCount,
+                _options.LanOnly,
                 _options.DhtPort);
         }
 
@@ -383,6 +393,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 try
                 {
                     initialNodes = await File.ReadAllBytesAsync(dhtStatePath, cancellationToken);
+                    _loadedSavedNodeCount = initialNodes.Length > 0 ? 1 : 0;
                     _logger.LogDebug("Loaded {Bytes} bytes of saved DHT state", initialNodes.Length);
                 }
                 catch (Exception ex)
@@ -661,6 +672,21 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
         var interval = TimeSpan.FromMinutes(minutes);
         return interval <= MaxPeerReconnectInterval ? interval : MaxPeerReconnectInterval;
+    }
+
+    internal static int GetBootstrapTimeoutSeconds(DhtRendezvousOptions options, int savedNodeCount)
+    {
+        if (options.LanOnly)
+        {
+            return Math.Max(1, options.LanOnlyBootstrapTimeoutSeconds);
+        }
+
+        if (savedNodeCount <= 0)
+        {
+            return Math.Max(1, options.ColdBootstrapTimeoutSeconds);
+        }
+
+        return Math.Max(1, options.BootstrapTimeoutSeconds);
     }
 
     private void RecordPeerConnectionFailure(string peerId)
@@ -1006,6 +1032,21 @@ public sealed class DhtRendezvousOptions
     /// Minimum mesh neighbors before triggering discovery.
     /// </summary>
     public int MinNeighbors { get; set; } = 3;
+
+    /// <summary>
+    /// Warm bootstrap grace period in seconds when a saved DHT node table is present.
+    /// </summary>
+    public int BootstrapTimeoutSeconds { get; set; } = 120;
+
+    /// <summary>
+    /// Cold bootstrap grace period in seconds when no saved DHT node table is available.
+    /// </summary>
+    public int ColdBootstrapTimeoutSeconds { get; set; } = 180;
+
+    /// <summary>
+    /// LAN-only bootstrap grace period in seconds. This is shorter because public bootstrap routers are intentionally disabled.
+    /// </summary>
+    public int LanOnlyBootstrapTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
     /// Enable UPnP/NAT-PMP port mapping.
