@@ -828,11 +828,6 @@ jobs:
           allow_unsigned_uploads = 0
           EOF
 
-            echo "Checking Launchpad SFTP authentication"
-            timeout --preserve-status 90 sftp -b - ppa.launchpad.net <<'EOF'
-          pwd
-          EOF
-
             echo "Uploading $(basename "$CHANGES_FILE") to Launchpad PPA over SFTP"
             timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
           else
