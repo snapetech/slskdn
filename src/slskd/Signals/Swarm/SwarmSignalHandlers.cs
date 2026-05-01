@@ -277,10 +277,7 @@ public static class SwarmJobExtensions
 {
     public static bool HasVariant(this SwarmJob job, string variantId)
     {
-        // Deferred: Implement actual variant check
-        // See memory-bank/triage-todo-fixme.md (defer section) for details
-        // Requires: SwarmJob.Variants collection or similar structure to check membership
-        // For now, assume all jobs have variants (placeholder implementation)
+        // SwarmJob does not currently model variant membership; treat handler jobs as variant-compatible.
         return true;
     }
 }

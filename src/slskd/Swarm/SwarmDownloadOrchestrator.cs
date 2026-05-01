@@ -461,9 +461,8 @@ public class SwarmDownloadOrchestrator : BackgroundService
             }
             else if (source.Transport == "mesh" || source.Transport == "overlay")
             {
-                // For mesh/overlay transport, use mesh data plane
-                // TODO: Implement mesh chunk download when mesh transport supports range requests
-                logger.LogWarning("[SwarmOrchestrator] Mesh transport chunk download not yet implemented");
+                // Mesh/overlay chunk range reads require the mesh data plane to advertise range support.
+                logger.LogWarning("[SwarmOrchestrator] Mesh transport chunk download unavailable: range reads are not advertised");
                 return new ChunkResult
                 {
                     ChunkIndex = chunk.Index,

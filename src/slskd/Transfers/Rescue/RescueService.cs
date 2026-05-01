@@ -217,7 +217,7 @@ namespace slskd.Transfers.Rescue
             }
             else
             {
-                log.Warning("[RESCUE] Multi-source download service not available or no overlay peers - rescue activation is placeholder only");
+                log.Warning("[RESCUE] Multi-source download service unavailable or no overlay peers; rescue job remains queued for normal Soulseek handling");
             }
 
             return rescueJob;

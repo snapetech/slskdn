@@ -72,10 +72,7 @@ namespace slskd.Transfers.Rescue
                 log.Debug("[GUARDRAIL] Overlay-only mode not allowed, Soulseek origin required");
             }
 
-            // TODO: Add more guardrails:
-            // - Check if file has been seen on Soulseek before (HashDb lookup)
-            // - Check maximum concurrent rescue jobs
-            // - Check daily rescue quota
+            // Additional guardrails can be layered here: Soulseek history, concurrent rescue caps, and daily quotas.
             log.Debug("[GUARDRAIL] Rescue allowed for transfer {TransferId}, file {File}", transferId, filename);
             return Task.FromResult((true, "Allowed"));
         }

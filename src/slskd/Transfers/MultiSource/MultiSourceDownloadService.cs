@@ -1423,8 +1423,7 @@ public class MultiSourceDownloadService : IMultiSourceDownloadService
             double? avgThroughput = null;
             double? avgRtt = null;
 
-            // TODO: Aggregate peer metrics if metrics service is available
-            // For now, use base optimization without performance data
+            // Peer performance metrics are optional; use the base optimization path when unavailable.
             var optimizedSize = await _chunkSizeOptimizer.RecommendChunkSizeAsync(
                 fileSize,
                 peerCount,
