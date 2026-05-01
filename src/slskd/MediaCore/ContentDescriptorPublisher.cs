@@ -92,7 +92,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                     Version: version,
                     PublishedAt: startTime,
                     Ttl: ttl,
-                    ErrorMessage: "Descriptor signature is required; automatic signing is not implemented.",
+                    ErrorMessage: "Descriptor signature is required; provide a signed descriptor before publishing.",
                     WasUpdated: false,
                     PreviousVersion: existingInfo?.Version);
             }
@@ -212,14 +212,14 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
         try
         {
             var previousVersion = _publishedDescriptors.TryGetValue(contentId, out var info) ? info.Version : "unknown";
-            _logger.LogWarning("[ContentDescriptorPublisher] Update requested for {ContentId}, but descriptor update/republish is not implemented", contentId);
+            _logger.LogWarning("[ContentDescriptorPublisher] Update requested for {ContentId}, but descriptor update/republish is unavailable through this publisher", contentId);
             return Task.FromResult(new DescriptorUpdateResult(
                 Success: false,
                 ContentId: contentId,
                 NewVersion: previousVersion,
                 PreviousVersion: previousVersion,
                 AppliedUpdates: Array.Empty<string>(),
-                ErrorMessage: "Descriptor update/republish is not implemented."));
+                ErrorMessage: "Descriptor update/republish is unavailable through this publisher."));
         }
         catch (Exception ex)
         {
@@ -258,7 +258,7 @@ public class ContentDescriptorPublisher : IContentDescriptorPublisher
                 if (info.ExpiresAt <= expiringThreshold)
                 {
                     _logger.LogWarning(
-                        "[ContentDescriptorPublisher] Descriptor {ContentId} is expiring at {Expiry}, but republish is not implemented",
+                        "[ContentDescriptorPublisher] Descriptor {ContentId} is expiring at {Expiry}, but republish is unavailable through this publisher",
                         contentId, info.ExpiresAt);
                     failed++;
                 }

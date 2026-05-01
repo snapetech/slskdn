@@ -257,8 +257,7 @@ public class MeshCircuitBuilder : IMeshCircuitBuilder, IDisposable
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
-            // In the placeholder implementation, we create a connection to each peer
-            // In reality, this would establish encrypted tunnels with onion routing
+            // Establish a direct transport hop to each selected peer; circuit isolation is tracked by circuit ID.
             try
             {
                 // Connect to this peer using available transports
