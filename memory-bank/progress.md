@@ -1,3 +1,11 @@
+## 2026-05-01 20:33:13Z
+
+- Corrected the shared mesh UDP design after live log inspection: QUIC is an additional mesh transport and does not replace DHT rendezvous or the UDP overlay.
+- The shared public UDP listener now owns `50305/udp` and demuxes DHT packets, UDP overlay control envelopes, QUIC Initial packets, and QUIC short-header traffic to the loopback QUIC backend on `55305/udp`.
+- Deployed `0.0.0-slskdn.manual.20260501202734.5d3478cb60fd` to `kspls0` as `/usr/lib/slskd/releases/manual-20260501202734.5d3478cb60fd`.
+- Live validation: sockets show public UDP `50305`, backend UDP `55305`, TCP `5030`/`50300`/`50301`/`50305`, and no stale UDP `50400`/`50306`/`50401`/`50402` listeners; startup logs report `UDP overlay enabled=True; QUIC backend=127.0.0.1:55305`; a workstation QUIC probe to `kspls0:50305` connected and closed cleanly; post-probe logs contained no decode-envelope warnings, exceptions, or stale-port references.
+- Validation: focused shared UDP/service/default-option tests passed, then full `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501202734.5d3478cb60fd` passed Web UI tests/build, Release backend build, unit/API/integration suites, and publish.
+
 ## 2026-05-01 19:43:00Z
 
 - Removed the logged-out Web UI browser-title tagline so `index.html`, `public/index.html`, and the PWA manifest now identify the app as `slskdN` without the old unofficial-fork wording.

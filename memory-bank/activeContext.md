@@ -1,3 +1,15 @@
+## Update 2026-05-01 20:33:13Z
+
+- Current task: Shared DHT/UDP overlay/QUIC demux is corrected and deployed to `kspls0`.
+- Last activity:
+  - corrected the mistaken either-or QUIC/UDP overlay model; QUIC is an additional mesh transport, not a replacement for DHT rendezvous or UDP overlay
+  - deployed `0.0.0-slskdn.manual.20260501202734.5d3478cb60fd` from commit `5d3478cb60fd` to `/usr/lib/slskd/releases/manual-20260501202734.5d3478cb60fd`
+  - verified live sockets: public UDP `50305`, backend UDP `55305`, TCP `5030`/`50300`/`50301`/`50305`, and no stale UDP `50400`/`50306`/`50401`/`50402`
+  - verified startup logs show the shared UDP listener with `UDP overlay enabled=True; QUIC backend=127.0.0.1:55305`
+  - verified a workstation QUIC probe to `kspls0:50305` succeeds and post-probe logs have no decode-envelope warnings or exceptions
+- Next steps:
+  1. Push local commits.
+
 ## Update 2026-05-01 19:43:00Z
 
 - Current task: Logged-out Web UI title tagline removal is complete locally.

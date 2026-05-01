@@ -14,7 +14,7 @@
 - [x] **network**: Share one UDP mesh port across DHT, UDP overlay, and QUIC.
  - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: kspls0 log/socket inspection found the shared-port build still binding a separate UDP overlay socket on `50400`. Documented ADR-0001 gotcha `0z276` and corrected the design so QUIC does not replace UDP overlay: the shared mesh UDP listener owns public `50305/udp` and demuxes DHT rendezvous packets, UDP overlay control envelopes, and QUIC traffic proxied to backend UDP `55305`.
+ - Notes: kspls0 log/socket inspection found the shared-port build still binding a separate UDP overlay socket on `50400`. Documented ADR-0001 gotcha `0z276` and corrected the design so QUIC does not replace UDP overlay: the shared mesh UDP listener owns public `50305/udp` and demuxes DHT rendezvous packets, UDP overlay control envelopes, QUIC Initial packets, and QUIC short-header traffic proxied to backend UDP `55305`. Deployed `0.0.0-slskdn.manual.20260501202734.5d3478cb60fd` to `kspls0`; live validation confirmed public UDP `50305`, backend UDP `55305`, no stale UDP `50400`/`50306`/`50401`/`50402`, clean QUIC probe to `kspls0:50305`, and no decode-envelope warnings after the probe.
 
 - [x] **network**: Deploy current runtime/network build to kspls0 and validate live behavior.
  - Status: completed (2026-05-01)
