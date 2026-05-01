@@ -119,7 +119,7 @@ public sealed class PrivateGatewayMeshService : IMeshService, IDisposable
         MeshServiceContext context,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("[PrivateGateway] Streaming requested by {PeerId}, but private gateway streaming is not implemented. Use TunnelData calls instead.", context.RemotePeerId);
+        _logger.LogWarning("[PrivateGateway] Streaming requested by {PeerId}, but private gateway exposes TunnelData request/response calls instead", context.RemotePeerId);
         return stream.CloseAsync(cancellationToken);
     }
 

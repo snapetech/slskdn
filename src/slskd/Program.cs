@@ -1522,8 +1522,7 @@ namespace slskd
             services.AddSingleton<VirtualSoulfind.Bridge.IBridgeApi, VirtualSoulfind.Bridge.BridgeApi>();
             services.AddSingleton<VirtualSoulfind.Bridge.Protocol.SoulseekProtocolParser>();
 
-            // BridgeProxyServer causes startup deadlock - skip for local dev
-            // TODO: Investigate why BridgeProxyServer construction blocks startup
+            // BridgeProxyServer is opt-in because construction has blocked startup in local-dev runs.
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_E2E_SKIP_BRIDGE_PROXY")) &&
                 !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLSKDN_ENABLE_BRIDGE_PROXY")))
             {

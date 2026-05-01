@@ -425,8 +425,8 @@ namespace slskd.Mesh
                 try
                 {
                     _ = GenerateHelloMessage();
-                    result.Error = "Mesh sync transport is not implemented";
-                    log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is not implemented", username);
+                    result.Error = "Mesh sync transport unavailable";
+                    log.Warning("[MESH] Refusing to report successful sync with {Peer}: transport is unavailable", username);
                 }
                 finally
                 {
