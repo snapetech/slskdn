@@ -27,6 +27,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   WebCrypto.
 - Restricted tag release automation to the stable `build-main-*` path after
   retiring the obsolete dev package channel.
+- Restored the stable Nix release metadata job as an explicit main release
+  target while keeping dev-channel releases disabled.
 - Removed the obsolete `slskdn-dev` package channel from active release
   automation, packaging validation, install docs, and dev-only manifests.
 - Removed the standalone Discovery Inbox and Import Staging surfaces from the

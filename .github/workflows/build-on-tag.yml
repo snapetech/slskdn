@@ -864,8 +864,8 @@ jobs:
           }
         shell: pwsh
 
-  metadata-main:
-    name: Update Main Repo Metadata
+  nix-main:
+    name: Update Nix/Main Release Metadata
     needs: [parse, release-main]
     if: needs.parse.outputs.channel == 'main'
     runs-on: ubuntu-latest
