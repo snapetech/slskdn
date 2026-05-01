@@ -34,6 +34,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   System administration surfaces.
 - Added player visual-tile regression coverage for cycling back to album art
   and opening the native visualizer full-window view from spectrum mode.
+- Expanded the player visual tile controls into explicit analyzer/native
+  visualizer mode buttons with window and fullscreen affordances.
 - Fixed the startup mesh transport registration build break by reading the
   separately bound `Mesh:Transport` section directly instead of assuming it is
   present on `OptionsAtStartup`.

@@ -1970,6 +1970,14 @@ const PlayerVisualTile = ({
     scope: 'signal scope',
     spectrum: 'spectrum bars',
   };
+  const tileModeIcons = {
+    butterchurn: 'magic',
+    'native-webgl2': 'microchip',
+    'native-webgpu': 'bolt',
+    scope: 'signal',
+    spectrum: 'chart bar',
+  };
+  const tileRef = useRef(null);
   const title = current?.title || current?.fileName || 'slskdN';
   const artist = current?.artist || '';
   const initials = (artist || title)
@@ -1993,9 +2001,9 @@ const PlayerVisualTile = ({
       onModeChange('inline');
     }
   };
-  const switchTileMode = (event) => {
+  const switchTileMode = (event, nextMode) => {
     event.stopPropagation();
-    setTileMode(nextTileMode);
+    setTileMode(nextMode);
   };
   const showVisualizerWindow = (event) => {
     event.stopPropagation();
@@ -2004,10 +2012,17 @@ const PlayerVisualTile = ({
     }
     onModeChange('fullwindow');
   };
-  const showVisualizerFullscreen = (event) => {
+  const showVisualizerFullscreen = async (event) => {
     event.stopPropagation();
     if (!showingVisualizer) {
       onTileModeChange(readStoredVisualizerEngineTileMode());
+    }
+    if (tileRef.current?.requestFullscreen) {
+      try {
+        await tileRef.current.requestFullscreen();
+      } catch {
+        // Keep the visualizer in fullscreen layout even if the browser denies the request.
+      }
     }
     onModeChange('fullscreen');
   };
@@ -2034,6 +2049,7 @@ const PlayerVisualTile = ({
               }
             }}
             onClick={handleTileActivate}
+            ref={tileRef}
             tabIndex={0}
           >
             {showingVisualizer ? (
@@ -2066,53 +2082,57 @@ const PlayerVisualTile = ({
             <span className="player-visual-affordance">
               <Icon name={showingVisualizer ? 'magic' : (showingAnalyzer ? 'chart bar' : 'image outline')} />
             </span>
-            <div className="player-visual-tile-controls">
-              <Popup
-                content={`Switch tile to ${tileModeLabels[nextTileMode]}.`}
-                trigger={
-                  <Button
-                    aria-label={`Switch tile to ${tileModeLabels[nextTileMode]}`}
-                    data-testid="player-visual-tile-cycle"
-                    icon
-                    onClick={switchTileMode}
-                    size="mini"
-                  >
-                    <Icon name={showingAnalyzer ? 'magic' : 'exchange'} />
-                  </Button>
-                }
-              />
-              <Popup
-                content="Maximize the visualizer to the browser window."
-                trigger={
-                  <Button
-                    aria-label="Maximize visualizer to browser window"
-                    data-testid="player-visual-tile-fullwindow"
-                    icon
-                    onClick={showVisualizerWindow}
-                    size="mini"
-                  >
-                    <Icon name="expand arrows alternate" />
-                  </Button>
-                }
-              />
-              <Popup
-                content="Maximize the visualizer to fullscreen."
-                trigger={
-                  <Button
-                    aria-label="Maximize visualizer to fullscreen"
-                    data-testid="player-visual-tile-fullscreen"
-                    icon
-                    onClick={showVisualizerFullscreen}
-                    size="mini"
-                  >
-                    <Icon name="expand" />
-                  </Button>
-                }
-              />
-            </div>
           </div>
         }
       />
+      <div className="player-visual-tile-controls" onClick={(event) => event.stopPropagation()}>
+        {['spectrum', 'scope', 'butterchurn', 'native-webgl2', 'native-webgpu'].map((option) => (
+          <Popup
+            content={`Show ${tileModeLabels[option]}.`}
+            key={option}
+            trigger={
+              <Button
+                aria-label={`Show ${tileModeLabels[option]}`}
+                active={normalizedTileMode === option}
+                data-testid={`player-visual-tile-mode-${option}`}
+                icon
+                onClick={(event) => switchTileMode(event, option)}
+                size="mini"
+              >
+                <Icon name={tileModeIcons[option]} />
+              </Button>
+            }
+          />
+        ))}
+        <Popup
+          content="Maximize the visualizer to the browser window."
+          trigger={
+            <Button
+              aria-label="Maximize visualizer to browser window"
+              data-testid="player-visual-tile-fullwindow"
+              icon
+              onClick={showVisualizerWindow}
+              size="mini"
+            >
+              <Icon name="expand arrows alternate" />
+            </Button>
+          }
+        />
+        <Popup
+          content="Maximize the visualizer to fullscreen."
+          trigger={
+            <Button
+              aria-label="Maximize visualizer to fullscreen"
+              data-testid="player-visual-tile-fullscreen"
+              icon
+              onClick={showVisualizerFullscreen}
+              size="mini"
+            >
+              <Icon name="expand" />
+            </Button>
+          }
+        />
+      </div>
     </div>
   );
 };

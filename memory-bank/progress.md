@@ -5,7 +5,7 @@
 - Refreshed `docs/getting-started.md` for current ports, default credentials, System admin tour, manual Search vs Acquisition Review, unified Messages, and safer multi-source wording.
 - Added `docs/system-surfaces.md`, `docs/pods-and-rooms.md`, and `docs/songid-discovery.md` as current user-facing guides.
 - Updated `docs/README.md`, `docs/FEATURES.md`, `docs/advanced-features.md`, `docs/config.md`, `docs/dev/webui-surface-audit-2026-04-30.md`, and `docs/dev/documentation-audit-2026-04-30.md`.
-- Validation pending: markdown/search checks and docs lint after this doc pass.
+- Validation: `bash ./bin/lint-docs`, targeted stale-reference search, and touched-file `git diff --check` passed.
 
 ## 2026-05-01 02:20:56Z
 

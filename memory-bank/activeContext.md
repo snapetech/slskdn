@@ -21,8 +21,8 @@
   - added `docs/system-surfaces.md`, `docs/pods-and-rooms.md`, and `docs/songid-discovery.md`
   - updated docs index, feature overview, advanced features, config cross-links, Web UI surface audit, documentation audit, task log, and progress log
 - Next steps:
-  1. Run docs lint/markdown checks and targeted stale-reference searches.
-  2. Treat Essentia/MIR, cover-similarity, embedding clustering, and real preset/device visualizer measurement as research/runtime scope, not documentation gaps.
+  1. Treat Essentia/MIR, cover-similarity, embedding clustering, and real preset/device visualizer measurement as research/runtime scope, not documentation gaps.
+  2. Remaining documentation cleanup is broad hygiene: broken-link cleanup, VPN guide splitting, and historical snapshot banners.
 
 ## Update 2026-05-01 02:20:56Z
 
