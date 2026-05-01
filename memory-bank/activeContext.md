@@ -4527,6 +4527,18 @@ dotnet test
   1. Continue into remaining E11/E10/E9 work only where it can avoid active dirty Import Staging/audio-verification lanes or where those lanes have settled.
   2. Do not add tag writes, file moves, cover writes, or ReplayGain execution until there is an explicit backend preview/confirmation and rollback contract.
 
+## Update 2026-05-01 03:08:11Z
+
+- Current task: Remaining middle/backlog completion pass is complete locally.
+- Last activity:
+  - reconciled completed QR invite display/scanning, DHT adaptive bootstrap diagnostics, native MilkDrop3 T-938, SongID parity notes, analyzer cleanup, and production placeholder burn-down tasks
+  - confirmed no published `build-dev-*` release tag exists, so the dev flake re-enable remains blocked instead of being faked
+  - replaced production placeholder/TODO wording with explicit capability-gate or unavailable-path language and updated the placeholder completion plan
+  - verified focused Contacts QR tests, focused DHT tests, touched Contacts ESLint, and `dotnet format --verify-no-changes --no-restore --verbosity minimal`
+- Next steps:
+  1. Re-enable `slskdn-dev` only after a real `build-dev-*` release exists and asset hashes are populated from that release.
+  2. Continue normal validation before merge because concurrent agents have been committing adjacent player and docs work.
+
 ## Update 2026-05-01 02:52:32Z
 
 - Current task: MilkDrop/Butterchurn player tile deployment to `kspls0` is complete.

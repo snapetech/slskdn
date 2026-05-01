@@ -113,6 +113,38 @@ public class PodsMeshServiceTests
     }
 
     [Fact]
+    public async Task HandleCallAsync_PostMessage_RejectsBodyOverFourKilobytesByUtf8Bytes()
+    {
+        var podMessaging = new Mock<IPodMessaging>();
+        var service = new PodsMeshService(
+            Mock.Of<ILogger<PodsMeshService>>(),
+            Mock.Of<IPodService>(),
+            podMessaging.Object);
+
+        var reply = await service.HandleCallAsync(
+            new ServiceCall
+            {
+                ServiceName = "pods",
+                Method = "PostMessage",
+                CorrelationId = Guid.NewGuid().ToString(),
+                Payload = JsonSerializer.SerializeToUtf8Bytes(new
+                {
+                    PodId = "pod:00000000000000000000000000000001",
+                    ChannelId = "general",
+                    Body = new string('\u00e9', 2049),
+                    Signature = "sig"
+                })
+            },
+            new MeshServiceContext { RemotePeerId = "peer-1" },
+            CancellationToken.None);
+
+        Assert.Equal(ServiceStatusCodes.PayloadTooLarge, reply.StatusCode);
+        podMessaging.Verify(
+            svc => svc.SendAsync(It.IsAny<PodMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task HandleStreamAsync_GetMessagesRequest_SendsMessagesAndCloses()
     {
         var expectedMessages = new[]
