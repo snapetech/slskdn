@@ -52,6 +52,40 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z261. Launchpad SFTP Uploads Must Fail Fast On SSH Auth Problems
+
+**The Bug**: The SFTP-preferred PPA workflow reached `dput`, validated signatures, spawned `ssh`, and then sat silently until the GitHub run was manually canceled. Without explicit batch-mode SSH settings and a bounded upload command, a missing Launchpad public key or interactive password prompt can make the release job look like a slow upload instead of an authentication/configuration failure.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+cat >> ~/.ssh/config << EOF
+Host ppa.launchpad.net
+  IdentityFile ~/.ssh/launchpad_ppa
+EOF
+
+dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+```
+
+**Correct**:
+```bash
+cat >> ~/.ssh/config << EOF
+Host ppa.launchpad.net
+  IdentityFile ~/.ssh/launchpad_ppa
+  BatchMode yes
+  PasswordAuthentication no
+  KbdInteractiveAuthentication no
+  NumberOfPasswordPrompts 0
+EOF
+
+timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+```
+
+**Why This Keeps Happening**: `dput` hides the lower-level SSH process, so interactive auth fallback looks like a transport hang. SFTP release paths must disable password/keyboard prompts, run a small `sftp` batch probe before upload, and wrap `dput` in a timeout so failures produce actionable logs.
+
 ### 0z260. Static Port Migration Notices Must Not Become Live Status Dashboards
 
 **The Bug**: The VPN ingress migration notice was supposed to explain that the required forwards changed from the old list to the new list, but the implementation added active/not-reported badges, public IP/port detection, and an extra obfuscation-listener row, making a simple configuration reminder noisy and misleading.
