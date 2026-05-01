@@ -24,7 +24,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 - Added Soulseek type-1 peer-message obfuscation configuration options and
   validation, including explicit mode and dedicated obfuscated listen-port
-  checks.
+  checks, plus a runtime-support plan that reports the current unsupported
+  Soulseek.NET wire-path state.
 - Updated the Getting Started guide around current default ports, direct manual
   Search behavior, Acquisition Review, Multi-Source Rescue, Messages, and
   System administration surfaces.
@@ -45,6 +46,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   only registered when QUIC connection/listener support is available, and
   startup warns when direct mesh transport is configured on a host that cannot
   support direct QUIC circuits.
+- Added an opt-in NixOS VM smoke harness that builds a minimal NixOS system
+  around the flake package, supplies required slskd module settings, boots
+  headless under QEMU/KVM when available, and verifies `slskd.service` reaches
+  active state through a serial success marker.
 - Added a browser-local System -> Network health score with local DHT, mesh,
   HashDb, backfill, and security-signal findings plus a copyable report for
   operations review.

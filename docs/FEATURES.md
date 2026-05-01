@@ -33,6 +33,10 @@
 - Optional five-second crossfade between queue items
 - Document Picture-in-Picture spectrum window on supported Chromium browsers
 - Karaoke-style center-channel vocal reduction toggle
+- Browser-local listening history, stats, ratings, smart-radio seed handoffs,
+  queue manager, similar-track auto-fill, and keyboard shortcuts
+- Native MilkDrop3-compatible WebGL2/WebGPU backends are selectable for testing;
+  Butterchurn remains available and device/preset parity is still experimental
 
 ### SongID
 - Native source-identification workflow beside MusicBrainz in Search
@@ -48,6 +52,15 @@
 - Produces ranked actions for song search, album preparation, album jobs, and artist discography planning
 - **Ranked acquisition & mix planning** — track/album/discography plans rely on identity-first scoring, mix decomposition generates `Split Into Track Plans`, and `Search Top Candidates` fan-outs handle ambiguous segments while ranking by quality/Byzantine consensus
 - Keeps synthetic / AI-origin signals informational rather than letting them override strong identity matches
+
+### Acquisition Review
+- Review queue for passive, imported, and generated acquisition candidates
+- Suggested, approved, snoozed, and rejected states with local review history
+- Watchlists, provider/source-feed suggestions, listening-history handoffs, and
+  Discovery Graph/SongID candidates can create review seeds
+- Impact summaries label local/manual, provider, network, or unknown work before
+  approval
+- Manual Search remains direct and does not route through Acquisition Review
 
 ### Discovery Graph / Constellation
 - Navigable similarity topology rather than flat related-artist lists
@@ -72,6 +85,20 @@
   - artists
   - fallback metadata seeds from search and MusicBrainz context
 - Semantic zoom stack (mini-map, drawer modal, atlas) lets SongID/MusicBrainz/search seeds share state while provenance/score-component overlays keep closeness explainable and actionable
+
+### System Admin Surfaces
+- **Policies**: guided YAML for webhooks/scripts, transfer policy, security and
+  access, search/network/DHT/rescue settings, retention, and share scan pressure
+- **Experience**: browser-local preferences for Search, Acquisition Review,
+  Player, and Messages
+- **Integrations**: VPN, Lidarr, metadata providers, notifications, source feeds,
+  FTP, Servarr readiness, and media-server execution contracts
+- **Source Providers**: read-only acquisition provider capabilities and
+  acquisition-profile priority chains
+- **Automation Center**: visible recipes, impact labels, local enablement, and
+  dry-run history
+- **Setup Health / Diagnostic Bundles**: readiness scoring and redacted support
+  snapshots
 
 ### Discography Concierge
 - Search-page coverage map for a MusicBrainz artist MBID
@@ -112,10 +139,18 @@
 
 ### UserCard Score Badges
 - Reputation/stats badges shown next to usernames in:
-  - Private chat message history (ChatSession)
-  - Room message history (RoomSession)
+  - Stable identity surfaces such as panel headers and member rails
   - Room user list sidebar (RoomSession)
   - Search results, Browse view, Transfers (existing)
+
+### Unified Messages
+- Direct messages, joined rooms, and pod room channels share a persistent
+  multi-panel workspace
+- Panel state can collapse/restore without taking over the full page
+- Pod direct channels are hidden from the normal list so they do not duplicate
+  Soulseek DMs
+- Listen Along controls are scoped to pod room/broadcast channels, not direct
+  messages
 
 ### Mesh Overlay Network
 - DHT-based peer discovery
