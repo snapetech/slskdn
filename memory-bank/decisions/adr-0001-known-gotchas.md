@@ -77,6 +77,7 @@ with socket.create_connection(("ppa.launchpad.net", 21), timeout=15) as sock:
 PY
 
 curl --fail --show-error --ipv4 --ftp-pasv --retry 5 --retry-all-errors \
+  --connect-timeout 120 \
   --upload-file "$source_file" \
   "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
 ```

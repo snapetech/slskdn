@@ -138,7 +138,7 @@ jobs:
             exit 1
           fi
 
-          echo "Pinning ppa.launchpad.net to IPv4 ${LAUNCHPAD_PPA_FTP_IPV4} for dput FTP upload"
+          echo "Pinning ppa.launchpad.net to IPv4 ${LAUNCHPAD_PPA_FTP_IPV4} for PPA FTP upload"
           echo "${LAUNCHPAD_PPA_FTP_IPV4} ppa.launchpad.net" | sudo tee -a /etc/hosts
           getent ahosts ppa.launchpad.net
 
@@ -199,7 +199,7 @@ jobs:
               --retry 5 \
               --retry-all-errors \
               --retry-delay 10 \
-              --connect-timeout 30 \
+              --connect-timeout 120 \
               --max-time 900 \
               --upload-file "$source_file" \
               "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
