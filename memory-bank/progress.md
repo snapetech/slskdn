@@ -9173,6 +9173,18 @@ Code quality improvements were completed as part of Option A:
 - Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-Btm3_g7j.js`, `index-8RtCOAqk.css`, and `Messaging-BVqhWdEj.js`.
 - Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
 
+## 2026-05-01 03:22:00Z
+
+- Started the production placeholder burn-down.
+- Added `docs/dev/placeholder-completion-plan-2026-05-01.md` to separate real
+  runtime gaps from UI input placeholders, generated files, tests, and
+  historical docs.
+- Replaced fake hard-coded swarm analytics efficiency values with values derived
+  from active multi-source downloads and peer throughput samples; unavailable
+  history remains zero/empty instead of invented data.
+- Added focused unit coverage for derived swarm efficiency metrics and empty
+  trend semantics.
+
 ## 2026-05-01 03:05:00Z
 
 - Continued the feature-expansion documentation burn-down with current-doc link

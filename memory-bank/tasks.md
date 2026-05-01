@@ -2216,3 +2216,7 @@
 - [x] Resolve current-doc broken links and stale documentation banners
   - Status: completed (2026-05-01)
   - Notes: Fixed the documentation audit state for the 25 tracked current-doc broken links, added historical snapshot banners to dated test/status planning docs, renamed pod-scoped tunnel docs in public prose to Pod Private Service Gateway with explicit host VPN-agent separation, and split host VPN guidance into focused companion pages for Linux/WireGuard, external tunnels, Windows/macOS, and the API contract.
+
+- [ ] Complete production placeholder burn-down
+  - Status: in progress (2026-05-01)
+  - Notes: Added `docs/dev/placeholder-completion-plan-2026-05-01.md` with production-only scope, scan command, subsystem work packages, and completion criteria. First slice removes fake hard-coded swarm analytics efficiency values and derives metrics from active downloads plus peer samples.

@@ -1,3 +1,18 @@
+## Update 2026-05-01 03:22:00Z
+
+- Current task: Production placeholder burn-down is in progress.
+- Last activity:
+  - added `docs/dev/placeholder-completion-plan-2026-05-01.md`
+  - scoped the burn-down to production markers while excluding UI input
+    placeholders, tests, generated assets, archive docs, and historical
+    memory-bank notes
+  - started P1 by removing fake hard-coded swarm analytics efficiency values
+  - added unit coverage for derived efficiency metrics and empty trend output
+- Next steps:
+  1. Validate the focused swarm analytics tests.
+  2. Continue with intentional disabled-feature cleanup and Mesh/Service Fabric
+     streaming markers after the current dirty obfuscation lane settles.
+
 ## Update 2026-05-01 02:56:49Z
 
 - Current task: Soulseek type-1 obfuscation default posture and README coverage are complete locally.
