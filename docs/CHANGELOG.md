@@ -38,6 +38,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   capability messages, including mesh sync and bridge proxy startup wording.
 - Removed stale TODO wording from mesh neighbor, signal handler, and transfer
   telemetry comments, and clarified swarm/rescue unavailable-state messages.
+- Reconciled the remaining feature-expansion task logs for QR invites, native
+  MilkDrop3, DHT bootstrap diagnostics, SongID research-only MIR lanes, analyzer
+  cleanup, and production placeholder burn-down.
 - Clarified mesh gateway, scheduler, bridge, LAN, and Mesh DHT validation
   comments to reflect current local validation and fetch-path enforcement.
 - Removed more stale placeholder comments from privacy, DHT publishing, pods,
