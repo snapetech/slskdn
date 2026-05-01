@@ -131,6 +131,11 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
         return buffer.Length > 0 && (buffer[0] & 0xC0) == 0xC0;
     }
 
+    internal static bool IsQuicShortHeaderPacket(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length > 0 && (buffer[0] & 0xC0) == 0x40;
+    }
+
     internal static bool IsDhtPacket(ReadOnlySpan<byte> buffer)
     {
         return buffer.Length > 0 && buffer[0] == (byte)'d';
@@ -151,19 +156,19 @@ public sealed class SharedMeshUdpListener : IDhtListener, IDisposable
                     continue;
                 }
 
-                if (_quicBackendEndPoint is not null && IsQuicInitialPacket(result.Buffer))
+                if (IsDhtPacket(result.Buffer))
+                {
+                    MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
+                    continue;
+                }
+
+                if (_quicBackendEndPoint is not null && (IsQuicInitialPacket(result.Buffer) || IsQuicShortHeaderPacket(result.Buffer)))
                 {
                     var session = _quicSessions.GetOrAdd(
                         result.RemoteEndPoint,
                         endpoint => new QuicProxySession(endpoint, _quicBackendEndPoint, udp, _logger, _cts.Token));
 
                     await session.ForwardToBackendAsync(result.Buffer, cancellationToken).ConfigureAwait(false);
-                    continue;
-                }
-
-                if (IsDhtPacket(result.Buffer))
-                {
-                    MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
                     continue;
                 }
 

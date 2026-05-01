@@ -25,6 +25,17 @@ public class SharedMeshUdpListenerTests
     }
 
     [Theory]
+    [InlineData(new byte[] { 0x41, 0x00, 0x00 }, true)]
+    [InlineData(new byte[] { 0x7f, 0x00, 0x00 }, true)]
+    [InlineData(new byte[] { 0xc3, 0x00, 0x00 }, false)]
+    [InlineData(new byte[] { 0x96, 0xa4, 0x70, 0x69, 0x6e, 0x67 }, false)]
+    [InlineData(new byte[] { }, false)]
+    public void IsQuicShortHeaderPacket_MatchesShortHeaderRange(byte[] datagram, bool expected)
+    {
+        Assert.Equal(expected, SharedMeshUdpListener.IsQuicShortHeaderPacket(datagram));
+    }
+
+    [Theory]
     [InlineData(new byte[] { 0x64, 0x31, 0x3a }, true)]
     [InlineData(new byte[] { 0x96, 0xa4, 0x70, 0x69, 0x6e, 0x67 }, false)]
     [InlineData(new byte[] { 0xc3, 0x00, 0x00 }, false)]
@@ -66,6 +77,12 @@ public class SharedMeshUdpListenerTests
 
         Assert.Equal(quicResponse, clientResult.Buffer);
         Assert.Equal(publicEndpoint, clientResult.RemoteEndPoint);
+
+        var quicShortHeaderPacket = new byte[] { 0x41, 0x00, 0x02 };
+        await client.SendAsync(quicShortHeaderPacket, publicEndpoint);
+        var shortHeaderBackendResult = await backend.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(quicShortHeaderPacket, shortHeaderBackendResult.Buffer);
     }
 
     [Fact]

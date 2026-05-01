@@ -54,7 +54,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z276. Shared Mesh UDP Ports Must Demux DHT, UDP Overlay, And QUIC
 
-**The Bug**: After restoring QUIC on the reduced shared mesh port, the app still treated UDP overlay and QUIC as mutually exclusive listeners. The first correction skipped `UdpOverlayServer` whenever QUIC was active, which removed the extra `50400/udp` socket but also implied QUIC replaced UDP overlay. That is wrong: DHT rendezvous, UDP overlay control envelopes, and QUIC overlay traffic are distinct protocols that can share public UDP `50305` only if the shared listener demuxes all three.
+**The Bug**: After restoring QUIC on the reduced shared mesh port, the app still treated UDP overlay and QUIC as mutually exclusive listeners. The first correction skipped `UdpOverlayServer` whenever QUIC was active, which removed the extra `50400/udp` socket but also implied QUIC replaced UDP overlay. That is wrong: DHT rendezvous, UDP overlay control envelopes, and QUIC overlay traffic are distinct protocols that can share public UDP `50305` only if the shared listener demuxes all three. A follow-up demux pass also treated QUIC short-header packets without an existing proxy session as UDP overlay, producing MessagePack decode warning stacks from normal QUIC traffic after restart.
 
 **Files Affected**:
 - `src/slskd/DhtRendezvous/SharedMeshUdpListener.cs`
@@ -88,7 +88,7 @@ if (DhtRendezvousService.ShouldUseSharedMeshUdpListener(dhtOptions, overlayOptio
     return new SharedMeshUdpListener(...);
 }
 
-if (IsQuicInitialPacket(result.Buffer))
+if (existingQuicSession is not null)
 {
     await session.ForwardToBackendAsync(result.Buffer, cancellationToken);
 }
@@ -96,13 +96,17 @@ else if (IsDhtPacket(result.Buffer))
 {
     MessageReceived?.Invoke(result.Buffer, result.RemoteEndPoint);
 }
+else if (IsQuicInitialPacket(result.Buffer) || IsQuicShortHeaderPacket(result.Buffer))
+{
+    await session.ForwardToBackendAsync(result.Buffer, cancellationToken);
+}
 else
 {
     await HandleOverlayDatagramAsync(result.Buffer, result.RemoteEndPoint, cancellationToken);
 }
 ```
 
-**Why This Keeps Happening**: Port reduction is about socket ownership, not protocol replacement. QUIC does not supersede UDP overlay or DHT. If multiple mesh protocols share one public UDP port, the owner of that socket must route every expected wire format; otherwise a fix will either bind an extra public port or silently disable one transport.
+**Why This Keeps Happening**: Port reduction is about socket ownership, not protocol replacement. QUIC does not supersede UDP overlay or DHT. If multiple mesh protocols share one public UDP port, the owner of that socket must route every expected wire format; otherwise a fix will either bind an extra public port, silently disable one transport, or misclassify ordinary QUIC short-header packets as malformed overlay envelopes.
 
 ### 0z275. QUIC Probe Connections May Close Without Opening A Stream
 

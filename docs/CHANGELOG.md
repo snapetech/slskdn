@@ -50,6 +50,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   longer log warning stack traces when the peer closes before opening a stream.
 - Kept UDP overlay and QUIC active together on the shared mesh UDP port instead
   of treating QUIC as a replacement for UDP overlay.
+- Routed QUIC short-header packets through the shared UDP demux so post-restart
+  QUIC traffic is not mistaken for malformed UDP overlay envelopes.
 - Switched slskdN to the private `slskNet.Runtime` Soulseek.NET-derived
   runtime fork for local builds, vendored the runtime source under
   `vendor/slskNet.Runtime`, activated Soulseek type-1 peer-message
