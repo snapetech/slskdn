@@ -533,17 +533,42 @@ export const createNativeMilkdropEngine = async ({
   rendererBackend = 'webgl2',
 }) => {
   const webGpuStatus = await getMilkdropWebGpuStatus();
-  const activeRendererBackend = rendererBackend === 'webgpu' ? 'webgpu' : 'webgl2';
+  const requestedRendererBackend = rendererBackend === 'webgpu' ? 'webgpu' : 'webgl2';
+  let activeRendererBackend = requestedRendererBackend === 'webgpu' && webGpuStatus.available
+    ? 'webgpu'
+    : 'webgl2';
+  let webGpuFallbackReason = requestedRendererBackend === 'webgpu' && activeRendererBackend === 'webgl2'
+    ? webGpuStatus.reason || 'WebGPU unavailable'
+    : '';
+  const createActiveRendererSet = async (options) => {
+    try {
+      return await Promise.resolve(createRendererSet({
+        ...options,
+        rendererBackend: activeRendererBackend,
+      }));
+    } catch (error) {
+      if (activeRendererBackend !== 'webgpu') {
+        throw error;
+      }
+      activeRendererBackend = 'webgl2';
+      webGpuFallbackReason = error?.message || 'WebGPU renderer failed';
+      // eslint-disable-next-line no-console
+      console.warn('Falling back to native MilkDrop WebGL2 renderer.', error);
+      return createRendererSet({
+        ...options,
+        rendererBackend: activeRendererBackend,
+      });
+    }
+  };
   let presetIndex = 0;
   let activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
   let activePresetTitle = nativePresets[presetIndex].name;
-  let activeRendererSet = await Promise.resolve(createRendererSet({
+  let activeRendererSet = await createActiveRendererSet({
     canvas,
     parsed: activeParsedPresetSet,
-    rendererBackend: activeRendererBackend,
     title: activePresetTitle,
     transitionSeconds: 0,
-  }));
+  });
   let retiringRendererSets = [];
   let pendingPresetLoad = null;
   let automation = normalizeAutomation();
@@ -631,10 +656,9 @@ export const createNativeMilkdropEngine = async ({
     activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
     activePresetTitle = nativePresets[presetIndex].name;
     return activateCreatedRendererSet(
-      createRendererSet({
+      createActiveRendererSet({
         canvas,
         parsed: activeParsedPresetSet,
-        rendererBackend: activeRendererBackend,
         title: activePresetTitle,
       }),
       options.blendSeconds ?? getPresetSetTransitionSeconds(activeParsedPresetSet),
@@ -690,10 +714,9 @@ export const createNativeMilkdropEngine = async ({
       activeParsedPresetSet = importedPresetSet;
       activePresetTitle = title;
       return activateCreatedRendererSet(
-        createRendererSet({
+        createActiveRendererSet({
           canvas,
           parsed: activeParsedPresetSet,
-          rendererBackend: activeRendererBackend,
           textureAssets: options.textureAssets,
           title,
         }),
@@ -714,10 +737,9 @@ export const createNativeMilkdropEngine = async ({
       activePresetTitle = title;
       const mergedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
       const activated = activateCreatedRendererSet(
-        createRendererSet({
+        createActiveRendererSet({
           canvas,
           parsed: activeParsedPresetSet,
-          rendererBackend: activeRendererBackend,
           textureAssets: options.textureAssets,
           title,
         }),
@@ -794,10 +816,9 @@ export const createNativeMilkdropEngine = async ({
       activePresetTitle = title;
       const mergedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
       const activated = activateCreatedRendererSet(
-        createRendererSet({
+        createActiveRendererSet({
           canvas,
           parsed: activeParsedPresetSet,
-          rendererBackend: activeRendererBackend,
           textureAssets: options.textureAssets,
           title,
         }),
@@ -827,10 +848,9 @@ export const createNativeMilkdropEngine = async ({
       activePresetTitle = title;
       const updatedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
       const activated = activateCreatedRendererSet(
-        createRendererSet({
+        createActiveRendererSet({
           canvas,
           parsed: activeParsedPresetSet,
-          rendererBackend: activeRendererBackend,
           textureAssets: options.textureAssets,
           title,
         }),
@@ -864,10 +884,9 @@ export const createNativeMilkdropEngine = async ({
       activePresetTitle = title;
       const updatedSource = serializeMilkdropPresetSet(activeParsedPresetSet);
       const activated = activateCreatedRendererSet(
-        createRendererSet({
+        createActiveRendererSet({
           canvas,
           parsed: activeParsedPresetSet,
-          rendererBackend: activeRendererBackend,
           textureAssets: options.textureAssets,
           title,
         }),
