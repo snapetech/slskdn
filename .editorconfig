@@ -196,6 +196,8 @@ dotnet_diagnostic.SA1651.severity = suggestion  # Placeholder XML docs; too nois
 
 [tests/**/*.cs]
 dotnet_diagnostic.CA2007.severity = none     # Test async style conflicts with xUnit guidance
+dotnet_diagnostic.CA2000.severity = none     # Existing tests use disposable fixture/helper patterns that are owned by the test host
+dotnet_diagnostic.CA1416.severity = none     # Platform-specific runtime probes are intentionally covered in tests
 dotnet_diagnostic.xUnit1030.severity = none  # ConfigureAwait guidance overlaps with CA2007 policy
 dotnet_diagnostic.xUnit1031.severity = none  # Existing tests intentionally use some blocking helpers
 dotnet_diagnostic.xUnit2009.severity = none  # Style-only assertion guidance
@@ -208,4 +210,3 @@ dotnet_diagnostic.RS1032.severity = suggestion  # Analyzer authoring hygiene; no
 dotnet_diagnostic.RS1036.severity = suggestion  # Analyzer project packaging guidance; not release-critical here
 dotnet_diagnostic.RS1041.severity = suggestion  # In-repo analyzer lives inside app assembly today
 dotnet_diagnostic.RS2008.severity = suggestion  # Release tracking metadata for custom analyzer rules
-

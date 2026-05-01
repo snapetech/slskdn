@@ -13,35 +13,44 @@ namespace slskd.Mesh.ServiceFabric;
 [MessagePackObject]
 public sealed record ServiceCall
 {
+    public ServiceCall()
+    {
+        ServiceName = string.Empty;
+        Method = string.Empty;
+        CorrelationId = Guid.NewGuid().ToString();
+        Payload = Array.Empty<byte>();
+        TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    }
+
     /// <summary>
     /// Service name to invoke (e.g., "pods", "shadow-index").
     /// </summary>
     [Key(0)]
-    public string ServiceName { get; init; } = string.Empty;
+    public string ServiceName { get; init; }
 
     /// <summary>
     /// Method/operation name within the service (e.g., "Join", "PostMessage", "LookupByMbId").
     /// </summary>
     [Key(1)]
-    public string Method { get; init; } = string.Empty;
+    public string Method { get; init; }
 
     /// <summary>
     /// Unique correlation ID for matching request to response.
     /// </summary>
     [Key(2)]
-    public string CorrelationId { get; init; } = Guid.NewGuid().ToString();
+    public string CorrelationId { get; init; }
 
     /// <summary>
     /// Serialized request payload (method-specific data).
     /// </summary>
     [Key(3)]
-    public byte[] Payload { get; init; } = Array.Empty<byte>();
+    public byte[] Payload { get; init; }
 
     /// <summary>
     /// When this call was created (UTC, Unix milliseconds).
     /// </summary>
     [Key(4)]
-    public long TimestampUnixMs { get; init; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    public long TimestampUnixMs { get; init; }
 }
 
 /// <summary>
@@ -51,11 +60,18 @@ public sealed record ServiceCall
 [MessagePackObject]
 public sealed record ServiceReply
 {
+    public ServiceReply()
+    {
+        CorrelationId = string.Empty;
+        Payload = Array.Empty<byte>();
+        TimestampUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    }
+
     /// <summary>
     /// Correlation ID matching the original ServiceCall.
     /// </summary>
     [Key(0)]
-    public string CorrelationId { get; init; } = string.Empty;
+    public string CorrelationId { get; init; }
 
     /// <summary>
     /// Status code: 0 = success, nonzero = error.
@@ -77,7 +93,7 @@ public sealed record ServiceReply
     /// Serialized response payload (method-specific data) or error details.
     /// </summary>
     [Key(2)]
-    public byte[] Payload { get; init; } = Array.Empty<byte>();
+    public byte[] Payload { get; init; }
 
     /// <summary>
     /// Optional error message (human-readable, safe for logging).
@@ -89,7 +105,7 @@ public sealed record ServiceReply
     /// When this reply was created (UTC, Unix milliseconds).
     /// </summary>
     [Key(4)]
-    public long TimestampUnixMs { get; init; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    public long TimestampUnixMs { get; init; }
 
     /// <summary>
     /// Helper: Check if this reply indicates success.

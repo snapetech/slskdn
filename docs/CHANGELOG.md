@@ -30,7 +30,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Replaced placeholder swarm analytics values with metrics derived from active
   downloads and peer throughput samples.
 - Moved mesh service MessagePack record defaults into constructors to avoid
-  deserialization resetting initialized `init` properties.
+  deserialization resetting initialized `init` properties, and cleaned the
+  adjacent multi-source comment formatting warning.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
