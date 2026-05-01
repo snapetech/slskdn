@@ -15,7 +15,7 @@ bash packaging/scripts/run-release-gate.sh
 bash ./bin/lint
 ```
 
-If the release claims to fix a reported bug, also run the reproduce-first workflow in [bugfix-verification-checklist.md](<repo-root>/docs/dev/bugfix-verification-checklist.md). Green generic validation is not enough on its own.
+If the release claims to fix a reported bug, also run the reproduce-first workflow in [bugfix-verification-checklist.md](bugfix-verification-checklist.md). Green generic validation is not enough on its own.
 
 The release gate now covers:
 
