@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z256. VPN Forwarded Ports Are Not Local Soulseek Listen Ports
+
+**The Bug**: Gluetun/VPN status polling copied the provider's public forwarded port into `soulseek.listen_port`, causing Soulseek.NET to rebind the local listener to the public/NAT port and log `Failed to start listening on 0.0.0.0:<forwarded-port>`.
+
+**Files Affected**:
+- `src/slskd/Integrations/VPN/VPNService.cs`
+- `tests/slskd.Tests.Unit/Integrations/VPN/VPNServiceTests.cs`
+
+**Wrong**:
+```csharp
+Program.ApplyConfigurationOverlay(overlay with
+{
+    Soulseek = overlay.Soulseek with
+    {
+        ListenPort = status.ForwardedPort,
+    },
+});
+```
+
+**Correct**:
+```csharp
+if (status.ForwardedPort.HasValue)
+{
+    isReadyNow = true;
+}
+```
+
+**Why This Keeps Happening**: VPN and router forwarded ports describe external reachability, not necessarily the local socket that slskd binds. Keep the configured local listener stable, store the provider's forwarded port in VPN state/status, and let UI/status surfaces show both local and public endpoints instead of mutating the runtime Soulseek listen port.
+
 ### 0z255. Browser Fingerprints Must Normalize WebCrypto Digest Input
 
 **The Bug**: The release gate failed in frontend tests because `File.arrayBuffer()` can return Buffer-like values or cross-realm ArrayBuffers under Node/jsdom, and Node WebCrypto rejects them unless they are copied into a native digest input.
