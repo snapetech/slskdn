@@ -19,6 +19,7 @@ Complete guide to all slskdn documentation.
 - [SongID and Discovery](songid-discovery.md) - Native identification, Acquisition Review, and Discovery Graph workflows
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI for policies, integrations, diagnostics, source providers, and local preferences
 - [Pods, Rooms, and Messages](pods-and-rooms.md) - Gold Star, pod rooms, unified messages, and listen-along boundaries
+- [Soulseek Type-1 Obfuscation](soulseek-type1-obfuscation.md) - Default-on compatibility posture, mode semantics, runtime status, and safety caveats
 - [Pod Private Service Gateway](pod-vpn/vpn-user-guide.md) - Pod-scoped private service tunnels over mesh; not host VPN routing or internet egress
 - [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
 - [Listening Party and Player](listening-party.md) - Integrated player, streaming, visualizers, and listen-along behavior
@@ -43,6 +44,7 @@ Complete guide to all slskdn documentation.
 - [How It Works](HOW-IT-WORKS.md) - Technical architecture overview
 - [Features Overview](FEATURES.md) - Complete feature list and details
 - [Lidarr Integration](lidarr-integration.md) - First-class plugin-free Lidarr wanted sync, download handoff, and safe post-download import
+- [Soulseek Type-1 Obfuscation](soulseek-type1-obfuscation.md) - Peer-message obfuscation options and runtime activation plan
 - [VPN Agent](../src/slskdN.VpnAgent/README.md) - Host-side fail-closed VPN routing and forwarded-port integration
 - [System Admin Surfaces](system-surfaces.md) - Guided System UI and operator panels
 - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - Development status and planned features
