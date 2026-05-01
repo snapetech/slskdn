@@ -52,6 +52,34 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z235. Persistent Services Need Test-Scoped Storage Paths
+
+**The Bug**: MusicBrainz overlay persistence made the default constructor load the shared app-directory state file. Existing unit tests used the default constructor for isolated in-memory services, so edits stored by one test leaked into later tests through persisted global state.
+
+**Files Affected**:
+- `src/slskd/Integrations/MusicBrainz/Overlay/MusicBrainzOverlayService.cs`
+- `tests/slskd.Tests.Unit/Integrations/MusicBrainz/MusicBrainzOverlayServiceTests.cs`
+
+**Wrong**:
+```csharp
+private static MusicBrainzOverlayService CreateService()
+{
+    return new MusicBrainzOverlayService(NullLogger<MusicBrainzOverlayService>.Instance);
+}
+```
+
+**Correct**:
+```csharp
+private static MusicBrainzOverlayService CreateService()
+{
+    return new MusicBrainzOverlayService(
+        NullLogger<MusicBrainzOverlayService>.Instance,
+        CreateStoragePath());
+}
+```
+
+**Why This Keeps Happening**: Persistence is usually added after service tests were written as pure in-memory tests. Once the production constructor loads from `Program.AppDirectory`, tests must use a unique temporary storage path and delete it, otherwise test order or old local state can change behavior.
+
 ### 0z234. Post-Action Success Messages Must Survive Follow-Up Refreshes
 
 **The Bug**: A Quarantine Jury UI action set a success message and then reloaded the selected review. The shared review-load helper cleared the message at the end of the action path, so users never saw confirmation that route or accept actions completed.
