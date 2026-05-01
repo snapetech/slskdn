@@ -16,10 +16,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MonoTorrent;
 using MonoTorrent.Connections.Dht;
 using MonoTorrent.Dht;
 using slskd.Mesh;
+using slskd.Mesh.Overlay;
 
 /// <summary>
 /// Service for discovering and connecting to mesh peers via BitTorrent DHT rendezvous.
@@ -37,6 +39,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private readonly MeshNeighborRegistry _registry;
     private readonly IMeshPeerManager _peerManager;
     private readonly DhtRendezvousOptions _options;
+    private readonly OverlayOptions _overlayOptions;
+    private readonly ILoggerFactory _loggerFactory;
 
     // MonoTorrent DHT components
     private DhtEngine? _dhtEngine;
@@ -83,7 +87,9 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         IMeshOverlayConnector overlayConnector,
         MeshNeighborRegistry registry,
         IMeshPeerManager peerManager,
-        DhtRendezvousOptions options)
+        DhtRendezvousOptions options,
+        IOptions<OverlayOptions>? overlayOptions = null,
+        ILoggerFactory? loggerFactory = null)
     {
         _logger = logger;
         _overlayServer = overlayServer;
@@ -91,6 +97,8 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         _registry = registry;
         _peerManager = peerManager;
         _options = options;
+        _overlayOptions = overlayOptions?.Value ?? new OverlayOptions();
+        _loggerFactory = loggerFactory ?? Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance;
     }
 
     public bool IsBeaconCapable { get; private set; }
@@ -372,7 +380,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
 
             // Use a stable UDP port so operators can forward or allow-list it explicitly.
             var dhtPort = _options.DhtPort;
-            dhtListener = MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
+            dhtListener = CreateDhtListener(dhtPort);
 
             if (dhtListener is null)
             {
@@ -469,6 +477,30 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
             dhtListener?.Stop();
             throw;
         }
+    }
+
+    private IDhtListener CreateDhtListener(int dhtPort)
+    {
+        if (ShouldShareDhtPortWithQuic(_options, _overlayOptions))
+        {
+            return new SharedMeshUdpListener(
+                new IPEndPoint(IPAddress.Any, dhtPort),
+                new IPEndPoint(IPAddress.Loopback, _overlayOptions.QuicBackendListenPort),
+                _loggerFactory.CreateLogger<SharedMeshUdpListener>());
+        }
+
+        return MonoTorrent.Factories.Default.CreateDhtListener(new IPEndPoint(IPAddress.Any, dhtPort));
+    }
+
+    internal static bool ShouldShareDhtPortWithQuic(DhtRendezvousOptions dhtOptions, OverlayOptions overlayOptions)
+    {
+        return dhtOptions.Enabled &&
+               overlayOptions.Enable &&
+               overlayOptions.EnableQuic &&
+               overlayOptions.ShareQuicWithDhtPort &&
+               overlayOptions.QuicListenPort == dhtOptions.DhtPort &&
+               overlayOptions.QuicBackendListenPort != dhtOptions.DhtPort &&
+               QuicRuntime.IsAvailable();
     }
 
     private void OnPeersFound(object? sender, PeersFoundEventArgs e)

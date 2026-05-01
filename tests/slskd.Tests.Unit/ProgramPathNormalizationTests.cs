@@ -417,7 +417,10 @@ public class ProgramPathNormalizationTests
         var dataOverlay = new slskd.Mesh.Overlay.DataOverlayOptions();
 
         Assert.True(overlay.Enable);
-        Assert.False(overlay.EnableQuic);
+        Assert.True(overlay.EnableQuic);
+        Assert.True(overlay.ShareQuicWithDhtPort);
+        Assert.Equal(50305, overlay.QuicListenPort);
+        Assert.Equal(55305, overlay.QuicBackendListenPort);
         Assert.False(dataOverlay.Enable);
     }
 

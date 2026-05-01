@@ -1,3 +1,15 @@
+## 2026-05-01 18:19:00Z
+
+- Restored QUIC on the reduced ingress footprint by sharing public UDP `50305` between DHT rendezvous and QUIC overlay traffic, with MsQuic listening on loopback backend UDP `55305`.
+- Added `SharedMeshUdpListener` as the DHT listener when overlay QUIC is enabled and configured for port sharing; DHT-shaped packets stay on the MonoTorrent path, while QUIC long-header Initial flows proxy to the backend listener.
+- Changed overlay defaults and example config so QUIC is enabled by default, advertises public `50305`, shares the DHT port, and keeps the backend-only QUIC socket off the public/router-forward list.
+- Updated the ingress migration notice and public docs to describe the current mesh/DHT/QUIC shared port without adding live IP/status detection.
+- Fixed the live multi-address UDP demux bug where wildcard sends replied from `192.168.50.248` after clients contacted `192.168.50.85`; the shared listener now binds per local IPv4 address so QUIC replies preserve the contacted endpoint. Documented this in ADR-0001 as `0z262`.
+- Updated `kspls0` nftables and the VPN ingress compact UDP drop-in from stale UDP `50306`/`50400` to shared UDP `50305`.
+- Deployed `0.0.0-slskdn.quicshare.3` to `kspls0` as `/usr/lib/slskd/releases/manual-quicshare-20260501181348`.
+- Live validation: service active, shared UDP listener bound `50305` on six local sockets, QUIC backend listening on `127.0.0.1:55305`, overlay public port advertised as `50305`, DHT overlay announcement completed, and workstation QUIC handshake to `kspls0:50305` succeeded. A conservative live search smoke returned no responses, so no transfer candidate was queued.
+- Validation: `dotnet build src/slskd/slskd.csproj --no-restore`, focused DHT/QUIC/default-option tests, `bash ./bin/lint`, `npm test -- App.test.jsx`, `npm run build`, and full `dotnet test --no-restore` passed.
+
 ## 2026-05-01 16:09:39Z
 
 - Diagnosed the PPA failure as runner reachability, not missing Launchpad SSH credentials: the last known successful `.197` PPA upload used anonymous FTP to `ppa.launchpad.net`.

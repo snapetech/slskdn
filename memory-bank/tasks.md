@@ -11,6 +11,11 @@
 
 *No high priority tasks currently active
 
+- [x] **network**: Restore QUIC overlay on the reduced shared mesh/DHT port.
+ - Status: completed (2026-05-01)
+ - Priority: P1
+ - Notes: Added DHT/QUIC UDP demux so public UDP `50305` carries DHT rendezvous plus QUIC overlay traffic, with MsQuic isolated on loopback backend UDP `55305`. Enabled QUIC by default, updated config/docs/UI port copy, fixed wildcard UDP source-IP replies by binding per local IPv4 address, deployed `0.0.0-slskdn.quicshare.3` to `kspls0`, updated host firewall/VPN ingress UDP rules to `50305`, and verified a workstation QUIC handshake to `kspls0:50305`.
+
 - [x] **runtime**: Switch slskdN to slskNet.Runtime fork and deploy to kspls0.
  - Status: completed (2026-05-01)
  - Priority: P1

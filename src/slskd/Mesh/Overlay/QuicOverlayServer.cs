@@ -93,9 +93,11 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
             // Generate self-signed certificate for QUIC/TLS
             using var certificate = SelfSignedCertificate.Create("CN=mesh-overlay-quic");
 
+            var listenEndPoint = GetListenEndPoint(options);
+            var advertisedPort = options.QuicListenPort;
             var listenerOptions = new QuicListenerOptions
             {
-                ListenEndPoint = new IPEndPoint(IPAddress.Any, options.QuicListenPort),
+                ListenEndPoint = listenEndPoint,
                 ApplicationProtocols = new List<SslApplicationProtocol> { new SslApplicationProtocol("slskdn-overlay") },
                 ConnectionOptionsCallback = (connection, hello, token) =>
                 {
@@ -121,7 +123,10 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
             try
             {
                 listener = await QuicListener.ListenAsync(listenerOptions, stoppingToken);
-                logger.LogInformation("[Overlay-QUIC] Listening on port {Port}", options.QuicListenPort);
+                logger.LogInformation(
+                    "[Overlay-QUIC] Listening on {ListenEndPoint}; advertised public port {PublicPort}",
+                    listenEndPoint,
+                    advertisedPort);
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
@@ -129,7 +134,7 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
                     "[Overlay-QUIC] QUIC overlay port {Port} is already in use. Continuing without QUIC overlay server. " +
                     "Mesh will operate in degraded mode: DHT, relay, and hole punching will still function, " +
                     "but direct inbound QUIC connections will be unavailable.",
-                    options.QuicListenPort);
+                    listenEndPoint.Port);
                 return; // Gracefully exit - mesh can still function via other transports
             }
             catch (SocketException ex)
@@ -141,7 +146,7 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
                 logger.LogWarning(
                     ex,
                     message,
-                    options.QuicListenPort,
+                    listenEndPoint.Port,
                     ex.SocketErrorCode);
                 return; // Gracefully exit - mesh can still function via other transports
             }
@@ -191,6 +196,13 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
         {
             logger.LogError(ex, "[Overlay-QUIC] Server failed");
         }
+    }
+
+    internal static IPEndPoint GetListenEndPoint(OverlayOptions options)
+    {
+        return options.ShareQuicWithDhtPort
+            ? new IPEndPoint(IPAddress.Loopback, options.QuicBackendListenPort)
+            : new IPEndPoint(IPAddress.Any, options.QuicListenPort);
     }
 
     [SupportedOSPlatform("linux")]

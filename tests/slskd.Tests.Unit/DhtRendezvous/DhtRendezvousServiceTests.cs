@@ -16,10 +16,53 @@ using MonoTorrent.Dht;
 using Moq;
 using slskd.DhtRendezvous;
 using slskd.Mesh;
+using slskd.Mesh.Overlay;
 using Xunit;
 
 public class DhtRendezvousServiceTests
 {
+    [Fact]
+    public void ShouldShareDhtPortWithQuic_WhenConfiguredForSharedPortAndRuntimeAvailable_ReturnsRuntimeSupport()
+    {
+        var result = DhtRendezvousService.ShouldShareDhtPortWithQuic(
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50305,
+            },
+            new OverlayOptions
+            {
+                Enable = true,
+                EnableQuic = true,
+                ShareQuicWithDhtPort = true,
+                QuicListenPort = 50305,
+                QuicBackendListenPort = 55305,
+            });
+
+        Assert.Equal(QuicRuntime.IsAvailable(), result);
+    }
+
+    [Fact]
+    public void ShouldShareDhtPortWithQuic_WhenBackendUsesPublicPort_ReturnsFalse()
+    {
+        var result = DhtRendezvousService.ShouldShareDhtPortWithQuic(
+            new DhtRendezvousOptions
+            {
+                Enabled = true,
+                DhtPort = 50305,
+            },
+            new OverlayOptions
+            {
+                Enable = true,
+                EnableQuic = true,
+                ShareQuicWithDhtPort = true,
+                QuicListenPort = 50305,
+                QuicBackendListenPort = 50305,
+            });
+
+        Assert.False(result);
+    }
+
     [Fact]
     public void OnPeersFound_WhenRendezvousPeersAreDiscovered_TracksUnverifiedCandidateWithoutClaimingCircuitCapability()
     {

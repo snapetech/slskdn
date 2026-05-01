@@ -281,7 +281,7 @@ describe('App', () => {
     expect(screen.getByText('slskdN ingress ports were reduced.')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Older builds needed five public forwards. Current builds need two: Soulseek peer/file transfers and the slskdN mesh/DHT overlay.',
+        'Older builds needed five public forwards. Current builds need two: Soulseek peer/file transfers and the slskdN mesh/DHT/QUIC overlay.',
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText('Soulseek peer/file transfers')).toHaveLength(2);
@@ -289,7 +289,8 @@ describe('App', () => {
     expect(screen.getByText('Need now')).toBeInTheDocument();
     expect(screen.getAllByText('TCP 50300')).toHaveLength(2);
     expect(screen.getAllByText('TCP/UDP 50305')).toHaveLength(2);
-    expect(screen.getAllByText('slskdN mesh overlay and DHT rendezvous')).toHaveLength(2);
+    expect(screen.getByText('slskdN mesh overlay and DHT rendezvous')).toBeInTheDocument();
+    expect(screen.getByText('slskdN mesh, DHT rendezvous, and QUIC overlay')).toBeInTheDocument();
     expect(screen.getByText('legacy mesh UDP overlay')).toBeInTheDocument();
     expect(screen.getByText('UDP 50400')).toBeInTheDocument();
     expect(screen.queryByText('TCP 50301')).not.toBeInTheDocument();

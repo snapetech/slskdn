@@ -388,9 +388,10 @@
 # overlay:
 #   enable: true
 #   listen_port: 50400
-#   # For a two-forward VPN setup, disable this direct UDP overlay or leave it private until the app has a UDP demux.
-#   enable_quic: false   # opt in only after the host's MsQuic/runtime stack has soaked cleanly
-#   quic_listen_port: 50402
+#   enable_quic: true
+#   quic_listen_port: 50305          # public QUIC overlay port; shares the DHT UDP forward when share_quic_with_dht_port is true
+#   share_quic_with_dht_port: true   # DHT binds 50305/udp and proxies QUIC Initial flows to the loopback backend below
+#   quic_backend_listen_port: 55305  # loopback-only MsQuic listener behind the shared public UDP port; do not forward this
 # overlay_data:
 #   enable: false        # QUIC data plane; requires a stable MsQuic/runtime stack
 #   listen_port: 50401

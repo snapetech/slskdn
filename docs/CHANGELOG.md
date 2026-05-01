@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added shared UDP port handling so the DHT rendezvous listener can keep the
+  public `50305/udp` forward while proxying QUIC overlay traffic to a loopback
+  MsQuic listener, putting direct QUIC back on the reduced two-forward mesh
+  setup.
 - Switched slskdN to the private `slskNet.Runtime` Soulseek.NET-derived
   runtime fork for local builds, vendored the runtime source under
   `vendor/slskNet.Runtime`, activated Soulseek type-1 peer-message

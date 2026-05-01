@@ -10,12 +10,13 @@ public class OverlayOptions
 {
     public bool Enable { get; set; } = true;
     public int ListenPort { get; set; } = 50400;
-    public bool EnableQuic { get; set; } = false;
+    public bool EnableQuic { get; set; } = true;
 
-    // QUIC overlay server needs its own UDP port: QUIC takes exclusive ownership of its
-    // UDP socket, so it cannot share ListenPort with the legacy UdpOverlayServer. Both
-    // can run concurrently when QUIC is explicitly enabled.
-    public int QuicListenPort { get; set; } = 50402;
+    // Public QUIC overlay port. When ShareQuicWithDhtPort is true, DHT owns the public
+    // UDP socket and proxies QUIC datagrams to QuicBackendListenPort on loopback.
+    public int QuicListenPort { get; set; } = 50305;
+    public bool ShareQuicWithDhtPort { get; set; } = true;
+    public int QuicBackendListenPort { get; set; } = 55305;
 
     public int ReceiveBufferBytes { get; set; } = 128 * 1024;
     public int SendBufferBytes { get; set; } = 128 * 1024;

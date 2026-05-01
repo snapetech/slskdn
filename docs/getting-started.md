@@ -124,8 +124,7 @@ See [Building from Source](build.md) for detailed instructions.
 | Web UI / API | `5030/tcp` | Keep local or behind your own reverse proxy unless intentionally exposed. |
 | HTTPS Web UI | `5031/tcp` | Configure certificate settings before forcing HTTPS. |
 | Soulseek listen | `50300/tcp` | Forward or allow-list this when accepting inbound Soulseek transfers. |
-| DHT rendezvous | `50305/udp` | Optional slskdN mesh rendezvous; set `dht.lan_only: true` to avoid public bootstrap. |
-| Mesh overlay | `50305/tcp` | Optional slskdN overlay listener. |
+| Mesh/DHT/QUIC | `50305/tcp` + `50305/udp` | Optional slskdN mesh listener, DHT rendezvous, and shared-port QUIC overlay; set `dht.lan_only: true` to avoid public bootstrap. |
 
 ### Essential Settings
 

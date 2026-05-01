@@ -1,3 +1,20 @@
+## Update 2026-05-01 18:19:00Z
+
+- Current task: Shared DHT/QUIC UDP demux and QUIC overlay restoration are complete locally and deployed to `kspls0`.
+- Last activity:
+  - changed the public mesh/DHT/QUIC overlay to use shared UDP `50305` with MsQuic listening on loopback backend UDP `55305`
+  - restored QUIC overlay default enablement and advertised public QUIC port `50305`
+  - added the shared UDP listener/proxy and tests for DHT routing, QUIC packet routing, and QUIC endpoint selection
+  - fixed the multi-address wildcard UDP source-IP bug by binding per local IPv4 address and documented it as ADR-0001 gotcha `0z262`
+  - updated `kspls0` host nftables and VPN ingress compact UDP configuration from stale `50306`/`50400` to shared UDP `50305`
+  - deployed `/usr/lib/slskd/releases/manual-quicshare-20260501181348` on `kspls0`
+  - verified live LAN QUIC handshake to `kspls0:50305`, live shared UDP sockets, DHT startup, QUIC backend startup, and overlay DHT announcement
+  - live API search smoke ran but returned no responses, so no weak download candidate was queued
+  - validation passed: `bash ./bin/lint`, Web UI App tests, Web UI production build, focused backend tests, full `dotnet test --no-restore`
+- Next steps:
+  1. Commit and push the shared DHT/QUIC port work.
+  2. Trigger a tag build only if a release is intentionally requested.
+
 ## Update 2026-05-01 18:08:00Z
 
 - Current task: Launchpad SFTP PPA upload setup is complete on GitHub and blocked on Launchpad account key registration.

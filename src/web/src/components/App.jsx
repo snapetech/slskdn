@@ -251,8 +251,8 @@ const LEGACY_INGRESS_PORTS = [
     proto: 'TCP',
   },
   {
-    config: 'dht.overlay_port + dht.dht_port',
-    label: 'slskdN mesh overlay and DHT rendezvous',
+    config: 'dht.overlay_port + dht.dht_port + overlay.quic_listen_port',
+    label: 'slskdN mesh, DHT rendezvous, and QUIC overlay',
     port: 50305,
     proto: 'TCP/UDP',
   },
@@ -335,7 +335,7 @@ const VpnPortChangeNotice = ({ onDismiss, portForwards }) => {
           <strong>slskdN ingress ports were reduced.</strong>
           <span>
             Older builds needed five public forwards. Current builds need two:
-            Soulseek peer/file transfers and the slskdN mesh/DHT overlay.
+            Soulseek peer/file transfers and the slskdN mesh/DHT/QUIC overlay.
           </span>
           <IngressPortList
             expectedPorts={LEGACY_INGRESS_PORTS}
