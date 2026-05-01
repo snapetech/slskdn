@@ -12660,3 +12660,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The main release flow packages a complete staged release artifact, but the standalone `release-ppa.yml` path rebuilds backend and frontend separately. It assumed the backend publish output already contained `wwwroot`, so the workflow only copied files into that path without creating it.
 
 **How to prevent it:** Any standalone packaging workflow that rebuilds frontend assets separately must `mkdir -p publish-linux-x64/wwwroot` before copying Vite output. Do not infer directory existence from a different release path that downloads and unzips a pre-staged artifact.
+
+### 0z73. Listener Event Handlers Must Treat The Sender As Optional Context
+
+**What went wrong:** While adding obfuscated peer-message support to the `slskNet.Runtime` fork, `ListenerHandler.HandleConnection` cast the event `sender` directly to `IListener` to detect whether the accepted connection came from the obfuscated listener. Existing unit tests invoke the handler without a listener sender, so the cleartext connection path threw before processing `PeerInit` or `PierceFirewall`.
+
+**Why it happened:** The implementation treated event sender metadata as required protocol state. In practice, the accepted `IConnection` is the required input and the listener sender is only extra context for listener address, port, and obfuscation mode.
+
+**How to prevent it:** Listener handlers must default to cleartext behavior unless `sender is IListener listener && listener.Obfuscated`. Use null-safe listener metadata in diagnostics, and add focused tests for direct handler invocation plus obfuscated-listener invocation when adding new listener-specific behavior.
