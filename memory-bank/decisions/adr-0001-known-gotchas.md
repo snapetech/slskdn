@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z243. Rich User Cards Do Not Belong In Dense Message Rows
+
+**The Bug**: Chat and room message rows rendered `UserCard` for every sender name, so reputation, speed, queue, and slot badges repeated beside every message and crowded the transcript.
+
+**Files Affected**:
+- `src/web/src/components/Chat/ChatSession.jsx`
+- `src/web/src/components/Rooms/RoomSession.jsx`
+- `src/web/src/components/Messaging/Messaging.jsx`
+
+**Wrong**:
+```jsx
+<span className="chat-message-name">
+  <UserCard username={message.username}>{message.username}</UserCard>
+</span>
+```
+
+**Correct**:
+```jsx
+<span className="chat-message-name">{message.username}: </span>
+```
+
+**Why This Keeps Happening**: `UserCard` looks like a harmless username wrapper, but it performs lookups and renders multiple badges. It belongs in stable identity surfaces such as panel headers and member lists, not repeated transcript rows where the extra badges create noise and redundant network/UI work.
+
 ### 0z242. Listen Along Controls Must Be Channel-Scoped And Compact
 
 **The Bug**: Unified pod messaging mounted the full Listen Along panel for every pod channel, including direct-message channels, which made DMs look like broadcast rooms and consumed most of the message panel.
