@@ -12629,3 +12629,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The earlier passive-FTP retry hardening handled Launchpad-side transient FTP errors, but it still depended on FTP being routable from the ephemeral GitHub runner. Launchpad supports SFTP uploads, and the current runner failure was in the transport path after package generation and signing had already succeeded.
 
 **How to prevent it:** PPA upload workflows should configure `dput` with `method = sftp` and the Launchpad account login, install a dedicated `LAUNCHPAD_SSH_PRIVATE_KEY` secret into `~/.ssh`, and fail clearly if the GPG signing key exists but the Launchpad SSH key is missing. Do not add more FTP retries for runner-level `Network is unreachable` failures.
+
+### 0z72. Standalone PPA Rebuilds Must Create The Web Root Before Copying Vite Assets
+
+**What went wrong:** The manually dispatched PPA retry for `2026050100-slskdn.215` rebuilt the frontend successfully into `src/web/build`, then failed immediately in `Copy Web Assets` with `cp: target 'publish-linux-x64/wwwroot/': No such file or directory`. The self-contained backend publish output did not create an empty `wwwroot` directory for the standalone workflow.
+
+**Why it happened:** The main release flow packages a complete staged release artifact, but the standalone `release-ppa.yml` path rebuilds backend and frontend separately. It assumed the backend publish output already contained `wwwroot`, so the workflow only copied files into that path without creating it.
+
+**How to prevent it:** Any standalone packaging workflow that rebuilds frontend assets separately must `mkdir -p publish-linux-x64/wwwroot` before copying Vite output. Do not infer directory existence from a different release path that downloads and unzips a pre-staged artifact.
