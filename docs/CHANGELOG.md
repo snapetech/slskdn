@@ -26,6 +26,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
   failed setup, and passthrough no-auth docs for the required CIDR gate.
 - Updated the login wordmark to show `slskdN` with a baseline-aligned block
   `N` suffix.
+- Filtered release-note highlights so CI, release plumbing, documentation
+  gotchas, tests, and repo-maintenance commits do not crowd out
+  user-facing changes.
 - Added native Soulseek discovery support for interests, hated interests,
   recommendations, item recommendations, similar users, and user-interest
   lookup through the vendored runtime and slskdN API.

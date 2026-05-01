@@ -390,9 +390,9 @@ mkdir -p "$(dirname "$OUT_PATH")"
   fi
 
   if [[ "$INCLUDE_COMMIT_DETAILS" -eq 1 ]]; then
-    printf '## Included Commits\n\n'
+    printf '## Included Product Commits\n\n'
     if [[ -z "$DISPLAY_COMMITS" ]]; then
-      printf '%s\n' "- No product commits listed for \`${LOGICAL_VERSION}\` after filtering release-hygiene docs commits."
+      printf '%s\n' "- No product-facing commits listed for \`${LOGICAL_VERSION}\` after filtering release, CI, documentation-gotcha, test, and repo-maintenance commits."
     else
       while IFS=$'\t' read -r sha subject; do
         short_sha="${sha:0:7}"
