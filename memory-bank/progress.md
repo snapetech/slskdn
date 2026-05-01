@@ -9391,3 +9391,11 @@ Code quality improvements were completed as part of Option A:
 - Live smoke then exposed normal QUIC handshake-only probes logging warning stack traces when the peer closed before opening a stream. Documented ADR-0001 gotcha `0z275`, quieted those expected QUIC disconnects for control/data servers, added focused coverage, and redeployed the committed fix.
 - Final live validation on `kspls0`: API reports the deployed version, Soulseek is `Connected, LoggedIn`, listeners are active on `5030/tcp`, `50300/tcp`, `50301/tcp`, `50305/tcp`, shared `50305/udp`, and backend `55305/udp`; QUIC handshake through `50305` closes cleanly without warning logs; live search for `test mp3` completed with `251` responses and `5379` files.
 - Validation: full `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501195252.8de0ba700dba` passed Web UI tests/build, Release backend build, `3820` unit tests, `46` API tests, `276` integration tests, and publish.
+
+## 2026-05-01 20:11:53Z
+
+- Inspected current `kspls0` logs and found one real port-reduction regression: the QUIC/shared-DHT build still registered `UdpOverlayServer` and bound legacy UDP `50400`.
+- Documented ADR-0001 gotcha `0z276`, changed hosted-service registration so the legacy UDP overlay server only starts when QUIC is disabled or unavailable, and added focused coverage for that decision.
+- Published and deployed `0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` to `kspls0` under `/usr/lib/slskd/releases/manual-20260501200529.f76cfe3e10a9`.
+- Live validation after restart: `50400/udp`, `50401/udp`, `50402/udp`, and `50306/udp` are not bound; shared UDP `50305`, QUIC backend UDP `55305`, TCP `50305`, Web UI `5030`, and Soulseek `50300`/`50301` are active; QUIC handshake through `kspls0:50305` connects and closes cleanly; Soulseek health recovered to Healthy; post-restart log scan found no fatal/error/exception/stack/abort/50400 lines.
+- Validation: focused `ProgramPathNormalizationTests` passed (`36` tests); full `bin/publish --runtime linux-x64 --version 0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` passed Web UI tests/build, Release backend build, `3824` unit tests, `46` API tests, `276` integration tests, and publish.

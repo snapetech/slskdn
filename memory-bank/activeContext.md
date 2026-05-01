@@ -47,6 +47,20 @@
 - Next steps:
   1. Push local commits.
 
+## Update 2026-05-01 20:11:53Z
+
+- Current task: kspls0 log inspection found and fixed the remaining legacy UDP overlay bind.
+- Last activity:
+  - inspected current `kspls0` service logs and sockets
+  - found legacy UDP `50400` still bound by `UdpOverlayServer` even though the shared DHT/QUIC port contract only needs public UDP `50305` plus backend UDP `55305`
+  - documented ADR-0001 gotcha `0z276` and committed it separately
+  - changed hosted-service registration so legacy UDP overlay only starts when QUIC is disabled or unavailable
+  - built and deployed `0.0.0-slskdn.manual.20260501200529.f76cfe3e10a9` from commit `f76cfe3e10a9` to `kspls0`
+  - verified no legacy UDP `50306`/`50400`/`50401`/`50402` sockets remain, QUIC handshake through `50305` still succeeds, Soulseek health recovered to Healthy, and log scan shows no fatal/error/exception/stack/abort/50400 lines
+  - validation passed: focused Program-path tests plus full `bin/publish --runtime linux-x64`
+- Next steps:
+  1. Push local commits.
+
 ## Update 2026-05-01 18:55:00Z
 
 - Current task: Current repo code is built and running on `kspls0` for user testing.
