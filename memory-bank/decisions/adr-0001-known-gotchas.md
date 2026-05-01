@@ -52,6 +52,29 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z245. Deleting A Soulseek DM Must Not Reveal A Hidden Pod DM
+
+**The Bug**: The Messages sidebar hid pod direct channels only while a matching saved Soulseek DM existed. After deleting the Soulseek thread, the pod `DM` channel became visible as a replacement conversation that could not be managed like a normal DM.
+
+**Files Affected**:
+- `src/web/src/components/Messaging/Messaging.jsx`
+- `src/web/src/components/Messaging/Messaging.test.jsx`
+
+**Wrong**:
+```javascript
+podChannels.filter(
+  (channel) =>
+    !(isPodDirectChannel(channel) && savedChatNames.has(normalizeConversationName(channel.podName))),
+);
+```
+
+**Correct**:
+```javascript
+podChannels.filter((channel) => !isPodDirectChannel(channel));
+```
+
+**Why This Keeps Happening**: Pod direct channels are mesh transport plumbing, not a second visible direct-message system. Hiding them conditionally on Soulseek conversation state creates a whack-a-mole UI where deleting one DM reveals another. Unified Messages should show one DM surface unless a deliberate mesh-DM product surface is built.
+
 ### 0z244. Dump Endpoint Tests Must Accept Intentional 501 Creation Failures
 
 **The Bug**: The PR-06 dump endpoint smoke test only accepted `200 OK` or `500 InternalServerError`, even though the hardened dumper intentionally returns `501 NotImplemented` when dump creation is unavailable in the test environment.
