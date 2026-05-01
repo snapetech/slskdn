@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added Contacts invite QR generation and QR image scanning for slskdN invite
+  links.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
   capabilities and System -> Network, including runtime support state and
   configured effective obfuscated port.

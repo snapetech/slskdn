@@ -9232,3 +9232,10 @@ Code quality improvements were completed as part of Option A:
 - Added `SoulseekObfuscationSupport` runtime plans and exposed them through the slskdN capabilities API and System -> Network status.
 - Documented the modes, flags, current Soulseek.NET runtime limitation, proven research scope, and network-health caveats in config docs and a dedicated guide.
 - Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, frontend lint, repo lint, broad non-live `.NET` tests, and touched-file whitespace checks passed.
+
+## 2026-05-01 02:52:32Z
+
+- Deployed the latest MilkDrop/Butterchurn player tile frontend bundle to `kspls0`.
+- Synced `src/slskd/wwwroot` into `/usr/lib/slskd/current/wwwroot`, restarted `slskd`, and confirmed `http://kspls0:5030` serves `index-CaQ2HqYt.js` plus `index-6lV9-732.css`.
+- Confirmed the live bundle contains the compact visualizer control path and external player tile control CSS.
+- Validation before deployment: focused Player visualizer tests, native MilkDrop smoke test, frontend lint, frontend production build, and touched-file whitespace checks passed.

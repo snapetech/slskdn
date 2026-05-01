@@ -2,6 +2,7 @@ import * as identityAPI from '../../lib/identity';
 import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import TooltipButton from '../Shared/TooltipButton';
+import QRCode from 'qrcode';
 import React, { Component } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -43,6 +44,7 @@ class Contacts extends Component {
     error: null,
     inviteFriendCode: null,
     inviteLink: null,
+    inviteQrDataUrl: null,
     loading: true,
     nearby: [],
     nearbyLoading: false,
@@ -105,11 +107,20 @@ class Contacts extends Component {
   handleCreateInvite = async () => {
     try {
       const response = await identityAPI.createInvite({ expiresInHours: 24 });
+      const inviteLink = response.data.inviteLink;
+      const inviteQrDataUrl = inviteLink
+        ? await QRCode.toDataURL(inviteLink, {
+            errorCorrectionLevel: 'M',
+            margin: 2,
+            scale: 6,
+          })
+        : null;
       this.setState({
         createInviteModalOpen: true,
         error: null,
         inviteFriendCode: response.data.friendCode,
-        inviteLink: response.data.inviteLink,
+        inviteLink,
+        inviteQrDataUrl,
       });
     } catch (error) {
       console.error('[Contacts] Create invite error:', error);
@@ -171,6 +182,7 @@ class Contacts extends Component {
         error:
           errorMessage ||
           'Failed to create invite. Please ensure Identity & Friends is enabled and configured.',
+        inviteQrDataUrl: null,
       });
     }
   };
@@ -204,6 +216,7 @@ class Contacts extends Component {
       error,
       inviteFriendCode,
       inviteLink,
+      inviteQrDataUrl,
       loading,
       nearby,
       nearbyLoading,
@@ -450,9 +463,24 @@ class Contacts extends Component {
                   </code>
                 </p>
               )}
-              <p>
-                <small>QR code display coming soon</small>
-              </p>
+              {inviteQrDataUrl && (
+                <Segment
+                  basic
+                  compact
+                  textAlign="center"
+                >
+                  <img
+                    alt="QR invite code"
+                    data-testid="contacts-invite-qr"
+                    src={inviteQrDataUrl}
+                    style={{
+                      height: 192,
+                      imageRendering: 'pixelated',
+                      width: 192,
+                    }}
+                  />
+                </Segment>
+              )}
             </Modal.Content>
             <Modal.Actions>
               <Button
@@ -469,7 +497,50 @@ class Contacts extends Component {
 }
 
 class AddFriendForm extends Component {
-  state = { inviteLink: '', nickname: '' };
+  fileInputRef = React.createRef();
+
+  state = {
+    inviteLink: '',
+    nickname: '',
+    scanError: null,
+    scanning: false,
+  };
+
+  handleQrFileSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    this.setState({ scanError: null, scanning: true });
+    try {
+      if (!('BarcodeDetector' in window)) {
+        throw new Error(
+          'This browser does not support QR scanning from images yet.',
+        );
+      }
+
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      const bitmap = await createImageBitmap(file);
+      try {
+        const codes = await detector.detect(bitmap);
+        const inviteLink = codes.find((code) =>
+          code.rawValue?.startsWith('slskdn://invite/'),
+        )?.rawValue;
+
+        if (!inviteLink) {
+          throw new Error('No slskdN invite QR code was found in that image.');
+        }
+
+        this.setState({ inviteLink, scanError: null });
+      } finally {
+        bitmap.close?.();
+      }
+    } catch (error) {
+      this.setState({ scanError: error.message || 'QR scan failed.' });
+    } finally {
+      event.target.value = '';
+      this.setState({ scanning: false });
+    }
+  };
 
   handleSubmit = (e) => {
     e.preventDefault();
@@ -491,6 +562,32 @@ class AddFriendForm extends Component {
             type="text"
             value={this.state.inviteLink}
           />
+          <input
+            accept="image/*"
+            data-testid="contacts-add-invite-qr-file"
+            onChange={this.handleQrFileSelected}
+            ref={this.fileInputRef}
+            style={{ display: 'none' }}
+            type="file"
+          />
+          <Button
+            data-testid="contacts-scan-invite-qr"
+            disabled={this.state.scanning}
+            icon
+            onClick={() => this.fileInputRef.current?.click()}
+            title="Scan a QR invite image from your camera or photo library."
+            type="button"
+          >
+            <Icon name="qrcode" />
+          </Button>
+          {this.state.scanError && (
+            <p
+              data-testid="contacts-qr-scan-error"
+              style={{ color: '#9f3a38', marginTop: '0.5em' }}
+            >
+              {this.state.scanError}
+            </p>
+          )}
         </div>
         <div style={{ marginBottom: '1em' }}>
           <label>Nickname:</label>

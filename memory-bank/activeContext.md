@@ -4494,3 +4494,15 @@ dotnet test
 - Next steps:
   1. Continue into remaining E11/E10/E9 work only where it can avoid active dirty Import Staging/audio-verification lanes or where those lanes have settled.
   2. Do not add tag writes, file moves, cover writes, or ReplayGain execution until there is an explicit backend preview/confirmation and rollback contract.
+
+## Update 2026-05-01 02:52:32Z
+
+- Current task: MilkDrop/Butterchurn player tile deployment to `kspls0` is complete.
+- Last activity:
+  - moved the small tile mode/fullscreen controls out of the visualizer canvas area in the current frontend bundle
+  - kept explicit player tile modes for spectrum, signal scope, Butterchurn, MilkDrop3 WebGL2, and MilkDrop3 WebGPU
+  - synced the rebuilt `wwwroot` to `/usr/lib/slskd/current/wwwroot` on `kspls0` and restarted the live `slskd` service
+  - verified `http://kspls0:5030` serves `index-CaQ2HqYt.js` and `index-6lV9-732.css`
+- Next steps:
+  1. If the browser still shows the old visualizer tile, hard-refresh once or unregister the old service worker; the server endpoint is now serving the new bundle.
+  2. Continue debugging any runtime browser-console errors from Butterchurn or native MilkDrop after confirming the new bundle is loaded.
