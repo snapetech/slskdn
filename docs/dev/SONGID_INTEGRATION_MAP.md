@@ -83,7 +83,7 @@ Visually, `SongID` sits near the current MusicBrainz lookup, but it is conceptua
 
 ## UX Placement
 
-Place `SongID` above or beside `MusicBrainzLookup` in [Searches.jsx](<repo-root>/src/web/src/components/Search/Searches.jsx) and keep the current MusicBrainz panel as the manual fallback.
+Place `SongID` above or beside `MusicBrainzLookup` in [Searches.jsx](../../src/web/src/components/Search/Searches.jsx) and keep the current MusicBrainz panel as the manual fallback.
 
 Recommended UI blocks:
 
