@@ -1,20 +1,21 @@
 ## Update 2026-05-01 17:35:00Z
 
-- Current task: slskdN runtime vendoring, ingress notice cleanup, Docker Hub release-channel work, and `kspls0` deployment are complete.
+- Current task: slskdN runtime vendoring, static ingress notice cleanup, Docker Hub release-channel work, and `kspls0` deployment are complete.
 - Last activity:
   - vendored `slskNet.Runtime` under `vendor/slskNet.Runtime` and moved app/test project references to the in-repo project
-  - simplified the ingress-port migration notice to plain old/new port lists and added the obfuscated listener to the new required list
+  - corrected the ingress-port migration notice to a static five-old-forwards versus two-current-forwards list with no public IPs, active/not-reported status, or obfuscation listener row
+  - documented the static-notice gotcha immediately in ADR-0001 as `e83d0c396`
   - rebuilt the Web UI bundle locally and started full `bin/build`; frontend tests, frontend production build, backend build, unit tests, and API tests passed before the integration test run was interrupted by the user
   - added Docker Hub tags to release Docker jobs and configured `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` in `snapetech/slskdn`
   - reran full `bin/build`; Web UI tests/build, backend build, unit tests, API tests, and integration tests passed
+  - deployed `/usr/lib/slskd/releases/manual-portnotice-20260501174927` to `kspls0`
   - deployed `/usr/lib/slskd/releases/manual-slsknet-repo-20260501173428` to `kspls0`
-  - confirmed live asset text no longer contains `PREVIOUS`, `CURRENT`, or the old explanatory copy
+  - confirmed live asset text contains the reduced-port copy and no active/not-reported status, public endpoint text, `50301`, `PREVIOUS`, or `CURRENT`
   - confirmed live listeners on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`
   - live-smoked Soulseek search and a small download; the download completed successfully
   - updated `bin/lint` to exclude vendored runtime source from slskdN formatting enforcement while keeping the project reference for builds
-  - committed and pushed the final cleanup as `306495389`
 - Next steps:
-  1. Add/rotate Docker Hub credentials if the token ever needs replacement; the current `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are configured.
+  1. Commit and push the corrected static ingress notice plus remaining release-channel cleanup.
   2. Trigger the next `build-main-*` tag only when a release build is intentionally wanted.
 
 ## Update 2026-05-01 17:30:00Z
@@ -24,7 +25,8 @@
   - generated `~/.ssh/slskdn_launchpad_ppa_ed25519`
   - stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in `snapetech/slskdn` GitHub repository secrets
   - updated both PPA workflows to prefer IPv4-pinned SFTP when the key is configured and retain anonymous FTP as fallback
-  - documented the SFTP-preferred PPA upload and SFTP IPv4-pinning gotchas as separate commits
+  - documented the SFTP-preferred PPA upload, SFTP IPv4-pinning, and SFTP auth-hang gotchas as separate commits
+  - added non-interactive SSH options, a bounded SFTP auth probe, and a bounded `dput` upload timeout after the first IPv4 SFTP upload retry hung inside `ssh`
 - Next steps:
   1. Validate workflow YAML and run the standalone PPA upload workflow for `2026050100-slskdn.215`.
   2. Register the generated public key on the `~keefshape` Launchpad account if SFTP authentication rejects it.

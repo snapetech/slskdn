@@ -279,17 +279,23 @@ describe('App', () => {
       await screen.findByTestId('vpn-port-change-notice'),
     ).toBeInTheDocument();
     expect(screen.getByText('slskdN ingress ports were reduced.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Older builds needed five public forwards. Current builds need two: Soulseek peer/file transfers and the slskdN mesh/DHT overlay.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('Soulseek peer/file transfers')).toHaveLength(2);
-    expect(screen.getByText('Old port list')).toBeInTheDocument();
-    expect(screen.getByText('New port list')).toBeInTheDocument();
+    expect(screen.getByText('Used to need')).toBeInTheDocument();
+    expect(screen.getByText('Need now')).toBeInTheDocument();
     expect(screen.getAllByText('TCP 50300')).toHaveLength(2);
-    expect(screen.getAllByText('TCP 50301')).toHaveLength(2);
-    expect(screen.getByText('Soulseek obfuscated peer messages')).toBeInTheDocument();
-    expect(screen.getByText('TCP/UDP 50305')).toBeInTheDocument();
+    expect(screen.getAllByText('TCP/UDP 50305')).toHaveLength(2);
+    expect(screen.getAllByText('slskdN mesh overlay and DHT rendezvous')).toHaveLength(2);
     expect(screen.getByText('legacy mesh UDP overlay')).toBeInTheDocument();
     expect(screen.getByText('UDP 50400')).toBeInTheDocument();
-    expect(screen.getByText('active: TCP 203.0.113.10:51000')).toBeInTheDocument();
-    expect(screen.getByText('active: TCP 203.0.113.20:51001')).toBeInTheDocument();
+    expect(screen.queryByText('TCP 50301')).not.toBeInTheDocument();
+    expect(screen.queryByText(/active:/u)).not.toBeInTheDocument();
+    expect(screen.queryByText('not reported')).not.toBeInTheDocument();
+    expect(screen.queryByText(/203\.0\.113\./u)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTitle('Dismiss port migration reminder'));
 

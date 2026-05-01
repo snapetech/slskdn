@@ -9329,13 +9329,16 @@ Code quality improvements were completed as part of Option A:
 - Updated `build-on-tag.yml` and `release-ppa.yml` to preflight Launchpad SSH/SFTP when `LAUNCHPAD_SFTP_KEY` is configured, upload signed source packages with `dput` over SFTP, and keep the anonymous FTP/curl path as fallback.
 - Documented the SFTP-preferred PPA upload gotcha immediately in ADR-0001 and committed it separately.
 - The first SFTP workflow retry showed the preflight still selected Launchpad IPv6 on GitHub and failed with `[Errno 101] Network is unreachable`; documented that gotcha separately and pinned the SFTP preflight to IPv4 too.
+- The next retry passed IPv4 SFTP preflight but `dput` spawned `ssh` and sat silently, so the workflow now disables interactive SSH auth, runs a bounded `sftp` auth probe before upload, and wraps `dput` in an explicit timeout.
 
 ## 2026-05-01 17:35:00Z
 
 - Vendored the `slskNet.Runtime` source into `vendor/slskNet.Runtime` and updated slskdN app/test project references plus `slskd.sln` so local builds do not depend on a sibling checkout.
-- Simplified the ingress-port migration notice to old/new port lists, added the obfuscated `50301` listener to the new required ports, and rebuilt the frontend bundle locally.
+- Corrected the ingress-port migration notice to static information only: five old public forwards, two current public forwards, no public IPs, no active/not-reported status, and no obfuscation-listener row.
+- Documented the static migration notice gotcha immediately in ADR-0001 and committed it separately as `e83d0c396`.
 - Added Docker Hub release publishing for `snapetech/slskdn` alongside GHCR and configured the required Docker Hub GitHub secrets.
+- Deployed `0.0.0-slskdn.portnotice.2` to `kspls0` as `/usr/lib/slskd/releases/manual-portnotice-20260501174927`.
 - Deployed `0.0.0-slskdn.slsknetrepo.2` to `kspls0` as `/usr/lib/slskd/releases/manual-slsknet-repo-20260501173428`.
-- Confirmed the live frontend bundle no longer contains the old `PREVIOUS` / `CURRENT` notice text, the daemon listens on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`, and a live Soulseek search plus small-file download smoke completed successfully.
+- Confirmed the live frontend bundle contains the reduced-port copy and no active/not-reported status, public endpoint text, `50301`, `PREVIOUS`, or `CURRENT`; the daemon listens on `50300/tcp`, `50301/tcp`, and `50305/tcp+udp`, and a live Soulseek search plus small-file download smoke completed successfully.
 - Updated `bin/lint` to exclude the vendored runtime source from slskdN formatting enforcement while keeping slskdN builds pointed at the in-repo runtime project.
 - Validation: workflow YAML parsed, Web UI tests and production build passed, backend build passed against the vendored runtime, unit/API/integration tests passed through `bash ./bin/build --version 0.0.0-slskdn.slsknetrepo.2`, and `bash ./bin/lint` passed.

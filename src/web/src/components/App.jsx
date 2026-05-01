@@ -251,22 +251,10 @@ const LEGACY_INGRESS_PORTS = [
     proto: 'TCP',
   },
   {
-    config: 'soulseek.obfuscation.listen_port',
-    label: 'Soulseek type-1 obfuscation preview',
-    port: 50301,
-    proto: 'TCP',
-  },
-  {
-    config: 'dht.overlay_port',
-    label: 'slskdN mesh overlay',
+    config: 'dht.overlay_port + dht.dht_port',
+    label: 'slskdN mesh overlay and DHT rendezvous',
     port: 50305,
-    proto: 'TCP',
-  },
-  {
-    config: 'dht.dht_port',
-    label: 'DHT rendezvous',
-    port: 50305,
-    proto: 'UDP',
+    proto: 'TCP/UDP',
   },
   {
     config: 'mesh.overlay.listen_port',
@@ -296,12 +284,6 @@ const CURRENT_INGRESS_PORTS = [
     proto: 'TCP',
   },
   {
-    config: 'soulseek.obfuscation.listen_port',
-    label: 'Soulseek obfuscated peer messages',
-    port: 50301,
-    proto: 'TCP',
-  },
-  {
     config: 'dht.overlay_port + dht.dht_port',
     label: 'slskdN mesh overlay and DHT rendezvous',
     port: 50305,
@@ -309,53 +291,7 @@ const CURRENT_INGRESS_PORTS = [
   },
 ];
 
-const forwardMatchesPort = (forward, expected) => {
-  const expectedProtocols = expected.proto.split('/');
-  const actualProtocol = normalizePortForwardProtocol(forward.proto);
-  const actualPorts = [
-    forward.localPort,
-    forward.targetPort,
-    forward.publicPort,
-  ].filter(Boolean);
-
-  return (
-    expectedProtocols.includes(actualProtocol) &&
-    actualPorts.includes(expected.port)
-  );
-};
-
-const getForwardStatus = (expected, forwards) => {
-  const matchingForwards = forwards.filter((forward) =>
-    forwardMatchesPort(forward, expected));
-
-  if (matchingForwards.length === 0) {
-    return {
-      label: 'not reported',
-      state: 'unknown',
-    };
-  }
-
-  const publicEndpoints = matchingForwards
-    .map((forward) =>
-      [
-        normalizePortForwardProtocol(forward.proto),
-        forward.publicIp
-          ? `${forward.publicIp}:${forward.publicPort}`
-          : forward.publicPort,
-      ]
-        .filter(Boolean)
-        .join(' '),
-    )
-    .filter(Boolean)
-    .join(', ');
-
-  return {
-    label: publicEndpoints ? `active: ${publicEndpoints}` : 'active',
-    state: 'open',
-  };
-};
-
-const IngressPortList = ({ expectedPorts, portForwards, title }) => {
+const IngressPortList = ({ expectedPorts, title }) => {
   if (!expectedPorts?.length) {
     return null;
   }
@@ -364,42 +300,29 @@ const IngressPortList = ({ expectedPorts, portForwards, title }) => {
     <div className="network-endpoint-change-group">
       {title ? <span className="network-endpoint-change-title">{title}</span> : null}
       <div className="network-endpoint-change-list">
-        {expectedPorts.map((expected) => {
-          const status = getForwardStatus(expected, portForwards);
-
-          return (
-            <div
-              className="network-endpoint-change-item"
-              key={`${expected.proto}-${expected.port}-${expected.config}`}
-            >
-              <span className="network-endpoint-change-service">
-                {expected.label}
-              </span>
-              <code>{`${expected.proto} ${expected.port}`}</code>
-              <span className="network-endpoint-change-config">
-                {expected.config}
-              </span>
-              <span
-                className={`network-endpoint-change-status ${status.state}`}
-              >
-                {status.label}
-              </span>
-            </div>
-          );
-        })}
+        {expectedPorts.map((expected) => (
+          <div
+            className="network-endpoint-change-item"
+            key={`${expected.proto}-${expected.port}-${expected.config}`}
+          >
+            <span className="network-endpoint-change-service">
+              {expected.label}
+            </span>
+            <code>{`${expected.proto} ${expected.port}`}</code>
+            <span className="network-endpoint-change-config">
+              {expected.config}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const VpnPortChangeNotice = ({ onDismiss, portForwards, previousSnapshot }) => {
+const VpnPortChangeNotice = ({ onDismiss, portForwards }) => {
   if (!portForwards.length) {
     return null;
   }
-
-  const hasDismissedOlderForwardSet =
-    previousSnapshot?.signature &&
-    previousSnapshot.signature !== getVpnPortSignature(portForwards);
 
   return (
     <Segment
@@ -411,26 +334,17 @@ const VpnPortChangeNotice = ({ onDismiss, portForwards, previousSnapshot }) => {
         <div className="network-endpoint-change-notice-copy">
           <strong>slskdN ingress ports were reduced.</strong>
           <span>
-            Router, firewall, and VPN forwards only need to point at the local
-            ports below. Remove forwards for ports that were used by older
-            builds but are no longer used.
+            Older builds needed five public forwards. Current builds need two:
+            Soulseek peer/file transfers and the slskdN mesh/DHT overlay.
           </span>
           <IngressPortList
             expectedPorts={LEGACY_INGRESS_PORTS}
-            portForwards={[]}
-            title="Old port list"
+            title="Used to need"
           />
           <IngressPortList
             expectedPorts={CURRENT_INGRESS_PORTS}
-            portForwards={portForwards}
-            title="New port list"
+            title="Need now"
           />
-          {hasDismissedOlderForwardSet ? (
-            <span className="network-endpoint-change-note">
-              Your reported VPN forwards changed since the last dismissed
-              reminder.
-            </span>
-          ) : null}
         </div>
       </div>
       <Popup
@@ -1318,7 +1232,6 @@ class App extends Component {
                     this.dismissVpnPortNotice(vpnPortSignature, vpnPortForwards)
                   }
                   portForwards={vpnPortForwards}
-                  previousSnapshot={previousNetworkEndpointSnapshot}
                 />
               )}
               <AppContext.Provider

@@ -227,8 +227,14 @@ jobs:
             User ${LAUNCHPAD_SFTP_USER}
             IdentityFile ~/.ssh/launchpad_ppa
             IdentitiesOnly yes
+            BatchMode yes
+            PasswordAuthentication no
+            KbdInteractiveAuthentication no
+            NumberOfPasswordPrompts 0
             StrictHostKeyChecking accept-new
+            ConnectTimeout 60
             ServerAliveInterval 30
+            ServerAliveCountMax 4
           EOF
 
             cat > ~/.dput.cf << EOF
@@ -240,8 +246,13 @@ jobs:
           allow_unsigned_uploads = 0
           EOF
 
+            echo "Checking Launchpad SFTP authentication"
+            timeout --preserve-status 90 sftp -b - ppa.launchpad.net <<'EOF'
+          pwd
+          EOF
+
             echo "Uploading $(basename "$CHANGES_FILE") to Launchpad PPA over SFTP"
-            dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+            timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
           else
             for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
               if [ ! -f "$source_file" ]; then
