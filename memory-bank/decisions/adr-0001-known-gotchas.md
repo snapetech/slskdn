@@ -12561,3 +12561,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** Placeholder wording cleanup intentionally edits text around feature gates. Tests that assert the whole sentence couple themselves to phrasing rather than the stable contract: operation failed, no local sequence leaked, and the message described unavailable mesh sync transport.
 
 **How to prevent it:** For capability-gate and unavailable-feature paths, assert stable status/error categories and sensitive-data absence. Use exact message assertions only when API compatibility explicitly requires that exact sentence.
+
+### 0z70. Removing A Web UI Surface Requires Cleaning Every Handoff Test And Import
+
+**What went wrong:** The Web UI cleanup removed the Acquisition Review/Discovery Inbox routes and components, but several pages and tests still referenced inbox handoff helpers, buttons, and test IDs. Frontend lint caught undefined Wishlist imports, and Vitest caught stale Player, Playlist Intake, Radar, Taste, Wishlist, and Library Health expectations.
+
+**Why it happened:** The visible nav/routes were removed first, while secondary handoff buttons and browser-local workflow tests still assumed the deleted surface existed. This left a mixed state where the app compiled only after local imports were restored, and tests still looked for controls no longer rendered.
+
+**How to prevent it:** When removing or renaming a Web UI surface, grep for its route name, component name, storage key, helper imports, button labels, and `data-testid` prefixes. Update the tests in the same pass to assert the replacement workflow, not the removed handoff.
