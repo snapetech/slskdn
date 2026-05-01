@@ -488,8 +488,8 @@ namespace slskd
             var obfuscationPlan = SoulseekObfuscationSupport.BuildPlan(OptionsAtStartup.Soulseek);
             if (obfuscationPlan.Enabled)
             {
-                Log.Warning(
-                    "Soulseek type-1 obfuscation requested in {Mode} mode on port {Port}, but runtime support is {RuntimeState}: {Summary}",
+                Log.Information(
+                    "Soulseek type-1 obfuscation configured in {Mode} mode on port {Port}; runtime state is {RuntimeState}: {Summary}",
                     obfuscationPlan.Mode,
                     obfuscationPlan.EffectiveListenPort,
                     obfuscationPlan.RuntimeState,

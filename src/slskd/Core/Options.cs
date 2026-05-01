@@ -2411,7 +2411,7 @@ namespace slskd
                 [EnvironmentVariable("SLSK_OBFUSCATION")]
                 [Description("enable Soulseek type-1 peer-message obfuscation options")]
                 [RequiresReconnect]
-                public bool Enabled { get; init; } = false;
+                public bool Enabled { get; init; } = true;
 
                 /// <summary>
                 ///     Gets the obfuscation posture.

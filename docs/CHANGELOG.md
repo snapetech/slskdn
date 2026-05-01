@@ -26,6 +26,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   links.
 - Added adaptive DHT rendezvous bootstrap timeouts for warm, cold, and LAN-only
   startup paths.
+- Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
+  while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
   capabilities and System -> Network, including runtime support state and
   configured effective obfuscated port.

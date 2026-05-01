@@ -34,7 +34,7 @@ public static class SoulseekObfuscationSupport
         var requestedListenPort = options.ListenPort > 0 ? options.ListenPort : (int?)null;
         var effectiveListenPort = requestedListenPort ?? DeriveListenPort(soulseek.ListenPort);
         var runtimeState = options.Enabled
-            ? RuntimeSupportsType1PeerMessages ? "active" : "configured_unsupported"
+            ? RuntimeSupportsType1PeerMessages ? "active_compatibility" : "configured_pending_runtime"
             : "disabled";
 
         var limitations = new List<string>();
@@ -79,7 +79,7 @@ public static class SoulseekObfuscationSupport
 
         var posture = mode switch
         {
-            SoulseekObfuscationMode.Compatibility => "Compatibility mode would advertise regular and obfuscated peer-message reachability when runtime support is available.",
+            SoulseekObfuscationMode.Compatibility => "Compatibility mode keeps the regular peer-message path available and adds obfuscated reachability when runtime support is available.",
             SoulseekObfuscationMode.Prefer => "Prefer mode would use obfuscated peer-message dials when peers advertise type-1 metadata and keep regular fallback.",
             SoulseekObfuscationMode.Only => "Only mode would advertise obfuscated peer-message reachability without regular fallback.",
             _ => "Soulseek type-1 peer-message obfuscation is configured.",
