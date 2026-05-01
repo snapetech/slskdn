@@ -9238,4 +9238,5 @@ Code quality improvements were completed as part of Option A:
 - Deployed the latest MilkDrop/Butterchurn player tile frontend bundle to `kspls0`.
 - Synced `src/slskd/wwwroot` into `/usr/lib/slskd/current/wwwroot`, restarted `slskd`, and confirmed `http://kspls0:5030` serves `index-CaQ2HqYt.js` plus `index-6lV9-732.css`.
 - Confirmed the live bundle contains the compact visualizer control path and external player tile control CSS.
+- Corrected a bad post-deploy restart where the live process briefly launched without `/etc/slskd/slskd.yml` and bound HTTP only to `127.0.0.1`; restarted through systemd and verified `/proc` shows `--config /etc/slskd/slskd.yml` and `0.0.0.0:5030`.
 - Validation before deployment: focused Player visualizer tests, native MilkDrop smoke test, frontend lint, frontend production build, and touched-file whitespace checks passed.
