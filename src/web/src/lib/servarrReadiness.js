@@ -51,3 +51,67 @@ export const summarizeServarrReadiness = (checks) => {
     status: ready === checks.length ? 'Ready' : 'Needs Setup',
   };
 };
+
+export const buildServarrCompatibilityPreview = ({
+  apiKey = '',
+  autoImportCompleted = false,
+  enabled = false,
+  importMode = 'copy',
+  importPathFrom = '',
+  importPathTo = '',
+  syncWantedToWishlist = false,
+  url = '',
+} = {}) => {
+  const checks = buildServarrReadiness({
+    apiKey,
+    autoImportCompleted,
+    enabled,
+    importPathFrom,
+    importPathTo,
+    syncWantedToWishlist,
+    url,
+  });
+  const summary = summarizeServarrReadiness(checks);
+  const actions = checks
+    .filter((check) => !check.ready)
+    .map((check) => check.description);
+
+  if (enabled && importMode === 'move' && !autoImportCompleted) {
+    actions.push('Enable completed import review before using move-style import handoff.');
+  }
+
+  return {
+    actions,
+    checks,
+    importMode,
+    summary,
+    supportsCompletedImport: enabled && autoImportCompleted === true,
+    supportsWantedPull: enabled && syncWantedToWishlist === true,
+  };
+};
+
+export const formatServarrCompatibilityReport = (preview) => {
+  const lines = [
+    'slskdN Servarr compatibility review',
+    `Status: ${preview.summary.status}`,
+    `Checks: ${preview.summary.ready}/${preview.summary.total}`,
+    `Wanted pull: ${preview.supportsWantedPull ? 'ready' : 'not ready'}`,
+    `Completed import: ${preview.supportsCompletedImport ? 'ready' : 'not ready'}`,
+    `Import mode: ${preview.importMode}`,
+    '',
+    'Checks:',
+  ];
+
+  preview.checks.forEach((check) => {
+    lines.push(`- ${check.ready ? 'READY' : 'TODO'}: ${check.title}`);
+  });
+
+  lines.push('', 'Actions:');
+  if (preview.actions.length === 0) {
+    lines.push('- none');
+  } else {
+    preview.actions.forEach((action) => lines.push(`- ${action}`));
+  }
+
+  return lines.join('\n');
+};

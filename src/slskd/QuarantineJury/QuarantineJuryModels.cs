@@ -134,6 +134,62 @@ public sealed class QuarantineJuryReview
     public string AcceptanceReason { get; set; } = string.Empty;
 }
 
+public sealed class QuarantineJuryAuditReport
+{
+    public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public int RequestCount { get; set; }
+
+    public int AcceptedReleaseCandidateCount { get; set; }
+
+    public int PendingReleaseCandidateCount { get; set; }
+
+    public int PendingManualReviewCount { get; set; }
+
+    public int UpholdQuarantineCount { get; set; }
+
+    public int StaleRequestCount { get; set; }
+
+    public List<QuarantineJuryAuditEntry> Entries { get; set; } = new();
+}
+
+public sealed class QuarantineJuryAuditEntry
+{
+    public string RequestId { get; set; } = string.Empty;
+
+    public string LocalReason { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public int EvidenceCount { get; set; }
+
+    public int JurorCount { get; set; }
+
+    public int VerdictCount { get; set; }
+
+    public int RequiredVotes { get; set; }
+
+    public QuarantineJuryVerdict Recommendation { get; set; } = QuarantineJuryVerdict.NeedsManualReview;
+
+    public bool QuorumReached { get; set; }
+
+    public bool HasAcceptance { get; set; }
+
+    public bool CanAcceptReleaseCandidate { get; set; }
+
+    public bool HasRouteAttempts { get; set; }
+
+    public bool HasFailedRouteAttempts { get; set; }
+
+    public bool IsStale { get; set; }
+
+    public string Status { get; set; } = string.Empty;
+
+    public string Reason { get; set; } = string.Empty;
+
+    public List<string> DissentingJurors { get; set; } = new();
+}
+
 public sealed class QuarantineJuryAcceptanceRequest
 {
     public string AcceptedBy { get; set; } = "local-user";
@@ -165,6 +221,46 @@ public sealed class QuarantineJuryAcceptanceResult
     public List<string> Errors { get; set; } = new();
 
     public QuarantineJuryReviewDecision? Decision { get; set; }
+}
+
+public sealed class QuarantineJuryReleasePackageResult
+{
+    public bool IsReady => Errors.Count == 0 && Package != null;
+
+    public List<string> Errors { get; set; } = new();
+
+    public QuarantineJuryReleasePackage? Package { get; set; }
+}
+
+public sealed class QuarantineJuryReleasePackage
+{
+    public string Type { get; set; } = "slskdn.quarantine-jury.release-package.v1";
+
+    public string Version { get; set; } = "1.0";
+
+    public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public string RequestId { get; set; } = string.Empty;
+
+    public string LocalReason { get; set; } = string.Empty;
+
+    public DateTimeOffset RequestCreatedAt { get; set; }
+
+    public List<QuarantineJuryEvidence> RequestEvidence { get; set; } = new();
+
+    public List<string> Jurors { get; set; } = new();
+
+    public QuarantineJuryAggregate CurrentAggregate { get; set; } = new();
+
+    public QuarantineJuryReviewDecision Acceptance { get; set; } = new();
+
+    public List<QuarantineJuryVerdictRecord> Verdicts { get; set; } = new();
+
+    public List<QuarantineJuryRouteAttempt> RouteAttempts { get; set; } = new();
+
+    public List<string> Warnings { get; set; } = new();
+
+    public bool MutatesLocalQuarantineState { get; set; }
 }
 
 public sealed class QuarantineJuryRouteRequest

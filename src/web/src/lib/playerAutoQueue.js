@@ -67,3 +67,20 @@ export const buildSimilarQueueCandidates = ({
     .sort((left, right) => right.score - left.score || left.index - right.index)
     .slice(0, limit);
 };
+
+export const getSimilarQueueSearchQueries = (
+  candidates = [],
+  { limit = 3 } = {},
+) =>
+  candidates
+    .map((candidate) => candidate.item)
+    .map((item) =>
+      [
+        item?.artist,
+        item?.title || item?.fileName,
+      ].map((value) => String(value || '').trim()).filter(Boolean).join(' '))
+    .filter(Boolean)
+    .filter((query, index, queries) =>
+      queries.findIndex((other) =>
+        other.toLowerCase() === query.toLowerCase()) === index)
+    .slice(0, limit);

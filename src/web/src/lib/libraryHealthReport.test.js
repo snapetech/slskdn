@@ -4,6 +4,9 @@ import {
   buildLibraryHealthReport,
   buildLibraryHealthSafeFixManifest,
   buildLibraryHealthSearchSeeds,
+  getLibraryHealthQuarantineReviewItems,
+  getLibraryHealthReplacementSearchQueries,
+  getLibraryHealthSafeFixIssueIds,
 } from './libraryHealthReport';
 
 describe('libraryHealthReport', () => {
@@ -100,6 +103,53 @@ describe('libraryHealthReport', () => {
     expect(seeds).toContain('- Fixture Artist Fixture Album Fixture Track | issue issue-1 | High | Wrong Duration');
     expect(seeds).not.toContain('Metadata Artist Needs Tags');
     expect(seeds).toContain('No search, peer browse, download, quarantine, or file mutation was started');
+  });
+
+  it('builds bounded executable Library Health handoffs', () => {
+    const issues = [
+      {
+        album: 'Fixture Album',
+        artist: 'Fixture Artist',
+        canAutoFix: true,
+        issueId: 'issue-1',
+        reason: 'Suspected transcode',
+        severity: 'Critical',
+        title: 'Fixture Track',
+        type: 'SuspectedTranscode',
+      },
+      {
+        album: 'Fixture Album',
+        artist: 'Fixture Artist',
+        canAutoFix: true,
+        issueId: 'issue-2',
+        severity: 'High',
+        title: 'Fixture Track',
+        type: 'WrongDuration',
+      },
+      {
+        artist: 'Manual Artist',
+        canAutoFix: false,
+        issueId: 'issue-3',
+        severity: 'Low',
+        title: 'Needs Tags',
+        type: 'MissingMetadata',
+      },
+    ];
+
+    expect(getLibraryHealthReplacementSearchQueries(issues)).toEqual([
+      'Fixture Artist Fixture Album Fixture Track',
+    ]);
+    expect(getLibraryHealthSafeFixIssueIds(issues)).toEqual([
+      'issue-1',
+      'issue-2',
+    ]);
+    expect(getLibraryHealthQuarantineReviewItems(issues)).toEqual([
+      expect.objectContaining({
+        evidenceKey: 'library-health:issue-1',
+        source: 'Library Health',
+        title: 'Fixture Artist - Fixture Album - Fixture Track',
+      }),
+    ]);
   });
 
   it('builds a quarantine review packet only for risky selected issues', () => {

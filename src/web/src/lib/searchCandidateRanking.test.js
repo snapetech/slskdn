@@ -117,6 +117,39 @@ describe('rankSearchCandidate', () => {
     expect(rank.reasons).toContain('local caution signals');
   });
 
+  it('honors explicit local quality overrides before raw signal score', () => {
+    const trusted = rankSearchCandidate({
+      communityQualitySummary: {
+        negative: 4,
+        override: { mode: 'trust' },
+        positive: 0,
+        score: 8,
+        signals: [{ type: 'suspicious-candidate' }],
+      },
+      response: {
+        files: [{ filename: 'Artist/Track.flac', size: 20_000_000 }],
+      },
+      searchText: 'artist track',
+    });
+
+    const ignored = rankSearchCandidate({
+      communityQualitySummary: {
+        negative: 3,
+        override: { mode: 'ignore' },
+        positive: 0,
+        score: 0,
+        signals: [{ type: 'suspicious-candidate' }],
+      },
+      response: {
+        files: [{ filename: 'Artist/Track.flac', size: 20_000_000 }],
+      },
+      searchText: 'artist track',
+    });
+
+    expect(trusted.reasons).toContain('local trust override');
+    expect(ignored.reasons).toContain('local quality signals ignored');
+  });
+
   it('applies preferred conditions as ranking signals instead of hard filters', () => {
     const rank = rankSearchCandidate({
       acquisitionProfile: 'rare-hunt',

@@ -15,14 +15,28 @@ describe('DiagnosticBundleModal', () => {
     render(
       <DiagnosticBundleModal
         options={{
+          directories: {
+            downloads: '/fixture/downloads',
+          },
           integration: {
             apiKey: 'secret-key',
             label: 'fixture-provider',
+          },
+          shares: {
+            directories: ['/fixture/music'],
+          },
+          web: {
+            authentication: {
+              apiKey: 'secret-api-key',
+            },
           },
         }}
         state={{
           connected: true,
           sessionToken: 'secret-token',
+          user: {
+            username: 'fixture_user',
+          },
         }}
       />,
     );
@@ -32,9 +46,12 @@ describe('DiagnosticBundleModal', () => {
     expect(screen.getByText('Redacted support snapshot')).toBeInTheDocument();
     const bundle = screen.getByLabelText('Redacted diagnostic bundle');
     expect(bundle.value).toContain('label: fixture-provider');
+    expect(bundle.value).toContain('setupHealth:');
+    expect(bundle.value).toContain('readiness: Ready');
     expect(bundle.value).toContain('apiKey: "[redacted]"');
     expect(bundle.value).toContain('sessionToken: "[redacted]"');
     expect(bundle.value).not.toContain('secret-key');
+    expect(bundle.value).not.toContain('secret-api-key');
     expect(bundle.value).not.toContain('secret-token');
   });
 

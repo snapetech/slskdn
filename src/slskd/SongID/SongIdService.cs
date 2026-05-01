@@ -31,6 +31,10 @@ public interface ISongIdService
     SongIdRun? Get(Guid id);
 
     IReadOnlyList<SongIdRun> List(int limit = 25);
+
+    SongIdQueueSummary GetQueueSummary(int activeLimit = 25);
+
+    SongIdRunEvidencePackage? GetEvidencePackage(Guid id);
 }
 
 public sealed class SongIdService : ISongIdService
@@ -182,6 +186,47 @@ public sealed class SongIdService : ISongIdService
     public IReadOnlyList<SongIdRun> List(int limit = 25)
     {
         return _store.List(limit);
+    }
+
+    public SongIdQueueSummary GetQueueSummary(int activeLimit = 25)
+    {
+        var recentRuns = _store.List(Math.Max(activeLimit, 100));
+        var activeRuns = recentRuns
+            .Where(run =>
+                string.Equals(run.Status, "queued", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(run.Status, "running", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(run => run.QueuePosition ?? int.MaxValue)
+            .ThenBy(run => run.CreatedAt)
+            .Take(Math.Max(1, activeLimit))
+            .Select(run => new SongIdQueueSummaryRun
+            {
+                RunId = run.Id,
+                SourceType = run.SourceType,
+                Status = run.Status,
+                CurrentStage = run.CurrentStage,
+                PercentComplete = run.PercentComplete,
+                QueuePosition = run.QueuePosition,
+                WorkerSlot = run.WorkerSlot,
+                CreatedAt = run.CreatedAt,
+                Summary = run.Summary,
+            })
+            .ToList();
+
+        return new SongIdQueueSummary
+        {
+            QueuedCount = recentRuns.Count(run => string.Equals(run.Status, "queued", StringComparison.OrdinalIgnoreCase)),
+            RunningCount = recentRuns.Count(run => string.Equals(run.Status, "running", StringComparison.OrdinalIgnoreCase)),
+            CompletedCount = recentRuns.Count(run => string.Equals(run.Status, "completed", StringComparison.OrdinalIgnoreCase)),
+            FailedCount = recentRuns.Count(run => string.Equals(run.Status, "failed", StringComparison.OrdinalIgnoreCase)),
+            MaxConcurrentRuns = GetMaxConcurrentRuns(),
+            ActiveRuns = activeRuns,
+        };
+    }
+
+    public SongIdRunEvidencePackage? GetEvidencePackage(Guid id)
+    {
+        var run = _store.Get(id);
+        return run == null ? null : BuildEvidencePackage(run);
     }
 
     private async Task StartWorkerAsync(int workerSlot)
@@ -621,6 +666,127 @@ public sealed class SongIdService : ISongIdService
                 AnalysisAudioSource = "text_query",
             },
         };
+    }
+
+    private static SongIdRunEvidencePackage BuildEvidencePackage(SongIdRun run)
+    {
+        var package = new SongIdRunEvidencePackage
+        {
+            RunId = run.Id,
+            SourceType = run.SourceType,
+            Status = run.Status,
+            Query = run.Query,
+            CreatedAt = run.CreatedAt,
+            CompletedAt = run.CompletedAt,
+            Summary = run.Summary,
+            CurrentStage = run.CurrentStage,
+            PercentComplete = run.PercentComplete,
+            Scorecard = run.Scorecard,
+            IdentityAssessment = run.IdentityAssessment,
+            SyntheticAssessment = run.SyntheticAssessment,
+            ForensicMatrix = run.ForensicMatrix,
+            TrackCandidates = run.Tracks
+                .OrderByDescending(candidate => candidate.ActionScore)
+                .ThenByDescending(candidate => candidate.IdentityScore)
+                .Take(10)
+                .ToList(),
+            AlbumCandidates = run.Albums
+                .OrderByDescending(candidate => candidate.ActionScore)
+                .ThenByDescending(candidate => candidate.IdentityScore)
+                .Take(6)
+                .ToList(),
+            ArtistCandidates = run.Artists
+                .OrderByDescending(candidate => candidate.ActionScore)
+                .ThenByDescending(candidate => candidate.IdentityScore)
+                .Take(6)
+                .ToList(),
+            Segments = run.Segments.Take(12).ToList(),
+            MixGroups = run.MixGroups.Take(12).ToList(),
+            Plans = run.Plans.Take(20).ToList(),
+            AcquisitionOptions = run.Options.Take(20).ToList(),
+            Evidence = run.Evidence.Take(100).ToList(),
+            Artifacts = BuildEvidenceArtifacts(run),
+        };
+
+        package.Warnings.AddRange(BuildEvidenceWarnings(run));
+        return package;
+    }
+
+    private static List<SongIdEvidenceArtifact> BuildEvidenceArtifacts(SongIdRun run)
+    {
+        var artifacts = new List<SongIdEvidenceArtifact>();
+        if (!string.IsNullOrWhiteSpace(run.ArtifactDirectory))
+        {
+            artifacts.Add(new SongIdEvidenceArtifact
+            {
+                Kind = "workspace",
+                Label = "SongID artifact directory",
+                Path = run.ArtifactDirectory,
+            });
+        }
+
+        if (run.FullSourceFingerprint != null && !string.IsNullOrWhiteSpace(run.FullSourceFingerprint.Path))
+        {
+            artifacts.Add(new SongIdEvidenceArtifact
+            {
+                Kind = "fingerprint",
+                Label = "Full source fingerprint",
+                Path = run.FullSourceFingerprint.Path,
+                DurationSeconds = run.FullSourceFingerprint.DurationSeconds,
+            });
+        }
+
+        artifacts.AddRange(run.Clips.Select(clip => new SongIdEvidenceArtifact
+        {
+            Kind = "clip",
+            Label = clip.ClipId,
+            Path = clip.Fingerprint,
+            StartSeconds = clip.StartSeconds,
+            DurationSeconds = clip.DurationSeconds,
+        }));
+        artifacts.AddRange(run.Stems.Select(stem => new SongIdEvidenceArtifact
+        {
+            Kind = "stem",
+            Label = string.IsNullOrWhiteSpace(stem.Label) ? stem.ArtifactId : stem.Label,
+            Path = stem.Path,
+        }));
+        artifacts.AddRange(run.Perturbations.Select(perturbation => new SongIdEvidenceArtifact
+        {
+            Kind = "perturbation",
+            Label = string.IsNullOrWhiteSpace(perturbation.Label) ? perturbation.PerturbationId : perturbation.Label,
+            Path = perturbation.Path,
+        }));
+
+        return artifacts
+            .Where(artifact => !string.IsNullOrWhiteSpace(artifact.Path))
+            .Take(100)
+            .ToList();
+    }
+
+    private static IEnumerable<string> BuildEvidenceWarnings(SongIdRun run)
+    {
+        if (!string.Equals(run.Status, "completed", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "SongID run is not completed; evidence package may be partial.";
+        }
+
+        if (run.Tracks.Count == 0)
+        {
+            yield return "No track candidates were produced.";
+        }
+
+        if (run.Scorecard.AcoustIdHitCount == 0 &&
+            run.Scorecard.SongRecHitCount == 0 &&
+            run.Scorecard.PanakoHitCount == 0 &&
+            run.Scorecard.AudfprintHitCount == 0)
+        {
+            yield return "No recognizer hits were recorded.";
+        }
+
+        if (run.ForensicMatrix == null)
+        {
+            yield return "No forensic matrix was generated.";
+        }
     }
 
     private async Task AddSearchCandidatesAsync(SongIdRun run, string query, CancellationToken cancellationToken)

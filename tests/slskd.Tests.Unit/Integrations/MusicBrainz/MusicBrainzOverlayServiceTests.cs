@@ -10,8 +10,18 @@ using slskd.Integrations.MusicBrainz.Overlay;
 using slskd.PodCore;
 using slskd.SocialFederation;
 
-public sealed class MusicBrainzOverlayServiceTests
+public sealed class MusicBrainzOverlayServiceTests : IDisposable
 {
+    private readonly List<string> _storagePaths = new();
+
+    public void Dispose()
+    {
+        foreach (var storagePath in _storagePaths)
+        {
+            DeleteStorage(storagePath);
+        }
+    }
+
     [Fact]
     public async Task StoreAsync_RejectsEditWithoutEvidence()
     {
@@ -72,6 +82,20 @@ public sealed class MusicBrainzOverlayServiceTests
             application.Provenance,
             first => Assert.Equal("edit-a", first.EditId),
             second => Assert.Equal("edit-b", second.EditId));
+    }
+
+    [Fact]
+    public async Task Constructor_LoadsPersistedEdits()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(storagePath);
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Persisted Group Title"));
+
+        var reloaded = CreateService(storagePath);
+        var application = await reloaded.ApplyToArtistReleaseGraphAsync(CreateGraph());
+
+        Assert.Equal("Persisted Group Title", application.Effective.ReleaseGroups[0].Title);
+        Assert.Equal("edit-1", Assert.Single(application.Provenance).EditId);
     }
 
     [Fact]
@@ -139,6 +163,30 @@ public sealed class MusicBrainzOverlayServiceTests
         Assert.NotNull(second.Decision);
         Assert.Equal(first.Decision.Id, second.Decision.Id);
         Assert.Equal("actor:operator", second.Decision.ApprovedBy);
+    }
+
+    [Fact]
+    public async Task ApproveExportAsync_PersistsLocalApproval()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(storagePath);
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+        var approval = await service.ApproveExportAsync(
+            "edit-1",
+            new MusicBrainzOverlayExportApprovalRequest
+            {
+                ApprovedBy = "actor:operator",
+                Note = "ready for manual MB edit",
+            });
+
+        var reloaded = CreateService(storagePath);
+        var review = await reloaded.GetExportReviewAsync("edit-1");
+
+        Assert.True(approval.IsApproved);
+        Assert.NotNull(review);
+        Assert.NotNull(review.Decision);
+        Assert.Equal("actor:operator", review.Decision.ApprovedBy);
+        Assert.False(review.CanApproveExport);
     }
 
     [Fact]
@@ -240,16 +288,68 @@ public sealed class MusicBrainzOverlayServiceTests
         Assert.Equal(new[] { "actor:alice" }, attempt.TargetPeerIds);
     }
 
-    private static MusicBrainzOverlayService CreateService()
+    [Fact]
+    public async Task RouteEditAsync_PersistsRouteAttempts()
     {
-        return new MusicBrainzOverlayService(NullLogger<MusicBrainzOverlayService>.Instance);
+        var storagePath = CreateStoragePath();
+        var router = new Mock<IPodMessageRouter>();
+        router
+            .Setup(service => service.RouteMessageToPeersAsync(
+                It.IsAny<PodMessage>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PodMessage message, IEnumerable<string> targets, CancellationToken _) =>
+                new PodMessageRoutingResult(
+                    Success: false,
+                    MessageId: message.MessageId,
+                    PodId: message.PodId,
+                    TargetPeerCount: targets.Count(),
+                    SuccessfullyRoutedCount: 1,
+                    FailedRoutingCount: 1,
+                    RoutingDuration: TimeSpan.FromMilliseconds(5),
+                    ErrorMessage: "partial route failure",
+                    FailedPeerIds: new[] { "actor:bob" }));
+        var service = CreateService(storagePath, router.Object);
+        await service.StoreAsync(CreateTitleEdit("edit-1", "release-group-1", "Corrected Group Title"));
+
+        await service.RouteEditAsync(
+            "edit-1",
+            new MusicBrainzOverlayRouteRequest
+            {
+                TargetPeerIds = new List<string> { "actor:alice", "actor:bob" },
+            });
+
+        var reloaded = CreateService(storagePath);
+        var attempts = await reloaded.GetRouteAttemptsAsync("edit-1");
+        var attempt = Assert.Single(attempts);
+        Assert.False(attempt.Success);
+        Assert.Equal(new[] { "actor:bob" }, attempt.FailedPeerIds);
+        Assert.Equal(new[] { "actor:alice" }, attempt.RoutedPeerIds);
     }
 
-    private static MusicBrainzOverlayService CreateService(IPodMessageRouter messageRouter)
+    private MusicBrainzOverlayService CreateService()
+    {
+        return CreateService(CreateStoragePath());
+    }
+
+    private static MusicBrainzOverlayService CreateService(string storagePath)
     {
         return new MusicBrainzOverlayService(
             NullLogger<MusicBrainzOverlayService>.Instance,
+            storagePath);
+    }
+
+    private static MusicBrainzOverlayService CreateService(string storagePath, IPodMessageRouter messageRouter)
+    {
+        return new MusicBrainzOverlayService(
+            NullLogger<MusicBrainzOverlayService>.Instance,
+            storagePath,
             messageRouter);
+    }
+
+    private MusicBrainzOverlayService CreateService(IPodMessageRouter messageRouter)
+    {
+        return CreateService(CreateStoragePath(), messageRouter);
     }
 
     private static ArtistReleaseGraph CreateGraph()
@@ -320,6 +420,19 @@ public sealed class MusicBrainzOverlayServiceTests
         edit.TargetType = MusicBrainzOverlayTargetType.Release;
         Sign(edit);
         return edit;
+    }
+
+    private string CreateStoragePath()
+    {
+        var storagePath = Path.Combine(Path.GetTempPath(), $"musicbrainz-overlay-{Guid.NewGuid():N}.json");
+        _storagePaths.Add(storagePath);
+        return storagePath;
+    }
+
+    private static void DeleteStorage(string storagePath)
+    {
+        File.Delete(storagePath);
+        File.Delete($"{storagePath}.tmp");
     }
 
     private static void Sign(MusicBrainzOverlayEdit edit)

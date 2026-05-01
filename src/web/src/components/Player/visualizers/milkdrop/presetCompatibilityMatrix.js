@@ -1,5 +1,6 @@
 import { analyzeMilkdropPresetCompatibility, getMilkdropCompatibilityError } from './presetCompatibility';
 import { parseMilkdropPreset } from './presetParser';
+import { analyzeMilkdropWebGpuShaderSupport } from './shaderTranslator';
 
 const sumIndexedEntries = (entries = []) =>
   entries.filter((entry) =>
@@ -55,6 +56,15 @@ const getPresetMetrics = (preset) => ({
   waveCount: sumIndexedEntries(preset.waves),
 });
 
+const getWebGpuShaderSections = (preset) => [
+  preset.shaders?.warp && !analyzeMilkdropWebGpuShaderSupport(preset.shaders.warp).supported
+    ? 'warp_shader'
+    : '',
+  preset.shaders?.comp && !analyzeMilkdropWebGpuShaderSupport(preset.shaders.comp).supported
+    ? 'comp_shader'
+    : '',
+].filter(Boolean);
+
 const mergeMetrics = (metrics) => metrics.reduce(
   (summary, metric) => ({
     maxQRegisterIndex: Math.max(summary.maxQRegisterIndex, getMaxQRegisterIndex(metric.qRegisters)),
@@ -88,6 +98,7 @@ export const buildMilkdropCompatibilityEntry = ({
   const parsed = parseMilkdropPreset(source, { format });
   const presetReports = parsed.presets.map((preset) => {
     const report = analyzeMilkdropPresetCompatibility(preset);
+    const webGpuShaderSections = getWebGpuShaderSections(preset);
     return {
       error: getMilkdropCompatibilityError(report),
       index: preset.index,
@@ -95,9 +106,12 @@ export const buildMilkdropCompatibilityEntry = ({
       shaderSections: report.shaderSections,
       title: preset.metadata?.title || '',
       unsupportedFunctions: report.unsupportedFunctions,
+      webGpuShaderSections,
+      webGpuSupported: report.unsupportedFunctions.length === 0 && webGpuShaderSections.length === 0,
     };
   });
   const errors = presetReports.map((report) => report.error).filter(Boolean);
+  const webGpuUnsupportedReports = presetReports.filter((report) => !report.webGpuSupported);
 
   return {
     fileName,
@@ -111,6 +125,10 @@ export const buildMilkdropCompatibilityEntry = ({
     unsupportedFunctions: mergeUnique(
       presetReports.flatMap((report) => report.unsupportedFunctions),
     ),
+    webGpuShaderSections: mergeUnique(
+      presetReports.flatMap((report) => report.webGpuShaderSections),
+    ),
+    webGpuSupported: webGpuUnsupportedReports.length === 0,
   };
 };
 
@@ -137,6 +155,12 @@ export const summarizeMilkdropCompatibilityMatrix = (entries = []) => entries.re
       ...summary.unsupportedShaderSections,
       ...entry.shaderSections,
     ]),
+    webGpuSupportedCount: summary.webGpuSupportedCount + (entry.webGpuSupported ? 1 : 0),
+    webGpuUnsupportedCount: summary.webGpuUnsupportedCount + (entry.webGpuSupported ? 0 : 1),
+    webGpuUnsupportedShaderSections: mergeUnique([
+      ...summary.webGpuUnsupportedShaderSections,
+      ...entry.webGpuShaderSections,
+    ]),
   }),
   {
     maxQRegisterIndex: 0,
@@ -150,5 +174,8 @@ export const summarizeMilkdropCompatibilityMatrix = (entries = []) => entries.re
     unsupportedCount: 0,
     unsupportedFunctions: [],
     unsupportedShaderSections: [],
+    webGpuSupportedCount: 0,
+    webGpuUnsupportedCount: 0,
+    webGpuUnsupportedShaderSections: [],
   },
 );

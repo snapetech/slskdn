@@ -53,6 +53,10 @@ export const outboundEvidenceTypes = [
 ];
 
 export const defaultMeshEvidencePolicy = {
+  evidenceReview: {
+    minimumConfidence: 0.7,
+    minimumWitnesses: 2,
+  },
   inboundTrustTier: 'disabled',
   outbound: outboundEvidenceTypes.reduce((state, evidenceType) => {
     state[evidenceType.id] = false;
@@ -75,6 +79,14 @@ const sanitizePolicy = (policy = {}) => {
   }, {});
 
   return {
+    evidenceReview: {
+      minimumConfidence: Number.isFinite(policy.evidenceReview?.minimumConfidence)
+        ? Math.min(Math.max(policy.evidenceReview.minimumConfidence, 0), 1)
+        : defaultMeshEvidencePolicy.evidenceReview.minimumConfidence,
+      minimumWitnesses: Number.isFinite(policy.evidenceReview?.minimumWitnesses)
+        ? Math.max(Math.round(policy.evidenceReview.minimumWitnesses), 1)
+        : defaultMeshEvidencePolicy.evidenceReview.minimumWitnesses,
+    },
     inboundTrustTier,
     outbound,
     provenanceRequired: true,
@@ -144,4 +156,130 @@ export const getMeshEvidencePolicySummary = (policy = getMeshEvidencePolicy()) =
     privateByDefault:
       policy.inboundTrustTier === 'disabled' && enabledOutbound.length === 0,
   };
+};
+
+const trustedInboundTiers = {
+  disabled: new Set(),
+  realm: new Set(['trusted', 'realm']),
+  trusted: new Set(['trusted']),
+};
+
+const normalizeEvidenceEntries = (entries) => {
+  if (Array.isArray(entries)) return entries;
+  if (Array.isArray(entries?.evidence)) return entries.evidence;
+  if (Array.isArray(entries?.items)) return entries.items;
+  return [];
+};
+
+const normalizeEvidenceEntry = (entry = {}) => ({
+  confidence: Number.isFinite(entry.confidence) ? entry.confidence : 0,
+  containsExactHoldings: entry.containsExactHoldings === true,
+  containsPath: entry.containsPath === true,
+  containsRawListeningHistory: entry.containsRawListeningHistory === true,
+  id: entry.id || `${entry.type || 'evidence'}:${entry.subject || 'unknown'}`,
+  provenance: {
+    peerId: entry.provenance?.peerId || entry.peerId || '',
+    realmId: entry.provenance?.realmId || entry.realmId || '',
+    signature: entry.provenance?.signature || entry.signature || '',
+    trustTier: entry.provenance?.trustTier || entry.trustTier || 'untrusted',
+  },
+  subject: entry.subject || 'unknown',
+  type: entry.type || 'unknown',
+  witnessCount: Number.isFinite(entry.witnessCount) ? entry.witnessCount : 0,
+});
+
+export const evaluateMeshEvidenceEntries = (
+  entries,
+  policy = getMeshEvidencePolicy(),
+) => {
+  const sanitizedPolicy = sanitizePolicy(policy);
+  const trustedTiers = trustedInboundTiers[sanitizedPolicy.inboundTrustTier];
+  const normalized = normalizeEvidenceEntries(entries).map(normalizeEvidenceEntry);
+
+  const results = normalized.map((entry) => {
+    const reasons = [];
+
+    if (sanitizedPolicy.inboundTrustTier === 'disabled') {
+      reasons.push('inbound mesh evidence disabled');
+    }
+
+    if (!entry.provenance.signature || !entry.provenance.peerId) {
+      reasons.push('missing signed provenance');
+    }
+
+    if (!trustedTiers.has(entry.provenance.trustTier)) {
+      reasons.push(`untrusted provenance tier: ${entry.provenance.trustTier}`);
+    }
+
+    if (entry.confidence < sanitizedPolicy.evidenceReview.minimumConfidence) {
+      reasons.push(`confidence below ${sanitizedPolicy.evidenceReview.minimumConfidence}`);
+    }
+
+    if (entry.witnessCount < sanitizedPolicy.evidenceReview.minimumWitnesses) {
+      reasons.push(`witness count below ${sanitizedPolicy.evidenceReview.minimumWitnesses}`);
+    }
+
+    if (entry.containsPath) {
+      reasons.push('contains raw path data');
+    }
+
+    if (entry.containsExactHoldings) {
+      reasons.push('contains exact local holdings');
+    }
+
+    if (entry.containsRawListeningHistory) {
+      reasons.push('contains raw listening history');
+    }
+
+    return {
+      ...entry,
+      accepted: reasons.length === 0,
+      reasons,
+    };
+  });
+
+  const accepted = results.filter((entry) => entry.accepted);
+
+  return {
+    accepted,
+    rejected: results.filter((entry) => !entry.accepted),
+    results,
+    summary: {
+      accepted: accepted.length,
+      rejected: results.length - accepted.length,
+      total: results.length,
+    },
+  };
+};
+
+export const parseMeshEvidenceReviewInput = (value) => {
+  if (!value?.trim()) return [];
+
+  const parsed = JSON.parse(value);
+  return normalizeEvidenceEntries(parsed);
+};
+
+export const formatMeshEvidenceReviewReport = (review) => {
+  const lines = [
+    'slskdN mesh evidence review',
+    `Total: ${review.summary.total}`,
+    `Accepted: ${review.summary.accepted}`,
+    `Rejected: ${review.summary.rejected}`,
+    '',
+  ];
+
+  review.results.forEach((entry) => {
+    lines.push(
+      `[${entry.accepted ? 'ACCEPT' : 'REJECT'}] ${entry.type} ${entry.subject}`,
+    );
+    lines.push(`Confidence: ${entry.confidence}`);
+    lines.push(`Witnesses: ${entry.witnessCount}`);
+    lines.push(`Provenance: ${entry.provenance.trustTier} ${entry.provenance.peerId}`);
+    if (entry.reasons.length > 0) {
+      lines.push(`Reasons: ${entry.reasons.join('; ')}`);
+    }
+    lines.push('');
+  });
+
+  return lines.join('\n').trim();
 };

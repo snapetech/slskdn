@@ -146,6 +146,23 @@
   margin: 0 !important;
 }
 
+.automation-center-actions {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.5rem 0 0.75rem;
+}
+
+.automation-history-panel {
+  border-left: 4px solid var(--slskdn-accent-purple, #a277ff);
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.automation-history-panel .ui.header {
+  margin-top: 0 !important;
+}
+
 .automation-recipe-dry-run {
   color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
   font-size: 0.86rem;
@@ -172,22 +189,70 @@
   margin: 0 !important;
 }
 
+.integration-section-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.integration-section-header .ui.header {
+  margin: 0 0 12px !important;
+}
+
 .integration-manual-import {
   margin-top: 14px !important;
+}
+
+.integration-muted-copy {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.55));
+  font-size: 0.88rem;
+  line-height: 1.35;
+  margin-top: 4px;
 }
 
 .media-server-adapter-card .integration-status-row {
   margin-top: 10px;
 }
 
+.media-server-adapter-card .ui.button {
+  margin-top: 4px;
+}
+
 .media-server-path-grid {
+  align-items: center;
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(240px, 1fr));
   margin-bottom: 12px;
 }
 
+.media-server-sync-preview.ui.segment {
+  border-left: 4px solid var(--slskdn-accent-purple, #a277ff);
+  margin-top: 14px !important;
+}
+
 @media only screen and (max-width: 760px) {
+  .automation-center-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .automation-center-actions .ui.button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .integration-section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .integration-section-header .ui.button {
+    justify-content: center;
+    width: 100%;
+  }
+
   .media-server-path-grid {
     grid-template-columns: 1fr;
   }
@@ -207,6 +272,47 @@
 
 .logs-table-message {
   word-break: break-all;
+}
+
+.network-health-panel.ui.segment {
+  border-left: 4px solid var(--slskdn-accent-purple, #a277ff);
+}
+
+.network-health-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.network-health-head .ui.header {
+  margin: 0 !important;
+}
+
+.network-health-score-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.network-health-score-row .ui.progress {
+  flex: 1 1 260px;
+  margin: 0 !important;
+}
+
+@media only screen and (max-width: 760px) {
+  .network-health-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .network-health-head .ui.button {
+    justify-content: center;
+    min-height: 42px;
+    width: 100%;
+  }
 }
 
 .events-list-id {
@@ -266,6 +372,20 @@
   margin: 0 0 14px !important;
 }
 
+.setup-health-filter-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 14px;
+}
+
+.setup-health-filter-row .ui.button {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
 .setup-health-grid {
   display: grid;
   gap: 12px;
@@ -311,6 +431,15 @@
   margin: 10px 0 4px;
 }
 
+.setup-health-card-group {
+  color: var(--slskdn-accent-purple, #a277ff);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin: 4px 0 0;
+  text-transform: uppercase;
+}
+
 .setup-health-card-evidence,
 .setup-health-card-action {
   color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
@@ -332,7 +461,17 @@
   color: var(--slskd-color-subtle) !important;
 }
 
+:root.dark .setup-health-card-group {
+  color: var(--slskdn-accent-primary-hover) !important;
+}
+
 @media only screen and (max-width: 760px) {
+  .setup-health-filter-row .ui.button {
+    justify-content: space-between;
+    min-height: 42px;
+    width: 100%;
+  }
+
   .setup-health-grid {
     grid-template-columns: 1fr;
   }
@@ -411,6 +550,33 @@
 .mesh-evidence-policy-help {
   color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
   line-height: 1.4;
+  margin-top: 0.75rem;
+}
+
+.mesh-evidence-review.ui.segment {
+  margin-top: 1rem;
+}
+
+.mesh-evidence-review-input {
+  font-family: monospace;
+  min-height: 160px;
+  width: 100%;
+}
+
+.mesh-evidence-review-actions,
+.mesh-evidence-review-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mesh-evidence-review-message.ui.message {
+  margin-top: 0.75rem;
+}
+
+.mesh-evidence-review-results {
   margin-top: 0.75rem;
 }
 

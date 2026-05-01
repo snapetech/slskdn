@@ -1,10 +1,13 @@
 import PlayerBar from './PlayerBar';
+import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
 import React from 'react';
 import { PlayerProvider, usePlayer } from './PlayerContext';
 import { MemoryRouter } from 'react-router-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import * as externalVisualizer from '../../lib/externalVisualizer';
+import * as searches from '../../lib/searches';
+import * as wishlistAPI from '../../lib/wishlist';
 
 vi.mock('../../lib/nowPlaying', () => ({
   clearNowPlaying: vi.fn(() => Promise.resolve()),
@@ -145,6 +148,14 @@ vi.mock('../../lib/streaming', () => ({
   createStreamTicket: vi.fn(() => Promise.resolve('ticket-1')),
 }));
 
+vi.mock('../../lib/searches', () => ({
+  createBatch: vi.fn(),
+}));
+
+vi.mock('../../lib/wishlist', () => ({
+  create: vi.fn(),
+}));
+
 const TestHarness = () => {
   const { playItem } = usePlayer();
 
@@ -207,13 +218,18 @@ const renderPlayer = () =>
 
 describe('PlayerBar', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     window.localStorage.clear();
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true })));
+    searches.createBatch.mockResolvedValue(3);
+    wishlistAPI.create.mockResolvedValue({ id: 'wishlist-seed' });
     HTMLMediaElement.prototype.load = vi.fn();
     HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve());
     HTMLMediaElement.prototype.pause = vi.fn();
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -294,6 +310,35 @@ describe('PlayerBar', () => {
 
     expect(document.querySelector('.player-visualizer-canvas')).toBeInTheDocument();
     expect(screen.queryByTestId('player-album-art')).not.toBeInTheDocument();
+  });
+
+  it('cycles the visual tile through visualizer and analyzer variants', async () => {
+    renderPlayer();
+
+    const tile = screen.getByTestId('player-visual-tile');
+
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('butterchurn'));
+    expect(document.querySelector('.player-visualizer-canvas')).toBeInTheDocument();
+
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('native-webgl2'));
+
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('native-webgpu'));
+
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('spectrum'));
+    expect(within(tile).getByLabelText('Spectrum analyzer')).toBeInTheDocument();
+
+    fireEvent.click(tile);
+    await waitFor(() =>
+      expect(window.localStorage.getItem('slskdn.player.visualTileMode')).toBe('scope'));
+    expect(within(tile).getByLabelText('Oscilloscope')).toBeInTheDocument();
   });
 
   it('does not repeat the currently playing track in the queue preview', () => {
@@ -398,6 +443,16 @@ describe('PlayerBar', () => {
     );
     fireEvent.click(screen.getByTestId('player-shelf-copy-policy-report'));
     expect(screen.getByText('Policy report prepared for 1 shelf items.')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('player-shelf-send-content:sha256:test'));
+    expect(screen.getByText('Sent Local stream to Discovery Inbox for approval.')).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'Discovery Shelf',
+          title: 'slskdN - Fixture Album - Local stream',
+        }),
+      ]),
+    );
     fireEvent.click(screen.getByTestId('player-shelf-preview-content:sha256:test'));
     expect(screen.getByText('Promote preview prepared for Local stream. No files were moved or deleted.')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('player-close-discovery-shelf'));
@@ -453,6 +508,42 @@ describe('PlayerBar', () => {
     expect(screen.getByText('slskdN Fixture Album')).toBeInTheDocument();
     expect(screen.getByText('Artist and genre seed')).toBeInTheDocument();
     expect(screen.getByText('slskdN Fixture Genre')).toBeInTheDocument();
+    expect(searches.createBatch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('player-radio-start-searches'));
+    await waitFor(() => {
+      expect(searches.createBatch).toHaveBeenCalledWith({
+        queries: [
+          'slskdN Local stream',
+          'slskdN Fixture Album',
+          'slskdN Fixture Genre',
+        ],
+      });
+    });
+    expect(screen.getByText('Started 3 smart-radio searches.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-radio-add-wishlist'));
+    await waitFor(() => {
+      expect(wishlistAPI.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          autoDownload: false,
+          enabled: true,
+          searchText: 'slskdN Local stream',
+        }),
+      );
+    });
+    expect(screen.getByText('Added 4 smart-radio seeds to Wishlist.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-radio-send-inbox'));
+    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'Smart Radio',
+          searchText: 'slskdN Local stream',
+        }),
+      ]),
+    );
+    expect(screen.getByText('Sent 4 smart-radio seeds to Discovery Inbox.')).toBeInTheDocument();
   });
 
   it('manages the playback queue without removing the current track', async () => {
@@ -483,6 +574,26 @@ describe('PlayerBar', () => {
 
     expect(screen.getByText('No upcoming tracks.')).toBeInTheDocument();
     expect(screen.getAllByText('Third stream')).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId('player-search-similar-candidates'));
+    await waitFor(() => {
+      expect(searches.createBatch).toHaveBeenCalledWith({
+        queries: ['slskdN Second stream', 'slskdN Local stream'],
+      });
+    });
+    expect(screen.getByText('Started 3 similar-track searches.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-wishlist-similar-candidates'));
+    await waitFor(() => {
+      expect(wishlistAPI.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          autoDownload: false,
+          enabled: true,
+          searchText: 'slskdN Second stream',
+        }),
+      );
+    });
+    expect(screen.getByText('Added 2 similar-track seeds to Wishlist.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('player-auto-queue-similar'));
 
@@ -524,6 +635,49 @@ describe('PlayerBar', () => {
     expect(screen.getAllByText('Fixture Genre').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Local stream').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('player-stats-search-seed-Fixture Genre')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-stats-send-seeds-to-discovery-inbox'));
+    expect(screen.getByText(/Sent .* listening seeds to Discovery Inbox/)).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          acquisitionProfile: 'mesh-preferred',
+          source: 'Listening Stats',
+        }),
+      ]),
+    );
+
+    fireEvent.click(screen.getByTestId('player-stats-start-seed-searches'));
+    await waitFor(() => {
+      expect(searches.createBatch).toHaveBeenCalledWith({
+        queries: expect.arrayContaining(['Fixture Genre', 'Local stream']),
+      });
+    });
+    expect(screen.getByText('Started 3 bounded listening seed searches.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('player-stats-add-seeds-to-wishlist'));
+    await waitFor(() => {
+      expect(wishlistAPI.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          autoDownload: false,
+          enabled: true,
+          searchText: 'Fixture Genre',
+        }),
+      );
+    });
+    expect(screen.getByText(/Added .* listening seeds to Wishlist/)).toBeInTheDocument();
+
+    window.localStorage.setItem('slskdn.listenbrainz.token', 'token-1');
+    fireEvent.click(screen.getByTestId('player-listening-history-scrobble-recent'));
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        'https://api.listenbrainz.org/1/submit-listens',
+        expect.objectContaining({
+          method: 'POST',
+        }),
+      );
+    });
+    expect(screen.getByText('Submitted 1 recent listen to ListenBrainz.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('player-clear-listening-history'));
 

@@ -1,8 +1,11 @@
 import {
+  evaluateMeshEvidenceEntries,
+  formatMeshEvidenceReviewReport,
   getMeshEvidencePolicy,
   getMeshEvidencePolicySummary,
   inboundTrustTiers,
   outboundEvidenceTypes,
+  parseMeshEvidenceReviewInput,
   resetMeshEvidencePolicy,
   setMeshEvidenceInboundTrustTier,
   setMeshEvidenceOutboundEnabled,
@@ -17,9 +20,11 @@ import {
   Icon,
   Label,
   List,
+  Message,
   Popup,
   Segment,
   Statistic,
+  TextArea,
 } from 'semantic-ui-react';
 
 const inboundOptions = inboundTrustTiers.map((tier) => ({
@@ -28,8 +33,44 @@ const inboundOptions = inboundTrustTiers.map((tier) => ({
   value: tier.id,
 }));
 
+const sampleEvidence = JSON.stringify(
+  {
+    evidence: [
+      {
+        confidence: 0.92,
+        provenance: {
+          peerId: 'fixture-peer',
+          realmId: 'fixture-realm',
+          signature: 'fixture-signature',
+          trustTier: 'realm',
+        },
+        subject: 'mbid:recording:fixture-track',
+        type: 'metadataCorrection',
+        witnessCount: 3,
+      },
+      {
+        confidence: 0.82,
+        containsPath: true,
+        provenance: {
+          peerId: 'untrusted-peer',
+          signature: 'fixture-signature',
+          trustTier: 'untrusted',
+        },
+        subject: 'private-path-example',
+        type: 'releaseCompleteness',
+        witnessCount: 1,
+      },
+    ],
+  },
+  null,
+  2,
+);
+
 const MeshEvidencePolicy = () => {
   const [policy, setPolicy] = useState(getMeshEvidencePolicy);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewInput, setReviewInput] = useState('');
+  const [review, setReview] = useState(null);
   const summary = useMemo(() => getMeshEvidencePolicySummary(policy), [policy]);
 
   const setInboundTier = (_event, { value }) => {
@@ -47,6 +88,29 @@ const MeshEvidencePolicy = () => {
   const resetPolicy = () => {
     setPolicy(resetMeshEvidencePolicy());
     toast.info('Mesh evidence policy reset to private defaults');
+  };
+
+  const reviewEvidence = () => {
+    try {
+      const entries = parseMeshEvidenceReviewInput(reviewInput);
+      setReview(evaluateMeshEvidenceEntries(entries, policy));
+      setReviewError('');
+    } catch (error) {
+      setReview(null);
+      setReviewError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const copyReviewReport = async () => {
+    if (!review) return;
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(formatMeshEvidenceReviewReport(review));
+      toast.success('Mesh evidence review copied');
+      return;
+    }
+
+    toast.info('Clipboard unavailable; select the review results manually');
   };
 
   return (
@@ -159,6 +223,125 @@ const MeshEvidencePolicy = () => {
           </List>
         </Segment>
       </div>
+
+      <Segment className="mesh-evidence-review">
+        <Header as="h4">
+          <Icon name="search" />
+          Evidence Review Sandbox
+          <Header.Subheader>
+            Paste signed mesh evidence JSON to preview local trust, provenance,
+            k-anonymity, confidence, and privacy gates before anything is applied.
+          </Header.Subheader>
+        </Header>
+        <TextArea
+          aria-label="Mesh evidence review JSON"
+          className="mesh-evidence-review-input"
+          onChange={(event) => setReviewInput(event.target.value)}
+          placeholder={sampleEvidence}
+          value={reviewInput}
+        />
+        <div className="mesh-evidence-review-actions">
+          <Popup
+            content="Load a browser-local sample containing one acceptable realm-signed item and one rejected privacy-risk item."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Load sample mesh evidence"
+                onClick={() => {
+                  setReviewInput(sampleEvidence);
+                  setReviewError('');
+                }}
+              >
+                <Icon name="flask" />
+                Load Sample
+              </Button>
+            }
+          />
+          <Popup
+            content="Evaluate the pasted evidence locally. This does not publish, query peers, or apply ranking changes."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Review mesh evidence locally"
+                disabled={!reviewInput.trim()}
+                onClick={reviewEvidence}
+                primary
+              >
+                <Icon name="check circle" />
+                Review Evidence
+              </Button>
+            }
+          />
+          <Popup
+            content="Copy the current mesh evidence review report."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Copy mesh evidence review report"
+                disabled={!review}
+                onClick={copyReviewReport}
+              >
+                <Icon name="copy" />
+                Copy Report
+              </Button>
+            }
+          />
+        </div>
+        {reviewError && (
+          <Message
+            className="mesh-evidence-review-message"
+            negative
+          >
+            <Message.Header>Invalid evidence JSON</Message.Header>
+            <p>{reviewError}</p>
+          </Message>
+        )}
+        {review && (
+          <div className="mesh-evidence-review-results">
+            <div className="mesh-evidence-review-summary">
+              <Label color="blue">
+                Total
+                <Label.Detail>{review.summary.total}</Label.Detail>
+              </Label>
+              <Label color="green">
+                Accepted
+                <Label.Detail>{review.summary.accepted}</Label.Detail>
+              </Label>
+              <Label color="red">
+                Rejected
+                <Label.Detail>{review.summary.rejected}</Label.Detail>
+              </Label>
+            </div>
+            <List
+              divided
+              relaxed
+            >
+              {review.results.map((entry) => (
+                <List.Item key={entry.id}>
+                  <List.Icon
+                    color={entry.accepted ? 'green' : 'red'}
+                    name={entry.accepted ? 'check circle' : 'ban'}
+                    size="large"
+                    verticalAlign="middle"
+                  />
+                  <List.Content>
+                    <List.Header>
+                      {entry.type} · {entry.subject}
+                    </List.Header>
+                    <List.Description>
+                      Confidence {entry.confidence}; witnesses {entry.witnessCount};
+                      provenance {entry.provenance.trustTier}
+                      {entry.reasons.length > 0
+                        ? `; rejected because ${entry.reasons.join(', ')}`
+                        : '; accepted for local use'}
+                    </List.Description>
+                  </List.Content>
+                </List.Item>
+              ))}
+            </List>
+          </div>
+        )}
+      </Segment>
     </Segment>
   );
 };

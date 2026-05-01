@@ -25,6 +25,11 @@ vi.mock('react-toastify', () => ({
 describe('Network', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
     window.localStorage.clear();
     slskdnAPI.getSlskdnStats.mockResolvedValue({
       backfill: {
@@ -61,6 +66,24 @@ describe('Network', () => {
     expect(
       screen.getByText(/configured Soulseek listen port is reachable/i),
     ).toBeInTheDocument();
+    expect(screen.getByText('Network Health')).toBeInTheDocument();
+    expect(screen.getByText('Needs attention')).toBeInTheDocument();
+  });
+
+  it('copies a network health report', async () => {
+    render(<Network theme="light" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Network Health')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy network health report' }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('slskdN network health report'),
+      );
+    });
   });
 
   it('explains zero-node DHT when LAN-only mode disables public bootstrap', async () => {
@@ -165,6 +188,7 @@ describe('Network', () => {
     });
 
     expect(screen.queryByText('Connectivity diagnostics')).not.toBeInTheDocument();
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
   });
 
   it('does not show the DHT exposure notice when DHT is LAN-only', async () => {

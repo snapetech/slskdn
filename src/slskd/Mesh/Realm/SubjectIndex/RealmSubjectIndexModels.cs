@@ -94,6 +94,93 @@ public sealed class RealmSubjectIndexResolution
     public string Provenance { get; set; } = string.Empty;
 }
 
+public sealed class RealmSubjectIndexConflictReport
+{
+    public string RealmId { get; set; } = string.Empty;
+
+    public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public int IndexCount { get; set; }
+
+    public int DisabledAuthorityCount { get; set; }
+
+    public int EntryCount { get; set; }
+
+    public bool HasConflicts => Conflicts.Count > 0;
+
+    public List<RealmSubjectIndexConflict> Conflicts { get; set; } = new();
+}
+
+public sealed class RealmSubjectIndexAuthorityDecisionRequest
+{
+    public bool Enabled { get; set; }
+
+    public string DecidedBy { get; set; } = "local-user";
+
+    public string Note { get; set; } = string.Empty;
+}
+
+public sealed class RealmSubjectIndexAuthorityDecision
+{
+    public bool IsAccepted => Errors.Count == 0;
+
+    public string RealmId { get; set; } = string.Empty;
+
+    public string IndexId { get; set; } = string.Empty;
+
+    public bool Enabled { get; set; }
+
+    public string DecidedBy { get; set; } = string.Empty;
+
+    public string Note { get; set; } = string.Empty;
+
+    public DateTimeOffset DecidedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public List<string> Errors { get; set; } = new();
+}
+
+public sealed class RealmSubjectIndexConflict
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Type { get; set; } = string.Empty;
+
+    public string SubjectNamespace { get; set; } = string.Empty;
+
+    public string SubjectId { get; set; } = string.Empty;
+
+    public string Key { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public List<RealmSubjectIndexConflictValue> Values { get; set; } = new();
+}
+
+public sealed class RealmSubjectIndexConflictValue
+{
+    public string RealmId { get; set; } = string.Empty;
+
+    public string IndexId { get; set; } = string.Empty;
+
+    public int Revision { get; set; }
+
+    public string SubjectId { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
+
+    public string WorkTitle { get; set; } = string.Empty;
+
+    public string WorkCreator { get; set; } = string.Empty;
+
+    public List<string> Aliases { get; set; } = new();
+
+    public Dictionary<string, string> ExternalIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public string AuthorityKey { get; set; } = string.Empty;
+
+    public string Provenance { get; set; } = string.Empty;
+}
+
 public sealed class RealmSubjectIndexProposal
 {
     public string ProposalId { get; set; } = string.Empty;

@@ -367,5 +367,51 @@ export const getListeningRecommendationSeeds = (stats = {}, limit = 5) => {
     });
   });
 
+  (stats.topTracks || []).forEach((track) => {
+    addRecommendationSeed(seeds, seen, {
+      basis: `${track.plays} local plays`,
+      label: track.label,
+      query: track.label,
+      type: 'Track seed',
+    });
+  });
+
   return seeds.slice(0, limit);
 };
+
+export const getListeningRecommendationQueries = (
+  stats = {},
+  { limit = 3 } = {},
+) =>
+  getListeningRecommendationSeeds(stats, Math.max(limit * 2, limit))
+    .map((seed) => seed.query)
+    .filter(Boolean)
+    .filter((query, index, queries) =>
+      queries.findIndex((other) =>
+        other.toLowerCase() === query.toLowerCase()) === index)
+    .slice(0, limit);
+
+const getSeedEvidenceKey = (seed = {}) =>
+  `listening:${normalizeText(seed.type).toLowerCase()}:${normalizeText(seed.query).toLowerCase()}`;
+
+export const buildListeningDiscoverySeed = (
+  seed = {},
+  { acquisitionProfile = 'lossless-exact' } = {},
+) => ({
+  acquisitionProfile,
+  evidenceKey: getSeedEvidenceKey(seed),
+  networkImpact:
+    'Listening intelligence review seed only; approval and explicit acquisition execution are required before any search, peer browse, or download.',
+  reason: `${seed.type || 'Listening seed'} from browser-local listening history (${seed.basis || 'local evidence'}).`,
+  searchText: normalizeText(seed.query),
+  source: 'Listening Stats',
+  title: normalizeText(seed.label || seed.query || 'Listening recommendation'),
+});
+
+export const buildListeningDiscoverySeeds = (
+  stats = {},
+  { acquisitionProfile = 'lossless-exact', limit = 5 } = {},
+) =>
+  getListeningRecommendationSeeds(stats, limit).map((seed) =>
+    buildListeningDiscoverySeed(seed, { acquisitionProfile }),
+  );

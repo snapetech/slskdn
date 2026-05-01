@@ -1,9 +1,14 @@
 import * as slskdnAPI from '../../../lib/slskdn';
+import {
+  buildNetworkHealthScore,
+  formatNetworkHealthReport,
+} from '../../../lib/networkHealthScore';
 import { getLocalStorageItem, setLocalStorageItem } from '../../../lib/storage';
 import { LoaderSegment, ShrinkableButton } from '../../Shared';
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
+  Button,
   Card,
   Divider,
   Grid,
@@ -195,6 +200,26 @@ const Network = ({ theme }) => {
     !dhtIsLanOnly &&
     dhtIsRunning &&
     !dhtExposureAcknowledged;
+  const networkHealth = buildNetworkHealthScore({
+    discoveredPeers,
+    meshPeers,
+    stats,
+  });
+
+  const copyNetworkHealthReport = async () => {
+    const report = formatNetworkHealthReport(networkHealth);
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(report);
+        toast.success('Network health report copied');
+      } catch {
+        toast.error('Unable to copy network health report');
+      }
+      return;
+    }
+
+    toast.info('Clipboard unavailable; select the report text manually');
+  };
 
   if (loading) {
     return <LoaderSegment />;
@@ -307,6 +332,110 @@ const Network = ({ theme }) => {
       </Card.Group>
 
       <Divider />
+
+      <Segment className="network-health-panel">
+        <div className="network-health-head">
+          <Header as="h4">
+            <Icon name="heartbeat" />
+            <Header.Content>
+              Network Health
+              <Header.Subheader>
+                Local readiness score from already-loaded mesh, DHT, HashDb, and security counters
+              </Header.Subheader>
+            </Header.Content>
+          </Header>
+          <Popup
+            content="Copy a local network-health report for diagnostics. This does not query peers or change network state."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Copy network health report"
+                onClick={copyNetworkHealthReport}
+                size="small"
+              >
+                <Icon name="copy" />
+                Copy Report
+              </Button>
+            }
+          />
+        </div>
+        <div className="network-health-score-row">
+          <Progress
+            color={
+              networkHealth.score >= 85
+                ? 'green'
+                : networkHealth.score >= 65
+                  ? 'yellow'
+                  : 'red'
+            }
+            percent={networkHealth.score}
+            progress
+          >
+            {networkHealth.label}
+          </Progress>
+          <Label color="blue">
+            Mesh
+            <Label.Detail>{networkHealth.inputs.meshCount}</Label.Detail>
+          </Label>
+          <Label color="teal">
+            Discovered
+            <Label.Detail>{networkHealth.inputs.discoveredCount}</Label.Detail>
+          </Label>
+          <Label color="purple">
+            DHT
+            <Label.Detail>{networkHealth.inputs.dhtNodes}</Label.Detail>
+          </Label>
+          <Label color="orange">
+            Security
+            <Label.Detail>{networkHealth.inputs.securityWarningCount}</Label.Detail>
+          </Label>
+        </div>
+        {networkHealth.findings.length > 0 ? (
+          <List
+            divided
+            relaxed
+          >
+            {networkHealth.findings.map((finding) => (
+              <List.Item key={`${finding.area}-${finding.summary}`}>
+                <List.Icon
+                  color={
+                    finding.severity === 'fail'
+                      ? 'red'
+                      : finding.severity === 'warn'
+                        ? 'yellow'
+                        : 'blue'
+                  }
+                  name={
+                    finding.severity === 'fail'
+                      ? 'warning sign'
+                      : finding.severity === 'warn'
+                        ? 'exclamation triangle'
+                        : 'info circle'
+                  }
+                  verticalAlign="middle"
+                />
+                <List.Content>
+                  <List.Header>
+                    {finding.area}: {finding.summary}
+                  </List.Header>
+                  <List.Description>{finding.action}</List.Description>
+                </List.Content>
+              </List.Item>
+            ))}
+          </List>
+        ) : (
+          <Message
+            className="network-diagnostic-message"
+            positive
+          >
+            <Message.Header>No local network-health findings</Message.Header>
+            <p>
+              Mesh, DHT, HashDb, and security counters look healthy from the
+              already-loaded dashboard data.
+            </p>
+          </Message>
+        )}
+      </Segment>
 
       {/* Our Capabilities */}
       <Segment>

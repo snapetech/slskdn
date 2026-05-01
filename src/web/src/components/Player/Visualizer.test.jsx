@@ -2,6 +2,8 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import Visualizer from './Visualizer';
+import { createButterchurnEngine } from './visualizers/butterchurnEngine';
+import { createNativeMilkdropEngine } from './visualizers/nativeMilkdropEngine';
 
 const butterchurnEngine = {
   dispose: vi.fn(),
@@ -104,6 +106,8 @@ describe('Visualizer', () => {
     HTMLCanvasElement.prototype.getContext = vi.fn(() => ({}));
     window.requestAnimationFrame = vi.fn(() => 1);
     window.cancelAnimationFrame = vi.fn();
+    createButterchurnEngine.mockClear();
+    createNativeMilkdropEngine.mockClear();
     butterchurnEngine.dispose.mockClear();
     nativeEngine.dispose.mockClear();
     nativeEngine.exportPresetFragment.mockClear();
@@ -137,8 +141,11 @@ describe('Visualizer', () => {
     fireEvent.click(await screen.findByTestId('visualizer-switch-engine'));
 
     await waitFor(() => {
-      expect(window.localStorage.getItem('slskdn.player.visualizerEngine')).toBe('native');
+      expect(window.localStorage.getItem('slskdn.player.visualizerEngine')).toBe('native-webgl2');
     });
+    expect(createNativeMilkdropEngine).toHaveBeenLastCalledWith(
+      expect.objectContaining({ rendererBackend: 'webgl2' }),
+    );
 
     const input = document.querySelector('input[type="file"]');
     const file = new File(['name=Imported native preset\nwave_r=1'], 'imported.milk', {
@@ -186,6 +193,40 @@ describe('Visualizer', () => {
     expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPreset')).toBeNull();
     expect(window.localStorage.getItem('slskdn.player.nativeMilkdropPresetLibrary')).toBeNull();
     expect(screen.queryByTestId('visualizer-native-preset-library')).not.toBeInTheDocument();
+  });
+
+  it('cycles visualizer engines through Butterchurn, MilkDrop3 WebGL2, and MilkDrop3 WebGPU', async () => {
+    render(
+      <Visualizer
+        audioElement={{}}
+        mode="fullwindow"
+        onModeChange={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId('visualizer-switch-engine');
+    expect(createButterchurnEngine).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('visualizer-switch-engine'));
+    await waitFor(() => {
+      expect(window.localStorage.getItem('slskdn.player.visualizerEngine')).toBe('native-webgl2');
+    });
+    expect(createNativeMilkdropEngine).toHaveBeenLastCalledWith(
+      expect.objectContaining({ rendererBackend: 'webgl2' }),
+    );
+
+    fireEvent.click(screen.getByTestId('visualizer-switch-engine'));
+    await waitFor(() => {
+      expect(window.localStorage.getItem('slskdn.player.visualizerEngine')).toBe('native-webgpu');
+    });
+    expect(createNativeMilkdropEngine).toHaveBeenLastCalledWith(
+      expect.objectContaining({ rendererBackend: 'webgpu' }),
+    );
+
+    fireEvent.click(screen.getByTestId('visualizer-switch-engine'));
+    await waitFor(() => {
+      expect(window.localStorage.getItem('slskdn.player.visualizerEngine')).toBe('butterchurn');
+    });
   });
 
   it('imports compatible native preset batches and reports skipped files', async () => {

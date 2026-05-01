@@ -6,6 +6,8 @@ namespace slskd.Tests.Unit.SourceFeeds;
 
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using slskd.SourceFeeds;
@@ -306,12 +308,102 @@ public class SourceFeedImportServiceTests
         Assert.Contains("method=user.getlovedtracks", handler.Requests[0].RequestUri!.ToString());
     }
 
+    [Fact]
+    public async Task PreviewAsync_RecordsRestartSafeHistory()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(new QueueHttpHandler(), storagePath: storagePath);
+
+        await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "Track name,Artist name,Album name\nSong,Artist,Album",
+            SourceKind = "csv",
+            IncludeAlbum = true,
+            Limit = 20,
+        });
+
+        var reloaded = CreateService(new QueueHttpHandler(), storagePath: storagePath);
+        var history = await reloaded.GetHistoryAsync();
+
+        var entry = Assert.Single(history);
+        Assert.Equal("local", entry.Provider);
+        Assert.Equal("csv", entry.SourceKind);
+        Assert.Equal(1, entry.SuggestionCount);
+        Assert.Equal(0, entry.NetworkRequestCount);
+        Assert.Equal(20, entry.Limit);
+        Assert.True(entry.IncludeAlbum);
+        Assert.NotEmpty(entry.SourceFingerprint);
+        Assert.Contains("Track name", entry.SourcePreview);
+        Assert.Single(entry.Suggestions);
+        Assert.Empty(entry.SkippedRows);
+    }
+
+    [Fact]
+    public async Task PreviewAsync_HistoryStoresSamplesWithoutProviderToken()
+    {
+        var handler = new QueueHttpHandler();
+        handler.EnqueueJson(
+            """
+            {
+              "total": 1,
+              "items": [
+                {
+                  "track": {
+                    "id": "track-1",
+                    "name": "Song",
+                    "album": { "name": "Album" },
+                    "artists": [{ "id": "artist-1", "name": "Artist" }],
+                    "external_urls": { "spotify": "https://open.spotify.com/track/track-1" }
+                  }
+                }
+              ]
+            }
+            """);
+        var service = CreateService(handler);
+
+        await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "spotify:liked",
+            SourceKind = "spotify",
+            ProviderAccessToken = "sensitive-provider-token",
+        });
+        var history = await service.GetHistoryAsync();
+
+        var entry = Assert.Single(history);
+        Assert.Equal("spotify", entry.Provider);
+        Assert.Equal("saved-tracks", entry.SourceKind);
+        Assert.Equal(1, entry.NetworkRequestCount);
+        var suggestion = Assert.Single(entry.Suggestions);
+        Assert.Equal("Artist Song Album", suggestion.SearchText);
+        Assert.DoesNotContain("sensitive-provider-token", JsonSerializer.Serialize(entry));
+    }
+
+    [Fact]
+    public async Task GetHistoryEntryAsync_ReturnsMatchingImportRun()
+    {
+        var service = CreateService(new QueueHttpHandler());
+        await service.PreviewAsync(new SourceFeedImportRequest
+        {
+            SourceText = "Artist - Song",
+            SourceKind = "text",
+        });
+        var history = await service.GetHistoryAsync();
+
+        var entry = await service.GetHistoryEntryAsync(history[0].ImportId);
+        var missing = await service.GetHistoryEntryAsync("missing");
+
+        Assert.NotNull(entry);
+        Assert.Equal(history[0].ImportId, entry.ImportId);
+        Assert.Null(missing);
+    }
+
     private static SourceFeedImportService CreateService(
         QueueHttpHandler handler,
         bool spotifyEnabled = false,
         string connectedSpotifyToken = "",
         string youtubeApiKey = "",
-        string lastFmApiKey = "")
+        string lastFmApiKey = "",
+        string? storagePath = null)
     {
         var httpClient = new HttpClient(handler);
         var factory = new Mock<IHttpClientFactory>();
@@ -345,7 +437,17 @@ public class SourceFeedImportServiceTests
             .Setup(x => x.GetAccessTokenAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(connectedSpotifyToken);
 
-        return new SourceFeedImportService(factory.Object, options.Object, spotifyConnection.Object);
+        return new SourceFeedImportService(
+            factory.Object,
+            options.Object,
+            spotifyConnection.Object,
+            NullLogger<SourceFeedImportService>.Instance,
+            storagePath ?? CreateStoragePath());
+    }
+
+    private static string CreateStoragePath()
+    {
+        return Path.Combine(Path.GetTempPath(), "slskdn-source-feed-tests", $"{Guid.NewGuid():N}.json");
     }
 
     private sealed class QueueHttpHandler : HttpMessageHandler

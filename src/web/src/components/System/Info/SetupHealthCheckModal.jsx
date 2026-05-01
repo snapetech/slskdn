@@ -9,6 +9,7 @@ import {
   Header,
   Icon,
   Label,
+  List,
   Message,
   Modal,
   Popup,
@@ -37,6 +38,7 @@ const copyToClipboard = async (value) => {
 };
 
 const SetupHealthCheckModal = ({ options = {}, state = {} }) => {
+  const [activeGroup, setActiveGroup] = useState('All');
   const [open, setOpen] = useState(false);
   const summary = useMemo(
     () =>
@@ -47,6 +49,17 @@ const SetupHealthCheckModal = ({ options = {}, state = {} }) => {
     [options, state],
   );
   const report = useMemo(() => formatSetupHealthReport(summary), [summary]);
+  const groupNames = useMemo(
+    () => ['All', ...Object.keys(summary.groups).sort()],
+    [summary.groups],
+  );
+  const visibleChecks = useMemo(
+    () =>
+      activeGroup === 'All'
+        ? summary.checks
+        : summary.checks.filter((item) => item.group === activeGroup),
+    [activeGroup, summary.checks],
+  );
 
   const copyReport = async () => {
     const copied = await copyToClipboard(report);
@@ -93,15 +106,19 @@ const SetupHealthCheckModal = ({ options = {}, state = {} }) => {
           >
             <Message.Header>{summary.readiness}</Message.Header>
             <p>
-              This check uses the options and state already loaded in this
+              This wizard uses the options and state already loaded in this
               browser. It does not contact peers, validate credentials, scan
-              folders, or mutate configuration.
+              folders, retry jobs, or mutate configuration.
             </p>
           </Message>
           <Statistic.Group
             className="setup-health-stats"
-            size="mini"
+            size="small"
           >
+            <Statistic color={summary.totals.fail ? 'red' : summary.totals.warn ? 'yellow' : 'green'}>
+              <Statistic.Value>{summary.score}</Statistic.Value>
+              <Statistic.Label>Score</Statistic.Label>
+            </Statistic>
             <Statistic color="green">
               <Statistic.Value>{summary.totals.pass}</Statistic.Value>
               <Statistic.Label>Pass</Statistic.Label>
@@ -115,8 +132,52 @@ const SetupHealthCheckModal = ({ options = {}, state = {} }) => {
               <Statistic.Label>Fail</Statistic.Label>
             </Statistic>
           </Statistic.Group>
+          {summary.nextSteps.length > 0 && (
+            <Message warning>
+              <Message.Header>Next Steps</Message.Header>
+              <List bulleted>
+                {summary.nextSteps.map((item) => (
+                  <List.Item key={`${item.group}-${item.area}`}>
+                    <strong>{item.area}:</strong> {item.action}
+                  </List.Item>
+                ))}
+              </List>
+            </Message>
+          )}
+          <div className="setup-health-filter-row">
+            {groupNames.map((group) => {
+              const groupSummary = summary.groups[group];
+              const label =
+                group === 'All'
+                  ? `${summary.checks.length}`
+                  : `${groupSummary.fail}/${groupSummary.warn}/${groupSummary.pass}`;
+
+              return (
+                <Popup
+                  content={
+                    group === 'All'
+                      ? 'Show every diagnostic check.'
+                      : `Show ${group} checks. Label is fail/warn/pass.`
+                  }
+                  key={group}
+                  position="top center"
+                  trigger={
+                    <Button
+                      aria-label={`Show ${group} setup health checks`}
+                      basic={activeGroup !== group}
+                      onClick={() => setActiveGroup(group)}
+                      size="small"
+                    >
+                      {group}
+                      <Label circular>{label}</Label>
+                    </Button>
+                  }
+                />
+              );
+            })}
+          </div>
           <div className="setup-health-grid">
-            {summary.checks.map((item) => (
+            {visibleChecks.map((item) => (
               <section
                 className={`setup-health-card setup-health-card-${item.status}`}
                 key={item.area}
@@ -134,6 +195,7 @@ const SetupHealthCheckModal = ({ options = {}, state = {} }) => {
                   </Label>
                 </div>
                 <p className="setup-health-card-summary">{item.summary}</p>
+                <p className="setup-health-card-group">{item.group}</p>
                 <p className="setup-health-card-evidence">{item.evidence}</p>
                 <p className="setup-health-card-action">{item.action}</p>
               </section>

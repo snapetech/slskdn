@@ -223,7 +223,16 @@ public class CollectionsControllerTests
         var c = CreateController();
         var collectionId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
-        var item = new CollectionItem { Id = itemId, CollectionId = collectionId, ContentId = "old", MediaKind = "audio", ContentHash = "hash" };
+        var item = new CollectionItem
+        {
+            Id = itemId,
+            CollectionId = collectionId,
+            ContentId = "old",
+            MediaKind = "audio",
+            ContentHash = "hash",
+            FileName = "old.flac",
+            Title = "Old",
+        };
 
         _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
@@ -239,7 +248,11 @@ public class CollectionsControllerTests
             {
                 ContentId = " content:mb:recording:1 ",
                 MediaKind = " audio ",
-                ContentHash = " hash-2 "
+                ContentHash = " hash-2 ",
+                FileName = " Artist/Album/01 Track.flac ",
+                Title = " Track ",
+                Artist = " Artist ",
+                Album = " Album "
             },
             CancellationToken.None);
 
@@ -248,6 +261,53 @@ public class CollectionsControllerTests
         Assert.Equal("content:mb:recording:1", updated.ContentId);
         Assert.Equal("audio", updated.MediaKind);
         Assert.Equal("hash-2", updated.ContentHash);
+        Assert.Equal("Artist/Album/01 Track.flac", updated.FileName);
+        Assert.Equal("Track", updated.Title);
+        Assert.Equal("Artist", updated.Artist);
+        Assert.Equal("Album", updated.Album);
+    }
+
+    [Fact]
+    public async Task AddItem_WithDisplayMetadata_TrimsAndPersistsSafeLabels()
+    {
+        var c = CreateController();
+        var collectionId = Guid.NewGuid();
+        _sharingMock.Setup(x => x.GetCollectionAsync(collectionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Collection { Id = collectionId, OwnerUserId = "alice" });
+        _sharingMock.Setup(x => x.AddCollectionItemAsync(It.IsAny<CollectionItem>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CollectionItem item, CancellationToken _) => item);
+
+        var r = await c.AddItem(
+            collectionId,
+            new AddCollectionItemRequest
+            {
+                ContentId = " content:1 ",
+                MediaKind = " audio ",
+                Sha256 = " abc123 ",
+                FileName = " Artist/Album/01 Track.flac ",
+                Title = " Track ",
+                Artist = " Artist ",
+                Album = " Album "
+            },
+            CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(r);
+        var item = Assert.IsType<CollectionItem>(created.Value);
+        Assert.Equal("Artist/Album/01 Track.flac", item.FileName);
+        Assert.Equal("Track", item.Title);
+        Assert.Equal("Artist", item.Artist);
+        Assert.Equal("Album", item.Album);
+        Assert.Equal("abc123", item.ContentHash);
+        _sharingMock.Verify(x => x.AddCollectionItemAsync(
+            It.Is<CollectionItem>(item =>
+                item.ContentId == "content:1" &&
+                item.MediaKind == "audio" &&
+                item.FileName == "Artist/Album/01 Track.flac" &&
+                item.Title == "Track" &&
+                item.Artist == "Artist" &&
+                item.Album == "Album" &&
+                item.ContentHash == "abc123"),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -266,7 +326,11 @@ public class CollectionsControllerTests
             {
                 ContentId = " content:1 ",
                 MediaKind = "   ",
-                ContentHash = "\t"
+                ContentHash = "\t",
+                FileName = "   ",
+                Title = "   ",
+                Artist = "   ",
+                Album = "   ",
             },
             CancellationToken.None);
 
@@ -275,7 +339,11 @@ public class CollectionsControllerTests
             It.Is<CollectionItem>(item =>
                 item.ContentId == "content:1" &&
                 item.MediaKind == null &&
-                item.ContentHash == null),
+                item.ContentHash == null &&
+                item.FileName == null &&
+                item.Title == null &&
+                item.Artist == null &&
+                item.Album == null),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 }

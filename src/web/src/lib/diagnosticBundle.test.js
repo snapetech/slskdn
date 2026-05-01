@@ -47,22 +47,39 @@ describe('diagnosticBundle', () => {
         protocol: 'http:',
       },
       options: {
+        directories: {
+          downloads: '/fixture/downloads',
+        },
+        shares: {
+          directories: ['/fixture/music'],
+        },
         soulseek: {
           username: 'fixture_user',
           password: 'plaintext',
+        },
+        web: {
+          authentication: {
+            apiKey: 'secret-api-key',
+          },
         },
       },
       state: {
         apiToken: 'abc',
         connected: true,
+        user: {
+          username: 'fixture_user',
+        },
       },
     });
 
     expect(bundle).toContain('generatedAt: 2026-04-30T20:10:00.000Z');
     expect(bundle).toContain('username: fixture_user');
+    expect(bundle).toContain('setupHealth:');
+    expect(bundle).toContain('readiness: Ready');
+    expect(bundle).toContain('score: 100');
     expect(bundle).toContain('password: "[redacted]"');
     expect(bundle).toContain('apiToken: "[redacted]"');
     expect(bundle).not.toContain('plaintext');
-    expect(bundle).not.toContain('abc');
+    expect(bundle).not.toContain('secret-api-key');
   });
 });

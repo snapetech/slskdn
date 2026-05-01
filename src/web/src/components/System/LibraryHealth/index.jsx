@@ -5,8 +5,13 @@ import {
   buildLibraryHealthReport,
   buildLibraryHealthSafeFixManifest,
   buildLibraryHealthSearchSeeds,
+  getLibraryHealthQuarantineReviewItems,
+  getLibraryHealthReplacementSearchQueries,
+  getLibraryHealthSafeFixIssueIds,
 } from '../../../lib/libraryHealthReport';
+import { addDiscoveryInboxItem } from '../../../lib/discoveryInbox';
 import { LoaderSegment } from '../../Shared';
+import * as searches from '../../../lib/searches';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -34,6 +39,7 @@ const LibraryHealth = () => {
   const [issues, setIssues] = useState([]);
   const [selectedIssues, setSelectedIssues] = useState(new Set());
   const [fixing, setFixing] = useState(false);
+  const [searchingReplacements, setSearchingReplacements] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -172,12 +178,20 @@ const LibraryHealth = () => {
       return;
     }
 
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const issueIds = getLibraryHealthSafeFixIssueIds(selectedIssueList);
+    if (issueIds.length === 0) {
+      setError('Select at least one auto-fixable issue.');
+      return;
+    }
+
     try {
       setFixing(true);
       setError(null);
-      const issueIds = Array.from(selectedIssues);
       await libraryHealth.createRemediationJob(issueIds);
       setSelectedIssues(new Set());
+      setReportMessage(`Queued remediation job for ${issueIds.length} auto-fixable issue${issueIds.length === 1 ? '' : 's'}.`);
       // Reload issues after a delay
       setTimeout(() => {
         loadSummary(libraryPath);
@@ -198,6 +212,7 @@ const LibraryHealth = () => {
       setFixing(true);
       setError(null);
       await libraryHealth.createRemediationJob([issueId]);
+      setReportMessage('Queued remediation job for 1 auto-fixable issue.');
       setTimeout(() => {
         loadSummary(libraryPath);
       }, 1_000);
@@ -286,6 +301,48 @@ const LibraryHealth = () => {
     }
 
     setReportMessage(`Library health quarantine review packet prepared for ${selectedIssueList.length} selected issues.`);
+  };
+
+  const handleRunReplacementSearches = async () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const queries = getLibraryHealthReplacementSearchQueries(selectedIssueList, {
+      limit: 3,
+    });
+
+    if (queries.length === 0) {
+      setError('Selected issues do not have replacement search candidates.');
+      return;
+    }
+
+    try {
+      setSearchingReplacements(true);
+      setError(null);
+      const count = await searches.createBatch({ queries });
+      setReportMessage(`Started ${count} bounded replacement search${count === 1 ? '' : 'es'} for selected Library Health issues.`);
+    } catch (error_) {
+      setError(
+        error_.response?.data?.message ||
+          error_.message ||
+          'Failed to start replacement searches',
+      );
+    } finally {
+      setSearchingReplacements(false);
+    }
+  };
+
+  const handleSendQuarantineReview = () => {
+    const selectedIssueList = issues.filter((issue) =>
+      selectedIssues.has(issue.issueId));
+    const reviewItems = getLibraryHealthQuarantineReviewItems(selectedIssueList);
+
+    if (reviewItems.length === 0) {
+      setError('Selected issues do not have quarantine review candidates.');
+      return;
+    }
+
+    reviewItems.forEach((item) => addDiscoveryInboxItem(item));
+    setReportMessage(`Sent ${reviewItems.length} Library Health quarantine review candidate${reviewItems.length === 1 ? '' : 's'} to Discovery Inbox.`);
   };
 
   const OverviewPane = () => (
@@ -517,6 +574,36 @@ const LibraryHealth = () => {
                   Fix {selectedIssues.size} Selected Issue
                   {selectedIssues.size > 1 ? 's' : ''}
                 </Button>
+                <Popup
+                  content="Start bounded live Soulseek replacement searches for selected replacement candidates. This starts searches only; it does not browse peers, download, quarantine, or mutate files."
+                  trigger={
+                    <Button
+                      data-testid="library-health-run-replacement-searches"
+                      disabled={fixing || searchingReplacements}
+                      loading={searchingReplacements}
+                      onClick={handleRunReplacementSearches}
+                      type="button"
+                    >
+                      <Icon name="search" />
+                      Start Replacement Searches
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Send risky selected issues to Discovery Inbox for explicit quarantine review. This stores review candidates only and does not move or quarantine files."
+                  trigger={
+                    <Button
+                      basic
+                      data-testid="library-health-send-quarantine-review"
+                      disabled={fixing}
+                      onClick={handleSendQuarantineReview}
+                      type="button"
+                    >
+                      <Icon name="inbox" />
+                      Send Quarantine Review
+                    </Button>
+                  }
+                />
                 <Button
                   basic
                   disabled={fixing}
@@ -681,15 +768,20 @@ const LibraryHealth = () => {
                       </Table.Cell>
                       <Table.Cell textAlign="center">
                         {issue.canAutoFix && issue.status === 'Detected' && (
-                          <Button
-                            disabled={fixing}
-                            onClick={() => handleFixSingle(issue.issueId)}
-                            primary
-                            size="tiny"
-                          >
-                            <Icon name="wrench" />
-                            Fix
-                          </Button>
+                          <Popup
+                            content="Queue a remediation job for this auto-fixable issue. The backend still applies its remediation safeguards."
+                            trigger={
+                              <Button
+                                disabled={fixing}
+                                onClick={() => handleFixSingle(issue.issueId)}
+                                primary
+                                size="tiny"
+                              >
+                                <Icon name="wrench" />
+                                Fix
+                              </Button>
+                            }
+                          />
                         )}
                         {issue.status === 'Fixing' && (
                           <Loader

@@ -1,4 +1,7 @@
-import { buildSimilarQueueCandidates } from './playerAutoQueue';
+import {
+  buildSimilarQueueCandidates,
+  getSimilarQueueSearchQueries,
+} from './playerAutoQueue';
 
 describe('playerAutoQueue', () => {
   it('finds similar recent tracks that are not already queued', () => {
@@ -35,6 +38,10 @@ describe('playerAutoQueue', () => {
     expect(candidates.map((candidate) => candidate.item.contentId)).toEqual([
       'sha256:album-match',
       'sha256:tag-match',
+    ]);
+    expect(getSimilarQueueSearchQueries(candidates)).toEqual([
+      'Fixture Artist Album Match',
+      'Other Artist Tag Match',
     ]);
   });
 

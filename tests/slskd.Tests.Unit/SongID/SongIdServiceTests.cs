@@ -290,6 +290,121 @@ public sealed class SongIdServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetQueueSummary_ReturnsActiveRunSnapshot()
+    {
+        var store = new SongIdRunStore();
+        var queued = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Source = "queued",
+            SourceType = "youtube_url",
+            Status = "queued",
+            CurrentStage = "queued",
+            QueuePosition = 2,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-2),
+            Summary = "queued",
+        };
+        var running = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Source = "running",
+            SourceType = "local_file",
+            Status = "running",
+            CurrentStage = "evidence_pipeline",
+            PercentComplete = 0.52,
+            WorkerSlot = 1,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-1),
+            Summary = "running",
+        };
+        store.Upsert(queued);
+        store.Upsert(running);
+        store.Upsert(new SongIdRun { Id = Guid.NewGuid(), Source = "done", Status = "completed" });
+        store.Upsert(new SongIdRun { Id = Guid.NewGuid(), Source = "failed", Status = "failed" });
+        var service = CreateService(store);
+
+        var summary = service.GetQueueSummary();
+
+        Assert.Equal(1, summary.QueuedCount);
+        Assert.Equal(1, summary.RunningCount);
+        Assert.Equal(1, summary.CompletedCount);
+        Assert.Equal(1, summary.FailedCount);
+        Assert.Equal(2, summary.MaxConcurrentRuns);
+        Assert.Equal(new[] { queued.Id, running.Id }, summary.ActiveRuns.Select(run => run.RunId));
+        Assert.Equal("evidence_pipeline", summary.ActiveRuns[1].CurrentStage);
+    }
+
+    [Fact]
+    public void GetEvidencePackage_ReturnsCappedReviewPayloadAndWarnings()
+    {
+        var store = new SongIdRunStore();
+        var run = new SongIdRun
+        {
+            Id = Guid.NewGuid(),
+            Source = "https://youtu.be/example",
+            SourceType = "youtube_url",
+            Status = "running",
+            Query = "Artist - Song",
+            CurrentStage = "evidence_pipeline",
+            PercentComplete = 0.5,
+            ArtifactDirectory = Path.Combine(_tempDir, "songid", "run"),
+            Evidence = Enumerable.Range(0, 120).Select(index => $"evidence-{index}").ToList(),
+            Scorecard = new SongIdScorecard
+            {
+                AcoustIdHitCount = 1,
+            },
+            Tracks = new List<SongIdTrackCandidate>
+            {
+                new()
+                {
+                    RecordingId = "low",
+                    Artist = "Artist",
+                    Title = "Low",
+                    ActionScore = 0.2,
+                    IdentityScore = 0.2,
+                },
+                new()
+                {
+                    RecordingId = "high",
+                    Artist = "Artist",
+                    Title = "High",
+                    ActionScore = 0.9,
+                    IdentityScore = 0.8,
+                },
+            },
+            FullSourceFingerprint = new SongIdFingerprintFinding
+            {
+                Path = "fingerprints/full.json",
+                DurationSeconds = 123,
+            },
+            Clips = new List<SongIdClipFinding>
+            {
+                new()
+                {
+                    ClipId = "clip-1",
+                    Fingerprint = "fingerprints/clip-1.json",
+                    StartSeconds = 30,
+                    DurationSeconds = 45,
+                },
+            },
+        };
+        store.Upsert(run);
+        var service = CreateService(store);
+
+        var package = service.GetEvidencePackage(run.Id);
+
+        Assert.NotNull(package);
+        Assert.Equal(run.Id, package.RunId);
+        Assert.Equal("youtube_url", package.SourceType);
+        Assert.Equal("high", package.TrackCandidates[0].RecordingId);
+        Assert.Equal(100, package.Evidence.Count);
+        Assert.Contains(package.Artifacts, artifact => artifact.Kind == "workspace");
+        Assert.Contains(package.Artifacts, artifact => artifact.Kind == "fingerprint" && artifact.DurationSeconds == 123);
+        Assert.Contains(package.Artifacts, artifact => artifact.Kind == "clip" && artifact.StartSeconds == 30);
+        Assert.Contains(package.Warnings, warning => warning.Contains("not completed", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(package.Warnings, warning => warning.Contains("forensic matrix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task AddPipelineEvidenceAsync_WithMissingYtDlp_DoesNotFailYouTubeRuns()
     {
         var run = new SongIdRun

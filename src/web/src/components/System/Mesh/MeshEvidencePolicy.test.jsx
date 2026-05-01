@@ -6,6 +6,11 @@ import React from 'react';
 describe('MeshEvidencePolicy', () => {
   beforeEach(() => {
     localStorage.clear();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('renders private defaults for mesh evidence controls', () => {
@@ -52,5 +57,41 @@ describe('MeshEvidencePolicy', () => {
 
     expect(localStorage.getItem(meshEvidencePolicyStorageKey)).toBeNull();
     expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('reviews pasted mesh evidence locally and copies the report', async () => {
+    render(<MeshEvidencePolicy />);
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Load sample mesh evidence',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('listbox', {
+        name: 'Mesh evidence inbound trust tier',
+      }),
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Trusted realms' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Review mesh evidence locally',
+      }),
+    );
+
+    expect(screen.getByText('Evidence Review Sandbox')).toBeInTheDocument();
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getByText('Rejected')).toBeInTheDocument();
+    expect(screen.getByText(/contains raw path data/)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Copy mesh evidence review report',
+      }),
+    );
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('slskdN mesh evidence review'),
+    );
   });
 });

@@ -37,4 +37,18 @@ public interface IRealmSubjectIndexService
     Task<IReadOnlyList<RealmSubjectIndex>> GetIndexesForRealmAsync(
         string realmId,
         CancellationToken cancellationToken = default);
+
+    Task<RealmSubjectIndexConflictReport> GetConflictReportAsync(
+        string realmId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RealmSubjectIndexAuthorityDecision>> GetAuthorityDecisionsForRealmAsync(
+        string realmId,
+        CancellationToken cancellationToken = default);
+
+    Task<RealmSubjectIndexAuthorityDecision> SetAuthorityEnabledAsync(
+        string realmId,
+        string indexId,
+        RealmSubjectIndexAuthorityDecisionRequest request,
+        CancellationToken cancellationToken = default);
 }

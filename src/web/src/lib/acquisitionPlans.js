@@ -39,6 +39,7 @@ const normalizePlan = (plan) => {
     acquisitionProfile: profile.id,
     createdAt: plan.createdAt || timestamp,
     evidenceKey: normalizeText(plan.evidenceKey),
+    execution: plan.execution || null,
     id: plan.id || uuidv4(),
     manualOnly: plan.manualOnly !== false,
     networkImpact:
@@ -49,12 +50,14 @@ const normalizePlan = (plan) => {
       profileProviderPriority[profile.id] ||
       profileProviderPriority['lossless-exact'],
     reason: plan.reason || 'Approved discovery candidate.',
+    queuedSearchId: plan.queuedSearchId || '',
     searchText: normalizeText(plan.searchText || plan.title),
     source: plan.source || 'Discovery Inbox',
     sourceId: plan.sourceId || '',
     state: normalizeState(plan.state),
     title: normalizeText(plan.title || plan.searchText || 'Untitled acquisition plan'),
     updatedAt: plan.updatedAt || timestamp,
+    wishlistRequestId: plan.wishlistRequestId || '',
   };
 };
 
@@ -117,5 +120,211 @@ export const createAcquisitionPlansFromDiscoveryInbox = (
   return {
     createdPlans,
     plans: saveAcquisitionPlans([...createdPlans, ...plans], setItem),
+  };
+};
+
+const canExecutePlan = (plan) => ['Planned', 'Ready'].includes(plan.state);
+
+const canCreateWishlistRequest = (plan) =>
+  canExecutePlan(plan) && !plan.wishlistRequestId;
+
+const buildSearchRequest = (plan) => ({
+  acquisitionProfile: plan.acquisitionProfile,
+  id: uuidv4(),
+  searchText: plan.searchText,
+});
+
+const buildWishlistRequest = (plan) => ({
+  autoDownload: false,
+  enabled: true,
+  filter: '',
+  maxResults: 50,
+  searchText: plan.searchText,
+});
+
+export const executeAcquisitionPlanSearches = async (
+  planIds = [],
+  {
+    createSearch,
+    getItem = getLocalStorageItem,
+    maxPlans = 3,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  if (typeof createSearch !== 'function') {
+    throw new Error('createSearch is required to execute acquisition plans.');
+  }
+
+  const selectedIds = new Set(planIds);
+  const plans = getAcquisitionPlans(getItem);
+  const eligible = plans
+    .filter((plan) => selectedIds.size === 0 || selectedIds.has(plan.id))
+    .filter(canExecutePlan)
+    .slice(0, maxPlans);
+  const eligibleIds = new Set(eligible.map((plan) => plan.id));
+  const results = [];
+
+  let nextPlans = saveAcquisitionPlans(
+    plans.map((plan) =>
+      eligibleIds.has(plan.id)
+        ? {
+            ...plan,
+            execution: {
+              requestedAt: now(),
+              summary:
+                'Backend search job requested from approved Discovery Inbox acquisition plan.',
+            },
+            state: 'Executing',
+            updatedAt: now(),
+          }
+        : plan,
+    ),
+    setItem,
+  );
+
+  for (const plan of eligible) {
+    const request = buildSearchRequest(plan);
+
+    try {
+      await createSearch(request);
+      results.push({
+        planId: plan.id,
+        searchId: request.id,
+        status: 'Queued',
+      });
+      nextPlans = nextPlans.map((candidate) =>
+        candidate.id === plan.id
+          ? {
+              ...candidate,
+              execution: {
+                requestedAt: candidate.execution?.requestedAt || now(),
+                summary:
+                  'Backend search job queued. Download selection still requires normal search-result review.',
+              },
+              networkImpact:
+                'Search job queued through the selected acquisition profile. No download starts until a result is explicitly selected.',
+              queuedSearchId: request.id,
+              state: 'Queued',
+              updatedAt: now(),
+            }
+          : candidate,
+      );
+    } catch (error) {
+      results.push({
+        error: error.message || 'Search request failed.',
+        planId: plan.id,
+        status: 'Failed',
+      });
+      nextPlans = nextPlans.map((candidate) =>
+        candidate.id === plan.id
+          ? {
+              ...candidate,
+              execution: {
+                requestedAt: candidate.execution?.requestedAt || now(),
+                summary: error.message || 'Search request failed.',
+              },
+              state: 'Failed',
+              updatedAt: now(),
+            }
+          : candidate,
+      );
+    }
+
+    nextPlans = saveAcquisitionPlans(nextPlans, setItem);
+  }
+
+  return {
+    executed: results.filter((result) => result.status === 'Queued').length,
+    failed: results.filter((result) => result.status === 'Failed').length,
+    plans: nextPlans,
+    results,
+    skipped: plans.filter((plan) =>
+      (selectedIds.size === 0 || selectedIds.has(plan.id)) &&
+      !eligibleIds.has(plan.id)
+    ).length,
+  };
+};
+
+export const executeAcquisitionPlanWishlistRequests = async (
+  planIds = [],
+  {
+    createWishlist,
+    getItem = getLocalStorageItem,
+    maxPlans = 5,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  if (typeof createWishlist !== 'function') {
+    throw new Error('createWishlist is required to create acquisition Wishlist requests.');
+  }
+
+  const selectedIds = new Set(planIds);
+  const plans = getAcquisitionPlans(getItem);
+  const eligible = plans
+    .filter((plan) => selectedIds.size === 0 || selectedIds.has(plan.id))
+    .filter(canCreateWishlistRequest)
+    .slice(0, maxPlans);
+  const eligibleIds = new Set(eligible.map((plan) => plan.id));
+  const results = [];
+  let nextPlans = plans;
+
+  for (const plan of eligible) {
+    try {
+      const wishlist = await createWishlist(buildWishlistRequest(plan));
+      const wishlistRequestId = wishlist?.id || uuidv4();
+
+      results.push({
+        planId: plan.id,
+        status: 'Created',
+        wishlistRequestId,
+      });
+      nextPlans = nextPlans.map((candidate) =>
+        candidate.id === plan.id
+          ? {
+              ...candidate,
+              execution: {
+                requestedAt: now(),
+                summary:
+                  'Wishlist request created with auto-download disabled. Downloads still require normal Wishlist review policy.',
+              },
+              networkImpact:
+                'Wishlist request created locally with auto-download disabled. No peer browse or file download starts from this action.',
+              updatedAt: now(),
+              wishlistRequestId,
+            }
+          : candidate,
+      );
+    } catch (error) {
+      results.push({
+        error: error.message || 'Wishlist request failed.',
+        planId: plan.id,
+        status: 'Failed',
+      });
+      nextPlans = nextPlans.map((candidate) =>
+        candidate.id === plan.id
+          ? {
+              ...candidate,
+              execution: {
+                requestedAt: now(),
+                summary: error.message || 'Wishlist request failed.',
+              },
+              updatedAt: now(),
+            }
+          : candidate,
+      );
+    }
+
+    nextPlans = saveAcquisitionPlans(nextPlans, setItem);
+  }
+
+  return {
+    created: results.filter((result) => result.status === 'Created').length,
+    failed: results.filter((result) => result.status === 'Failed').length,
+    plans: nextPlans,
+    results,
+    skipped: plans.filter((plan) =>
+      (selectedIds.size === 0 || selectedIds.has(plan.id)) &&
+      !eligibleIds.has(plan.id)
+    ).length,
   };
 };

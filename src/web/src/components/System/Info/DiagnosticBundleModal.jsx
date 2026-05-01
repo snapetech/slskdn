@@ -74,8 +74,9 @@ const DiagnosticBundleModal = ({ options = {}, state = {} }) => {
           <Message info>
             <Message.Header>Redacted support snapshot</Message.Header>
             <p>
-              This bundle includes browser, route, state, and option shape. It
-              redacts secrets before display and does not contact the server.
+              This bundle includes browser, route, setup-health summary, state,
+              and option shape. It redacts secrets before display and does not
+              contact the server.
             </p>
           </Message>
           <Header as="h4">Bundle</Header>

@@ -1,13 +1,20 @@
 import './ImportStaging.css';
-import { fingerprintFile } from '../../lib/fileFingerprint';
+import {
+  audioVerificationProfiles,
+  buildAudioVerificationDecision,
+  clearAudioVerificationCache,
+  verifyAudioFile,
+} from '../../lib/audioVerification';
 import {
   addImportStagingFiles,
   addImportStagingItemToDenylist,
+  applyAudioVerificationPolicy,
   getImportStagingDenylist,
   getImportStagingItems,
   matchAllImportStagingItems,
   overrideImportStagingItemMetadataMatch,
   removeImportStagingDenylistEntry,
+  updateImportStagingItemAudioVerification,
   updateImportStagingItemMetadataMatch,
   updateImportStagingItemState,
 } from '../../lib/importStaging';
@@ -119,9 +126,50 @@ const renderFingerprintVerification = (fingerprint) => {
   );
 };
 
+const verificationColors = {
+  Disabled: 'grey',
+  Failed: 'red',
+  Review: 'orange',
+  Verified: 'green',
+};
+
+const renderAudioVerification = (verification) => {
+  if (!verification) {
+    return (
+      <Label color="grey">
+        Not Requested
+      </Label>
+    );
+  }
+
+  return (
+    <div>
+      <Label color={verificationColors[verification.status] || 'grey'}>
+        {verification.status}
+        <Label.Detail>{Math.round((verification.confidence || 0) * 100)}%</Label.Detail>
+      </Label>
+      <div className="import-staging-meta">
+        {verification.profileId} · {verification.failMode} · {verification.action}
+      </div>
+      {verification.evidence?.length > 0 && (
+        <div className="import-staging-meta">
+          {verification.evidence.join(' ')}
+        </div>
+      )}
+      {verification.warnings?.length > 0 && (
+        <div className="import-staging-warning">
+          {verification.warnings.join(' ')}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ImportStaging = () => {
   const fileInputRef = useRef(null);
+  const [cacheVerification, setCacheVerification] = useState(true);
   const [fingerprintOnAdd, setFingerprintOnAdd] = useState(false);
+  const [verificationProfile, setVerificationProfile] = useState('balanced');
   const [denylist, setDenylist] = useState(() => getImportStagingDenylist());
   const [items, setItems] = useState(() => getImportStagingItems());
   const [overrideInputs, setOverrideInputs] = useState({});
@@ -146,13 +194,21 @@ const ImportStaging = () => {
     const files = Array.from(event.target.files || []);
     const stagedFiles = fingerprintOnAdd
       ? await Promise.all(
-          files.map(async (file) => ({
-            fingerprintVerification: await fingerprintFile(file),
-            lastModified: file.lastModified,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-          })),
+          files.map(async (file) => {
+            const result = await verifyAudioFile(file, {
+              cacheEnabled: cacheVerification,
+              profileId: verificationProfile,
+            });
+
+            return {
+              audioVerification: result.verification,
+              fingerprintVerification: result.fingerprint,
+              lastModified: file.lastModified,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+            };
+          }),
         )
       : files;
 
@@ -184,6 +240,22 @@ const ImportStaging = () => {
 
   const matchAll = () => {
     setItems(matchAllImportStagingItems());
+  };
+
+  const verifyItem = (item) => {
+    const verification = buildAudioVerificationDecision({
+      file: item,
+      fingerprint: item.fingerprintVerification,
+      profileId: verificationProfile,
+    });
+
+    setItems(updateImportStagingItemAudioVerification(item.id, verification));
+  };
+
+  const applyVerificationPolicyToItem = (item) => {
+    setItems(
+      updateImportStagingItemState(item.id, applyAudioVerificationPolicy(item)),
+    );
   };
 
   const setOverrideInput = (item, field, value) => {
@@ -276,6 +348,45 @@ const ImportStaging = () => {
               </label>
             }
           />
+          <Form.Select
+            aria-label="Audio verification profile"
+            compact
+            onChange={(_event, data) => setVerificationProfile(data.value)}
+            options={audioVerificationProfiles.map((profile) => ({
+              key: profile.id,
+              text: `${profile.title} (${profile.failMode})`,
+              value: profile.id,
+            }))}
+            value={verificationProfile}
+          />
+          <Popup
+            content="Cache browser-computed fingerprints so repeated verification of the same local file metadata can reuse the previous hash."
+            position="top center"
+            trigger={
+              <label className="import-staging-fingerprint-toggle">
+                <input
+                  aria-label="Cache verification fingerprints"
+                  checked={cacheVerification}
+                  onChange={(event) => setCacheVerification(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>Cache verification</span>
+              </label>
+            }
+          />
+          <Popup
+            content="Clear the browser-local audio verification fingerprint cache."
+            position="top center"
+            trigger={
+              <Button
+                aria-label="Clear audio verification cache"
+                onClick={clearAudioVerificationCache}
+              >
+                <Icon name="eraser" />
+                Clear Verification Cache
+              </Button>
+            }
+          />
         </div>
       </div>
 
@@ -357,6 +468,7 @@ const ImportStaging = () => {
               <Table.HeaderCell width={2}>Size</Table.HeaderCell>
               <Table.HeaderCell width={4}>Metadata Match</Table.HeaderCell>
               <Table.HeaderCell width={3}>Fingerprint</Table.HeaderCell>
+              <Table.HeaderCell width={3}>Audio Verification</Table.HeaderCell>
               <Table.HeaderCell width={2}>State</Table.HeaderCell>
               <Table.HeaderCell width={4}>Actions</Table.HeaderCell>
             </Table.Row>
@@ -397,6 +509,9 @@ const ImportStaging = () => {
                 <Table.Cell data-label="Fingerprint">
                   {renderFingerprintVerification(item.fingerprintVerification)}
                 </Table.Cell>
+                <Table.Cell data-label="Audio Verification">
+                  {renderAudioVerification(item.audioVerification)}
+                </Table.Cell>
                 <Table.Cell data-label="State">
                   <Label color={stateColors[item.state]}>{item.state}</Label>
                 </Table.Cell>
@@ -433,6 +548,37 @@ const ImportStaging = () => {
                         >
                           <Icon name="edit" />
                           Override
+                        </Button>
+                      }
+                    />
+                    <Popup
+                      content="Run audio verification for this staged item using the selected profile. This reads only browser-accessible file metadata or a staged hash and does not import or move files."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Verify audio for ${item.fileName}`}
+                          compact
+                          onClick={() => verifyItem(item)}
+                          size="tiny"
+                        >
+                          <Icon name="shield" />
+                          Verify
+                        </Button>
+                      }
+                    />
+                    <Popup
+                      content="Apply the selected audio verification profile policy to this row. Verified files become Ready, fail-closed quarantine results become Failed, and review results stay Staged for manual review."
+                      position="top center"
+                      trigger={
+                        <Button
+                          aria-label={`Apply audio verification policy for ${item.fileName}`}
+                          compact
+                          disabled={!item.audioVerification}
+                          onClick={() => applyVerificationPolicyToItem(item)}
+                          size="tiny"
+                        >
+                          <Icon name="balance scale" />
+                          Policy
                         </Button>
                       }
                     />

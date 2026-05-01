@@ -215,6 +215,167 @@ void main() {
 }`;
 };
 
+const normalizeWgslExpression = (expression) =>
+  expression
+    .replace(/\btexture\s*\(\s*previousFrame\s*,\s*([^)]+)\)/g, 'textureSample(previousFrame, previousSampler, $1)')
+    .replace(/\btexture\s*\(\s*shaderTexture([0-3])\s*,\s*([^)]+)\)/g, 'textureSample(shaderTexture$1, shaderTextureSampler, $2)')
+    .replace(/\bvec2\s*\(/g, 'vec2f(')
+    .replace(/\bvec3\s*\(/g, 'vec3f(')
+    .replace(/\bvec4\s*\(/g, 'vec4f(')
+    .replace(/\bclamp01\s*\(\s*vec2f\s*\(/g, 'clamp01v2(vec2f(')
+    .replace(/\bclamp01\s*\(\s*vec3f\s*\(/g, 'clamp01v3(vec3f(')
+    .replace(/\bclamp01\s*\(\s*vec4f\s*\(/g, 'clamp01v4(vec4f(')
+    .replace(/\batan\s*\(/g, 'atan2(')
+    .replace(/\bmix\s*\(/g, 'mix(')
+    .replace(/\bmod\s*\(/g, 'mod(');
+
+const normalizeWgslDeclaration = (declaration) =>
+  normalizeWgslExpression(declaration)
+    .replace(/^vec2\s+/i, 'var ')
+    .replace(/^vec3\s+/i, 'var ')
+    .replace(/^vec4\s+/i, 'var ')
+    .replace(/^float\s+/i, 'var ')
+    .replace(/\s=\s/, ' = ');
+
+export const createTranslatedMilkdropWgslShader = (source) => {
+  const parsed = parseShaderProgram(source);
+  if (!parsed) return '';
+  if (
+    [parsed.expression, ...parsed.declarations].some((statement) =>
+      /[?&|^~]/.test(statement))
+  ) {
+    return '';
+  }
+  const qFields = shaderQRegisterNames.map((name) => `  ${name}: f32,`).join('\n');
+  const qLocals = shaderQRegisterNames.map((name) => `  let ${name} = uniforms.${name};`).join('\n');
+  const fftFields = Array.from({ length: 64 }, (_unused, index) => `  fft${index}: f32,`).join('\n');
+  const waveformFields = Array.from({ length: 64 }, (_unused, index) => `  waveform${index}: f32,`).join('\n');
+  const textureDeclarations = parsed.textureSamplers
+    .map((_sampler, index) => `@group(0) @binding(${index + 3}) var shaderTexture${index}: texture_2d<f32>;`)
+    .join('\n');
+  const fftCases = Array.from(
+    { length: 63 },
+    (_unused, index) => `  if (index == ${index}u) { value = uniforms.fft${index}; }`,
+  ).join('\n');
+  const waveformCases = Array.from(
+    { length: 63 },
+    (_unused, index) => `  if (index == ${index}u) { value = uniforms.waveform${index}; }`,
+  ).join('\n');
+  const declarationSource = parsed.declarations
+    .map((declaration) => `  ${normalizeWgslDeclaration(declaration)}`)
+    .join('\n');
+  const expression = normalizeWgslExpression(parsed.expression);
+  return `
+struct Uniforms {
+  color: vec4f,
+  time: f32,
+  bass: f32,
+  mid: f32,
+  treb: f32,
+  bass_att: f32,
+  mid_att: f32,
+  treb_att: f32,
+  feedback: f32,
+  outputAlpha: f32,
+  sampleRate: f32,
+  canvasWidth: f32,
+  canvasHeight: f32,
+${qFields}
+${fftFields}
+${waveformFields}
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var previousFrame: texture_2d<f32>;
+@group(0) @binding(2) var previousSampler: sampler;
+@group(0) @binding(7) var shaderTextureSampler: sampler;
+${textureDeclarations}
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+};
+
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  var positions = array<vec2f, 3>(
+    vec2f(-1.0, -1.0),
+    vec2f(3.0, -1.0),
+    vec2f(-1.0, 3.0)
+  );
+  var output: VertexOutput;
+  output.position = vec4f(positions[vertexIndex], 0.0, 1.0);
+  output.uv = positions[vertexIndex] * 0.5 + vec2f(0.5);
+  return output;
+}
+
+fn clamp01(value: f32) -> f32 {
+  return clamp(value, 0.0, 1.0);
+}
+
+fn clamp01v2(value: vec2f) -> vec2f {
+  return clamp(value, vec2f(0.0), vec2f(1.0));
+}
+
+fn clamp01v3(value: vec3f) -> vec3f {
+  return clamp(value, vec3f(0.0), vec3f(1.0));
+}
+
+fn clamp01v4(value: vec4f) -> vec4f {
+  return clamp(value, vec4f(0.0), vec4f(1.0));
+}
+
+fn get_fft(position: f32) -> f32 {
+  let index = u32(clamp(position, 0.0, 1.0) * 63.0);
+  var value = uniforms.fft63;
+${fftCases}
+  return value;
+}
+
+fn get_fft_hz(hz: f32) -> f32 {
+  let nyquist = max(uniforms.sampleRate * 0.5, 1.0);
+  return get_fft(hz / nyquist);
+}
+
+fn get_waveform(position: f32) -> f32 {
+  let index = u32(clamp(position, 0.0, 1.0) * 63.0);
+  var value = uniforms.waveform63;
+${waveformCases}
+  return value;
+}
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+  let uv = input.uv;
+  let color = uniforms.color.rgb;
+  let time = uniforms.time;
+  let bass = uniforms.bass;
+  let mid = uniforms.mid;
+  let treb = uniforms.treb;
+  let bass_att = uniforms.bass_att;
+  let mid_att = uniforms.mid_att;
+  let treb_att = uniforms.treb_att;
+  let x = uv.x;
+  let y = uv.y;
+  let centeredUv = uv - vec2f(0.5);
+  let rad = length(centeredUv);
+  let ang = atan2(centeredUv.y, centeredUv.x);
+  let resolution = vec2f(max(uniforms.canvasWidth, 1.0), max(uniforms.canvasHeight, 1.0));
+  let pixelSize = vec2f(1.0) / resolution;
+  let aspect = resolution.x / resolution.y;
+  let texsize = vec4f(resolution, pixelSize);
+${qLocals}
+${declarationSource}
+  let ret = vec3f(${expression});
+  let previous = textureSample(previousFrame, previousSampler, clamp(uv, vec2f(0.0), vec2f(1.0))).rgb;
+  return vec4f(mix(ret, previous, uniforms.feedback), uniforms.outputAlpha);
+}`;
+};
+
 export const analyzeMilkdropShaderSupport = (source) => ({
   supported: !source || Boolean(createTranslatedMilkdropFragmentShader(source)),
+});
+
+export const analyzeMilkdropWebGpuShaderSupport = (source) => ({
+  supported: !source || Boolean(createTranslatedMilkdropWgslShader(source)),
 });

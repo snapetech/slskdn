@@ -1,6 +1,8 @@
 import {
   analyzeMilkdropShaderSupport,
+  analyzeMilkdropWebGpuShaderSupport,
   createTranslatedMilkdropFragmentShader,
+  createTranslatedMilkdropWgslShader,
   getMilkdropShaderTextureSamplers,
   translateMilkdropShaderExpression,
 } from './shaderTranslator';
@@ -171,5 +173,38 @@ describe('MilkDrop shader translator', () => {
     expect(translateMilkdropShaderExpression('float3 tint = vec3(1.0); ret = tint; tint *= 0.5;'))
       .toBe('');
     expect(translateMilkdropShaderExpression('ret = vec3(1.0); ret = vec3(0.0);')).toBe('');
+  });
+
+  it('translates the safe subset into WGSL for WebGPU feedback passes', () => {
+    const shader = createTranslatedMilkdropWgslShader(`
+      float3 tint = saturate(vec3(q1, bass_att, uv.x));
+      tint *= tex2D(sampler_main, uv).rgb;
+      ret = tint + vec3(time * 0.01, get_fft(0.25), get_waveform(0.5));
+    `);
+
+    expect(shader).toContain('@fragment');
+    expect(shader).toContain('q64: f32');
+    expect(shader).toContain('fft63: f32');
+    expect(shader).toContain('waveform63: f32');
+    expect(shader).toContain('let q1 = uniforms.q1;');
+    expect(shader).toContain('fn get_fft(position: f32) -> f32');
+    expect(shader).toContain('fn get_fft_hz(hz: f32) -> f32');
+    expect(shader).toContain('fn get_waveform(position: f32) -> f32');
+    expect(shader).toContain('var tint = clamp01v3(vec3f(q1, bass_att, uv.x));');
+    expect(shader).toContain('tint *= textureSample(previousFrame, previousSampler, uv).rgb;');
+    expect(shader).toContain('let ret = vec3f(tint + vec3f(time * 0.01, get_fft(0.25), get_waveform(0.5)));');
+  });
+
+  it('keeps unsupported WebGPU shader cases out of the first WGSL subset', () => {
+    const shader = createTranslatedMilkdropWgslShader('ret = tex2D(sampler_noise, uv).rgb;');
+    expect(shader).toContain('@group(0) @binding(3) var shaderTexture0: texture_2d<f32>;');
+    expect(shader).toContain('textureSample(shaderTexture0, shaderTextureSampler, uv).rgb');
+    expect(analyzeMilkdropWebGpuShaderSupport('ret = tex2D(sampler_noise, uv).rgb;').supported)
+      .toBe(true);
+    expect(createTranslatedMilkdropWgslShader('ret = q1 > 0.5 ? vec3(1.0) : vec3(0.0);'))
+      .toBe('');
+    expect(analyzeMilkdropWebGpuShaderSupport(
+      'ret = q1 > 0.5 ? vec3(1.0) : vec3(0.0);',
+    ).supported).toBe(false);
   });
 });

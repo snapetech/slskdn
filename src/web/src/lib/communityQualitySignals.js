@@ -1,4 +1,6 @@
 export const communityQualitySignalStorageKey = 'slskdn.communityQualitySignals';
+export const communityQualityOverrideStorageKey =
+  'slskdn.communityQualityOverrides';
 
 const positiveSignalTypes = new Set([
   'served-verified-content',
@@ -36,12 +38,36 @@ const readSignals = () => {
   }
 };
 
+const readOverrides = () => {
+  const storage = getStorage();
+  if (!storage) return {};
+
+  try {
+    const parsed = JSON.parse(
+      storage.getItem(communityQualityOverrideStorageKey) || '{}',
+    );
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch (_error) {
+    return {};
+  }
+};
+
 const writeSignals = (signals) => {
   const storage = getStorage();
   if (!storage) return signals;
 
   storage.setItem(communityQualitySignalStorageKey, JSON.stringify(signals));
   return signals;
+};
+
+const writeOverrides = (overrides) => {
+  const storage = getStorage();
+  if (!storage) return overrides;
+
+  storage.setItem(communityQualityOverrideStorageKey, JSON.stringify(overrides));
+  return overrides;
 };
 
 const normalizeSignal = (signal) => {
@@ -94,6 +120,37 @@ export const clearCommunityQualitySignalsForUser = (username) => {
   );
 };
 
+const normalizeOverrideMode = (mode) =>
+  ['ignore', 'trust', 'caution'].includes(mode) ? mode : 'ignore';
+
+const normalizeOverride = (override = {}) => ({
+  createdAt: override.createdAt || new Date().toISOString(),
+  mode: normalizeOverrideMode(override.mode),
+  note: (override.note || '').trim(),
+  source: override.source || 'local-review',
+});
+
+export const getCommunityQualityOverrides = () => readOverrides();
+
+export const setCommunityQualityOverride = (username, override = {}) => {
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername) {
+    return getCommunityQualityOverrides();
+  }
+
+  return writeOverrides({
+    ...getCommunityQualityOverrides(),
+    [normalizedUsername]: normalizeOverride(override),
+  });
+};
+
+export const clearCommunityQualityOverride = (username) => {
+  const normalizedUsername = normalizeUsername(username);
+  const overrides = { ...getCommunityQualityOverrides() };
+  delete overrides[normalizedUsername];
+  return writeOverrides(overrides);
+};
+
 export const getCommunityQualitySummary = (username) => {
   const normalizedUsername = normalizeUsername(username);
   const signals = getCommunityQualitySignals().filter(
@@ -101,12 +158,23 @@ export const getCommunityQualitySummary = (username) => {
   );
   const positive = signals.filter((signal) => signal.category === 'positive').length;
   const negative = signals.filter((signal) => signal.category === 'negative').length;
-  const score = Math.min(Math.max((positive * 4) - (negative * 6), -18), 18);
+  const override = getCommunityQualityOverrides()[normalizedUsername] || null;
+  const rawScore = Math.min(Math.max((positive * 4) - (negative * 6), -18), 18);
+  const score =
+    override?.mode === 'ignore'
+      ? 0
+      : override?.mode === 'trust'
+        ? Math.max(rawScore, 8)
+        : override?.mode === 'caution'
+          ? Math.min(rawScore, -6)
+          : rawScore;
 
   return {
     latestReason: signals[signals.length - 1]?.reason || '',
     negative,
+    override,
     positive,
+    rawScore,
     score,
     signals,
     username: normalizedUsername,
@@ -115,7 +183,40 @@ export const getCommunityQualitySummary = (username) => {
 
 export const getCommunityQualityLabel = (summary) => {
   if (!summary || summary.signals.length === 0) {
-    return null;
+    if (!summary?.override) return null;
+
+    return {
+      color: summary.override.mode === 'trust' ? 'green' : 'grey',
+      icon: summary.override.mode === 'trust' ? 'shield alternate' : 'eye slash',
+      text:
+        summary.override.mode === 'trust'
+          ? 'Local trust override'
+          : 'Signals ignored',
+    };
+  }
+
+  if (summary.override?.mode === 'ignore') {
+    return {
+      color: 'grey',
+      icon: 'eye slash',
+      text: 'Signals ignored',
+    };
+  }
+
+  if (summary.override?.mode === 'trust') {
+    return {
+      color: 'green',
+      icon: 'shield alternate',
+      text: 'Local trust override',
+    };
+  }
+
+  if (summary.override?.mode === 'caution') {
+    return {
+      color: 'orange',
+      icon: 'exclamation triangle',
+      text: 'Local caution override',
+    };
   }
 
   if (summary.score >= 8) {

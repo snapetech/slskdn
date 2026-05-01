@@ -384,16 +384,18 @@ This is where `slskdn` can do better than `ytdlpchopid` instead of merely matchi
 - [x] Feed stronger SongID identity confidence into song / album / discography action ordering
 - [x] Replace the current fire-and-forget SongID background launch with a durable queue/worker model that accepts effectively unbounded queued runs and processes only `X` concurrent runs at a time
 - [x] Make SongID worker concurrency configurable instead of the current internal fixed value
+- [x] Expose backend queue summary and evidence-package APIs for review/export without triggering searches or downloads
 
 ### P3: Test and UX depth
 
-- [ ] Add API tests for SongID run creation, retrieval, persistence, and progress payload shape
+- [x] Add API tests for SongID run creation, retrieval, persistence, and progress payload shape
 - [x] Add service/store coverage for queue recovery and queue-position ordering
-- [ ] Add UI tests for status/progress rendering, canonical scoring, and unobtrusive synthetic evidence display
+- [x] Add service/controller coverage for queue summaries and evidence packages
+- [x] Add UI tests for status/progress rendering, canonical scoring, and unobtrusive synthetic evidence display
 - [x] Add tests for the "identity beats synthetic for downloading" rule
 - [x] Add tests for "one strong synthetic lane is not enough" confidence capping
-- [ ] Add tests for "strong identity suppresses synthetic overclaiming"
-- [ ] Add export or debug views for the detailed forensic matrix without making it the main UI
+- [x] Add tests for "strong identity suppresses synthetic overclaiming"
+- [x] Add export or debug views for the detailed forensic matrix without making it the main UI
 
 ### P4: Future MIR parity
 

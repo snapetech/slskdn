@@ -1,7 +1,10 @@
 import {
   getMeshEvidencePolicy,
   getMeshEvidencePolicySummary,
+  evaluateMeshEvidenceEntries,
+  formatMeshEvidenceReviewReport,
   meshEvidencePolicyStorageKey,
+  parseMeshEvidenceReviewInput,
   resetMeshEvidencePolicy,
   setMeshEvidenceInboundTrustTier,
   setMeshEvidenceOutboundEnabled,
@@ -29,6 +32,10 @@ describe('meshEvidencePolicy', () => {
     expect(JSON.parse(localStorage.getItem(meshEvidencePolicyStorageKey))).toEqual(
       expect.objectContaining({
         inboundTrustTier: 'trusted',
+        evidenceReview: {
+          minimumConfidence: 0.7,
+          minimumWitnesses: 2,
+        },
         provenanceRequired: true,
       }),
     );
@@ -75,5 +82,72 @@ describe('meshEvidencePolicy', () => {
 
     expect(policy).toEqual(getMeshEvidencePolicy());
     expect(localStorage.getItem(meshEvidencePolicyStorageKey)).toBeNull();
+  });
+
+  it('evaluates inbound evidence against provenance, trust, privacy, and k-anonymity gates', () => {
+    const policy = setMeshEvidenceInboundTrustTier('realm');
+    const review = evaluateMeshEvidenceEntries(
+      [
+        {
+          confidence: 0.91,
+          provenance: {
+            peerId: 'fixture-peer',
+            signature: 'fixture-signature',
+            trustTier: 'realm',
+          },
+          subject: 'mbid:recording:fixture',
+          type: 'metadataCorrection',
+          witnessCount: 3,
+        },
+        {
+          confidence: 0.95,
+          containsPath: true,
+          provenance: {
+            peerId: 'unknown-peer',
+            signature: 'fixture-signature',
+            trustTier: 'untrusted',
+          },
+          subject: 'private-path',
+          type: 'releaseCompleteness',
+          witnessCount: 1,
+        },
+      ],
+      policy,
+    );
+
+    expect(review.summary).toEqual({
+      accepted: 1,
+      rejected: 1,
+      total: 2,
+    });
+    expect(review.rejected[0].reasons).toEqual(
+      expect.arrayContaining([
+        'untrusted provenance tier: untrusted',
+        'witness count below 2',
+        'contains raw path data',
+      ]),
+    );
+  });
+
+  it('parses and formats mesh evidence review reports', () => {
+    const entries = parseMeshEvidenceReviewInput(
+      JSON.stringify({
+        evidence: [
+          {
+            confidence: 0.1,
+            subject: 'fixture',
+            type: 'fakeLosslessWarning',
+          },
+        ],
+      }),
+    );
+    const report = formatMeshEvidenceReviewReport(
+      evaluateMeshEvidenceEntries(entries, getMeshEvidencePolicy()),
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(report).toContain('slskdN mesh evidence review');
+    expect(report).toContain('[REJECT] fakeLosslessWarning fixture');
+    expect(report).toContain('inbound mesh evidence disabled');
   });
 });

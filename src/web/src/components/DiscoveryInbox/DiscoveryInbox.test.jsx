@@ -4,13 +4,26 @@ import {
   addDiscoveryInboxItem,
   discoveryInboxStorageKey,
 } from '../../lib/discoveryInbox';
+import { create as createSearch } from '../../lib/searches';
+import { create as createWishlist } from '../../lib/wishlist';
 import { saveWatchlist, watchlistStorageKey } from '../../lib/watchlists';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
+import { vi } from 'vitest';
+
+vi.mock('../../lib/searches', () => ({
+  create: vi.fn().mockResolvedValue({ data: {} }),
+}));
+
+vi.mock('../../lib/wishlist', () => ({
+  create: vi.fn().mockResolvedValue({ id: 'wishlist-plan' }),
+}));
 
 describe('DiscoveryInbox', () => {
   beforeEach(() => {
     localStorage.clear();
+    createSearch.mockClear();
+    createWishlist.mockClear();
   });
 
   it('shows saved candidates and persists review decisions', () => {
@@ -28,7 +41,7 @@ describe('DiscoveryInbox', () => {
 
     expect(screen.getByText('rare track')).toBeInTheDocument();
     expect(screen.getAllByText(/Rare Hunt/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Manual review only/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Manual review only/).length).toBeGreaterThan(0);
     expect(screen.getByText('Review impact')).toBeInTheDocument();
     expect(screen.getAllByText('Local/manual').length).toBeGreaterThan(0);
 
@@ -117,6 +130,54 @@ describe('DiscoveryInbox', () => {
     );
   });
 
+  it('reviews discovery items from the mobile review tray', () => {
+    const first = addDiscoveryInboxItem({
+      evidenceKey: 'manual-search:first',
+      searchText: 'first',
+      source: 'Search',
+      title: 'first',
+    });
+    const second = addDiscoveryInboxItem({
+      evidenceKey: 'manual-search:second',
+      searchText: 'second',
+      source: 'Search',
+      title: 'second',
+    });
+
+    render(<DiscoveryInbox />);
+
+    expect(screen.getByText('Mobile Review')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select first for mobile review' }),
+    );
+    expect(screen.getByText('Reviewing: first')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review next discovery item' }));
+    expect(screen.getByText('Reviewing: second')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Review tray reject second' }),
+    );
+
+    let persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persisted.find((candidate) => candidate.id === second.id).state).toBe(
+      'Rejected',
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select first for mobile review' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Review tray approve first' }),
+    );
+
+    persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
+    expect(persisted.find((candidate) => candidate.id === first.id).state).toBe(
+      'Approved',
+    );
+  });
+
   it('creates review-only acquisition plans from approved candidates', () => {
     const item = addDiscoveryInboxItem({
       acquisitionProfile: 'mesh-preferred',
@@ -153,6 +214,86 @@ describe('DiscoveryInbox', () => {
     expect(persistedInbox.find((candidate) => candidate.id === item.id).state).toBe(
       'Staged',
     );
+  });
+
+  it('executes ready acquisition plans as bounded search jobs', async () => {
+    addDiscoveryInboxItem({
+      acquisitionProfile: 'mesh-preferred',
+      evidenceKey: 'manual-search:rare-track',
+      networkImpact: 'Manual review only.',
+      reason: 'Saved from Search while using Mesh Preferred.',
+      searchText: 'rare track',
+      source: 'Search',
+      title: 'rare track',
+    });
+
+    render(<DiscoveryInbox />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve rare track' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Create acquisition plans for approved discovery items',
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Execute ready acquisition plans' }));
+
+    expect(await screen.findByText(/Queued 1 acquisition search job/)).toBeInTheDocument();
+    expect(createSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acquisitionProfile: 'mesh-preferred',
+        searchText: 'rare track',
+      }),
+    );
+    const persistedPlans = JSON.parse(localStorage.getItem(acquisitionPlanStorageKey));
+    expect(persistedPlans[0]).toEqual(
+      expect.objectContaining({
+        state: 'Queued',
+        queuedSearchId: expect.any(String),
+      }),
+    );
+  });
+
+  it('creates Wishlist requests from ready acquisition plans without auto-download', async () => {
+    addDiscoveryInboxItem({
+      acquisitionProfile: 'mesh-preferred',
+      evidenceKey: 'manual-search:rare-track',
+      networkImpact: 'Manual review only.',
+      reason: 'Saved from Search while using Mesh Preferred.',
+      searchText: 'rare track',
+      source: 'Search',
+      title: 'rare track',
+    });
+
+    render(<DiscoveryInbox />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve rare track' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Create acquisition plans for approved discovery items',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Create Wishlist requests for ready acquisition plans',
+      }),
+    );
+
+    expect(await screen.findByText(/Created 1 Wishlist request/)).toBeInTheDocument();
+    expect(createWishlist).toHaveBeenCalledWith({
+      autoDownload: false,
+      enabled: true,
+      filter: '',
+      maxResults: 50,
+      searchText: 'rare track',
+    });
+    const persistedPlans = JSON.parse(localStorage.getItem(acquisitionPlanStorageKey));
+    expect(persistedPlans[0]).toEqual(
+      expect.objectContaining({
+        state: 'Planned',
+        wishlistRequestId: 'wishlist-plan',
+      }),
+    );
+    expect(screen.getByText(/Wishlist request wishlist-plan/)).toBeInTheDocument();
   });
 
   it('adds watchlist targets and creates review seeds without scanning providers', () => {

@@ -97,7 +97,7 @@ describe('createNativeMilkdropEngine', () => {
     engine.render();
     engine.resize(320, 180);
 
-    expect(engine.name).toBe('slskdN MilkDrop WebGL');
+    expect(engine.name).toBe('slskdN MilkDrop WebGL2');
     expect(audioNode.connect).toHaveBeenCalledWith(analyser);
     expect(renderer.render).toHaveBeenCalledWith(
       expect.objectContaining({

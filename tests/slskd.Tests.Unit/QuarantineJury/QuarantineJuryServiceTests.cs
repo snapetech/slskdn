@@ -281,6 +281,61 @@ public sealed class QuarantineJuryServiceTests
     }
 
     [Fact]
+    public async Task GetAuditReportAsync_SummarizesAcceptedPendingAndStaleRequests()
+    {
+        var service = CreateService();
+        var accepted = CreateRequest("request-accepted");
+        var pending = CreateRequest("request-pending");
+        var stale = CreateRequest("request-stale");
+        stale.CreatedAt = DateTimeOffset.UtcNow.AddHours(-96);
+        await service.CreateRequestAsync(accepted);
+        await service.CreateRequestAsync(pending);
+        await service.CreateRequestAsync(stale);
+        await SubmitSignedVerdict(service, accepted.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, accepted.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, pending.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, pending.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+        await service.AcceptReleaseCandidateAsync(
+            accepted.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+            });
+
+        var report = await service.GetAuditReportAsync(staleAfterHours: 24);
+
+        Assert.Equal(3, report.RequestCount);
+        Assert.Equal(1, report.AcceptedReleaseCandidateCount);
+        Assert.Equal(1, report.PendingReleaseCandidateCount);
+        Assert.Equal(1, report.PendingManualReviewCount);
+        Assert.Equal(1, report.StaleRequestCount);
+        Assert.Contains(report.Entries, entry => entry.RequestId == accepted.Id && entry.Status == "accepted-release-candidate");
+        Assert.Contains(report.Entries, entry => entry.RequestId == pending.Id && entry.CanAcceptReleaseCandidate);
+        Assert.Contains(report.Entries, entry => entry.RequestId == stale.Id && entry.IsStale);
+    }
+
+    [Fact]
+    public async Task GetAuditReportAsync_TracksFailedRouteAttempts()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+
+        await service.RouteRequestAsync(
+            request.Id,
+            new QuarantineJuryRouteRequest
+            {
+                TargetJurors = new List<string> { "actor:mallory" },
+            });
+
+        var report = await service.GetAuditReportAsync();
+
+        var entry = Assert.Single(report.Entries);
+        Assert.True(entry.HasRouteAttempts);
+        Assert.True(entry.HasFailedRouteAttempts);
+    }
+
+    [Fact]
     public async Task AcceptReleaseCandidateAsync_RejectsWhenRecommendationIsNotReleaseCandidate()
     {
         var service = CreateService();
@@ -375,6 +430,78 @@ public sealed class QuarantineJuryServiceTests
         Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, review.Acceptance.AggregateSnapshot.Recommendation);
     }
 
+    [Fact]
+    public async Task GetReleasePackageAsync_ReturnsAcceptedReleaseEvidencePackage()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+        await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+                Note = "reviewed locally",
+            });
+
+        var result = await service.GetReleasePackageAsync(request.Id);
+
+        Assert.True(result.IsReady);
+        Assert.NotNull(result.Package);
+        Assert.Equal("slskdn.quarantine-jury.release-package.v1", result.Package.Type);
+        Assert.Equal(request.Id, result.Package.RequestId);
+        Assert.Equal(2, result.Package.RequestEvidence.Count);
+        Assert.Equal(new[] { "actor:alice", "actor:bob" }, result.Package.Jurors);
+        Assert.Equal(2, result.Package.Verdicts.Count);
+        Assert.Equal("actor:operator", result.Package.Acceptance.AcceptedBy);
+        Assert.Equal(QuarantineJuryVerdict.ReleaseCandidate, result.Package.CurrentAggregate.Recommendation);
+        Assert.False(result.Package.MutatesLocalQuarantineState);
+        Assert.Contains("Release package is evidence-only and does not change local quarantine enforcement.", result.Package.Warnings);
+    }
+
+    [Fact]
+    public async Task GetReleasePackageAsync_RejectsBeforeLocalAcceptance()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+
+        var result = await service.GetReleasePackageAsync(request.Id);
+
+        Assert.False(result.IsReady);
+        Assert.Contains("Release candidate has not been accepted locally.", result.Errors);
+    }
+
+    [Fact]
+    public async Task GetReleasePackageAsync_WarnsWhenAggregateChangedAfterAcceptance()
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        request.Jurors.Add("actor:carol");
+        await service.CreateRequestAsync(request);
+        await SubmitSignedVerdict(service, request.Id, "actor:alice", QuarantineJuryVerdict.ReleaseCandidate);
+        await SubmitSignedVerdict(service, request.Id, "actor:bob", QuarantineJuryVerdict.ReleaseCandidate);
+        await service.AcceptReleaseCandidateAsync(
+            request.Id,
+            new QuarantineJuryAcceptanceRequest
+            {
+                AcceptedBy = "actor:operator",
+            });
+        await SubmitSignedVerdict(service, request.Id, "actor:carol", QuarantineJuryVerdict.UpholdQuarantine);
+
+        var result = await service.GetReleasePackageAsync(request.Id);
+
+        Assert.True(result.IsReady);
+        Assert.NotNull(result.Package);
+        Assert.Equal(3, result.Package.CurrentAggregate.TotalVerdicts);
+        Assert.Equal(2, result.Package.Acceptance.AggregateSnapshot.TotalVerdicts);
+        Assert.Contains("Current verdict aggregate differs from the aggregate accepted by the operator.", result.Package.Warnings);
+    }
+
     private static QuarantineJuryService CreateService()
     {
         return CreateService(CreateStoragePath());
@@ -400,11 +527,11 @@ public sealed class QuarantineJuryServiceTests
         return Path.Combine(Path.GetTempPath(), "slskdn-jury-tests", $"{Guid.NewGuid():N}.json");
     }
 
-    private static QuarantineJuryRequest CreateRequest()
+    private static QuarantineJuryRequest CreateRequest(string id = "request-1")
     {
         return new QuarantineJuryRequest
         {
-            Id = "request-1",
+            Id = id,
             LocalReason = "suspected_mismatch",
             Jurors = new List<string> { "actor:alice", "actor:bob" },
             Evidence = new List<QuarantineJuryEvidence>

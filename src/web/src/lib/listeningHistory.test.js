@@ -1,8 +1,10 @@
 import {
+  buildListeningDiscoverySeeds,
   clearListeningHistory,
   exportListeningHistoryCsv,
   exportListeningHistoryJson,
   getListeningHistory,
+  getListeningRecommendationQueries,
   getListeningRecommendationSeeds,
   getListeningStats,
   importListeningHistory,
@@ -118,7 +120,29 @@ describe('listeningHistory', () => {
         query: 'Fixture Genre',
         type: 'Genre seed',
       },
+      {
+        basis: '1 local plays',
+        label: 'New Track',
+        query: 'New Track',
+        type: 'Track seed',
+      },
     ]));
+
+    const inboxSeeds = buildListeningDiscoverySeeds(stats, {
+      acquisitionProfile: 'mesh-preferred',
+    });
+    expect(inboxSeeds[0]).toEqual(
+      expect.objectContaining({
+        acquisitionProfile: 'mesh-preferred',
+        evidenceKey: 'listening:forgotten favorite:fixture artist older favorite',
+        networkImpact: expect.stringContaining('approval and explicit acquisition execution'),
+        source: 'Listening Stats',
+      }),
+    );
+    expect(getListeningRecommendationQueries(stats, { limit: 2 })).toEqual([
+      'Fixture Artist Older Favorite',
+      'Second Fixture Artist',
+    ]);
   });
 
   it('deduplicates immediate duplicate plays for the same track', () => {

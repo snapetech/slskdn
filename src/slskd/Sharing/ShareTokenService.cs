@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using slskd.Common.Security;
 
 /// <summary>
 /// HMAC-SHA256–signed JWT share token service. Uses Options.Sharing.TokenSigningKey.
@@ -118,7 +119,7 @@ public sealed class ShareTokenService : IShareTokenService
 
                     foreach (var aud in audiences)
                     {
-                        if (string.Equals(aud, collectionClaim, StringComparison.Ordinal))
+                        if (SecurityUtils.ConstantTimeEquals(aud, collectionClaim))
                             return true;
                     }
 

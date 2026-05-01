@@ -63,6 +63,33 @@ public class SoulseekFileFactoryTests
         }
     }
 
+    [Fact]
+    public void Create_WithMediaAttributeProbingDisabled_SkipsAudioAttributeExtraction()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"slskdn-audio-fast-{Guid.NewGuid():N}.wav");
+
+        try
+        {
+            WriteMinimalWav(path);
+
+            var factory = new SoulseekFileFactory(
+                new FileService(new TestOptionsMonitor<slskd.Options>(new slskd.Options())),
+                probeMediaAttributes: false);
+
+            var file = factory.Create(path, "share\\sample.wav");
+
+            Assert.Equal("wav", file.Extension);
+            Assert.Empty(file.Attributes ?? Array.Empty<Soulseek.FileAttribute>());
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
     private static void WriteMinimalWav(string path)
     {
         const short channels = 1;

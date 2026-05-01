@@ -2,7 +2,9 @@ import LibraryHealth from './index';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
+import { addDiscoveryInboxItem } from '../../../lib/discoveryInbox';
 import * as libraryHealth from '../../../lib/libraryHealth';
+import * as searches from '../../../lib/searches';
 
 vi.mock('../../../lib/libraryHealth', () => ({
   createRemediationJob: vi.fn(),
@@ -13,6 +15,14 @@ vi.mock('../../../lib/libraryHealth', () => ({
   getSummary: vi.fn(),
   startScan: vi.fn(),
   updateIssueStatus: vi.fn(),
+}));
+
+vi.mock('../../../lib/searches', () => ({
+  createBatch: vi.fn(),
+}));
+
+vi.mock('../../../lib/discoveryInbox', () => ({
+  addDiscoveryInboxItem: vi.fn(),
 }));
 
 vi.mock('semantic-ui-react', async () => {
@@ -65,6 +75,7 @@ describe('LibraryHealth', () => {
       data: {
         issues: [
           {
+            album: 'Fixture Album',
             artist: 'Fixture Artist',
             canAutoFix: true,
             issueId: 'issue-1',
@@ -77,6 +88,7 @@ describe('LibraryHealth', () => {
         ],
       },
     });
+    searches.createBatch.mockResolvedValue(1);
   });
 
   afterEach(() => {
@@ -125,5 +137,63 @@ describe('LibraryHealth', () => {
       'Library health quarantine review packet prepared for 1 selected issues.',
     );
     expect(libraryHealth.createRemediationJob).not.toHaveBeenCalled();
+  });
+
+  it('runs bounded replacement searches and sends quarantine review candidates', async () => {
+    vi.useFakeTimers();
+    render(<LibraryHealth />);
+
+    fireEvent.change(screen.getByPlaceholderText('Enter library path (e.g., /music or C:\\Music)'), {
+      target: { value: '/fixture/music' },
+    });
+    fireEvent.click(screen.getByText('Start Scan'));
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await screen.findByText('Fixture Track');
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    fireEvent.click(screen.getByTestId('library-health-run-replacement-searches'));
+
+    await waitFor(() => {
+      expect(searches.createBatch).toHaveBeenCalledWith({
+        queries: ['Fixture Artist Fixture Album Fixture Track'],
+      });
+    });
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Started 1 bounded replacement search for selected Library Health issues.',
+    );
+
+    fireEvent.click(screen.getByTestId('library-health-send-quarantine-review'));
+
+    expect(addDiscoveryInboxItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidenceKey: 'library-health:issue-1',
+        source: 'Library Health',
+      }),
+    );
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Sent 1 Library Health quarantine review candidate to Discovery Inbox.',
+    );
+  });
+
+  it('queues remediation jobs only for selected auto-fixable issue ids', async () => {
+    vi.useFakeTimers();
+    render(<LibraryHealth />);
+
+    fireEvent.change(screen.getByPlaceholderText('Enter library path (e.g., /music or C:\\Music)'), {
+      target: { value: '/fixture/music' },
+    });
+    fireEvent.click(screen.getByText('Start Scan'));
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await screen.findByText('Fixture Track');
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    fireEvent.click(screen.getByText('Fix 1 Selected Issue'));
+
+    await waitFor(() => {
+      expect(libraryHealth.createRemediationJob).toHaveBeenCalledWith(['issue-1']);
+    });
+    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
+      'Queued remediation job for 1 auto-fixable issue.',
+    );
   });
 });

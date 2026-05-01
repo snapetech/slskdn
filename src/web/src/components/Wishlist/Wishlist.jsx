@@ -2,8 +2,11 @@ import './Wishlist.css';
 import { urlBase } from '../../config';
 import {
   addWishlistItemToDiscoveryInbox,
+  buildWishlistRequestReviewPacket,
   buildWishlistRequestSummary,
+  formatWishlistRequestReviewPacket,
   getWishlistRequestState,
+  getRunnableWishlistRequests,
 } from '../../lib/acquisitionRequests';
 import {
   addDiscoveryInboxItem,
@@ -755,6 +758,8 @@ const Wishlist = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSourceImportModal, setShowSourceImportModal] = useState(false);
   const [inboxItems, setInboxItems] = useState(() => getDiscoveryInboxItems());
+  const [requestCopyStatus, setRequestCopyStatus] = useState('');
+  const [bulkRunning, setBulkRunning] = useState(false);
   const requestSummary = useMemo(
     () =>
       buildWishlistRequestSummary({
@@ -763,6 +768,65 @@ const Wishlist = () => {
       }),
     [inboxItems, items],
   );
+  const runnableRequests = useMemo(
+    () => getRunnableWishlistRequests(items, { limit: 3 }),
+    [items],
+  );
+
+  const copyRequestReviewPacket = async () => {
+    const packet = buildWishlistRequestReviewPacket({
+      inboxItems,
+      items,
+    });
+    const report = formatWishlistRequestReviewPacket(packet);
+
+    if (!navigator.clipboard?.writeText) {
+      setRequestCopyStatus('Clipboard unavailable; copy the request summary manually.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(report);
+      setRequestCopyStatus('Wishlist request review copied.');
+    } catch {
+      setRequestCopyStatus('Unable to copy Wishlist request review.');
+    }
+  };
+
+  const runEnabledSearches = async () => {
+    setBulkRunning(true);
+    const results = [];
+
+    try {
+      for (const item of runnableRequests) {
+        try {
+          const result = await wishlistAPI.runSearch(item.id);
+          results.push({
+            id: item.id,
+            responseCount: result.responseCount ?? result.ResponseCount ?? 0,
+            status: 'ran',
+          });
+        } catch (error) {
+          results.push({
+            error: error.message || 'Search failed',
+            id: item.id,
+            status: 'failed',
+          });
+        }
+      }
+
+      const ran = results.filter((result) => result.status === 'ran').length;
+      const failed = results.filter((result) => result.status === 'failed').length;
+      setRequestCopyStatus(
+        `Ran ${ran} enabled Wishlist search${ran === 1 ? '' : 'es'}${
+          failed ? `; ${failed} failed` : ''
+        }. Downloads still require normal result selection and policy.`,
+      );
+      await loadItems();
+    } finally {
+      setBulkRunning(false);
+    }
+  };
 
   const loadItems = useCallback(async () => {
     try {
@@ -904,13 +968,46 @@ const Wishlist = () => {
 
       {!loading && (
         <Segment className="wishlist-request-summary">
-          <Header as="h3">
-            <Icon name="clipboard check" />
-            Request Portal Summary
-            <Header.Subheader>
-              Operator view of wanted music before acquisition jobs are wired.
-            </Header.Subheader>
-          </Header>
+          <div className="wishlist-request-summary-header">
+            <Header as="h3">
+              <Icon name="clipboard check" />
+              Request Portal Summary
+              <Header.Subheader>
+                Operator view of wanted music before acquisition jobs are wired.
+              </Header.Subheader>
+            </Header>
+            <Popup
+              content="Copy the current Wishlist request review packet. This does not start searches, peer browsing, downloads, or automation."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label="Copy Wishlist request review"
+                  onClick={copyRequestReviewPacket}
+                  size="small"
+                >
+                  <Icon name="copy" />
+                  Copy Review
+                </Button>
+              }
+            />
+            <Popup
+              content="Run up to three enabled Wishlist searches now through the backend. This starts search jobs only; downloads still require the normal result selection and policy."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label="Run enabled Wishlist searches"
+                  disabled={runnableRequests.length === 0}
+                  loading={bulkRunning}
+                  onClick={runEnabledSearches}
+                  primary
+                  size="small"
+                >
+                  <Icon name="play" />
+                  Run Enabled
+                </Button>
+              }
+            />
+          </div>
           <div className="wishlist-request-summary-grid">
             <Label color="purple">
               Requests
@@ -933,6 +1030,14 @@ const Wishlist = () => {
               <Label.Detail>{requestSummary.quotaRemaining} left</Label.Detail>
             </Label>
           </div>
+          {requestCopyStatus && (
+            <Label
+              basic
+              color="purple"
+            >
+              {requestCopyStatus}
+            </Label>
+          )}
         </Segment>
       )}
 

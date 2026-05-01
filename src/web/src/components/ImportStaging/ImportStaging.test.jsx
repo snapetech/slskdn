@@ -52,6 +52,52 @@ describe('ImportStaging', () => {
         value: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
       }),
     );
+    expect(persisted[0].audioVerification).toEqual(
+      expect.objectContaining({
+        action: 'Review',
+        profileId: 'balanced',
+        status: 'Review',
+      }),
+    );
+  });
+
+  it('verifies staged audio and applies verification policy locally', () => {
+    localStorage.setItem(
+      importStagingStorageKey,
+      JSON.stringify([
+        {
+          fileName: 'tiny.flac',
+          id: 'stage-1',
+          lastModified: 123,
+          size: 3,
+          state: 'Ready',
+          type: 'audio/flac',
+        },
+      ]),
+    );
+
+    render(<ImportStaging />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verify audio for tiny.flac' }));
+
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
+    expect(screen.getByText(/balanced · fail-open · Review/)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Apply audio verification policy for tiny.flac',
+      }),
+    );
+
+    const persisted = JSON.parse(localStorage.getItem(importStagingStorageKey));
+    expect(persisted[0].audioVerification).toEqual(
+      expect.objectContaining({
+        action: 'Review',
+        profileId: 'balanced',
+        status: 'Failed',
+      }),
+    );
+    expect(persisted[0].state).toBe('Staged');
   });
 
   it('persists review state changes', () => {
@@ -99,6 +145,9 @@ describe('ImportStaging', () => {
     expect(container.querySelector('td[data-label="File"]')).toBeInTheDocument();
     expect(
       container.querySelector('td[data-label="Metadata Match"]'),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector('td[data-label="Audio Verification"]'),
     ).toBeInTheDocument();
     expect(container.querySelector('td[data-label="Actions"]')).toBeInTheDocument();
   });
@@ -159,6 +208,7 @@ describe('ImportStaging', () => {
 
     expect(screen.getByText('Strong Match')).toBeInTheDocument();
     expect(screen.getByText('Artist - Album - Track')).toBeInTheDocument();
+    expect(screen.getByText(/Band Auto/)).toBeInTheDocument();
     const persisted = JSON.parse(localStorage.getItem(importStagingStorageKey));
     expect(persisted[0].metadataMatch).toEqual(
       expect.objectContaining({
@@ -167,5 +217,38 @@ describe('ImportStaging', () => {
         title: 'Track',
       }),
     );
+  });
+
+  it('accepts manual metadata overrides for low-confidence matches', () => {
+    localStorage.setItem(
+      importStagingStorageKey,
+      JSON.stringify([
+        {
+          fileName: 'mystery.flac',
+          id: 'stage-1',
+          lastModified: 123,
+          size: 3,
+          state: 'Staged',
+          type: 'audio/flac',
+        },
+      ]),
+    );
+
+    render(<ImportStaging />);
+
+    fireEvent.change(screen.getByLabelText('Override artist for mystery.flac'), {
+      target: { value: 'Manual Artist' },
+    });
+    fireEvent.change(screen.getByLabelText('Override title for mystery.flac'), {
+      target: { value: 'Manual Title' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Apply metadata override for mystery.flac',
+      }),
+    );
+
+    expect(screen.getByText('Manual Override')).toBeInTheDocument();
+    expect(screen.getByText('Manual Artist - Manual Title')).toBeInTheDocument();
   });
 });

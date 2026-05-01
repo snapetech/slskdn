@@ -222,4 +222,81 @@ describe('PlaylistIntake', () => {
       }),
     );
   });
+
+  it('previews tag organization plans without writing files', () => {
+    render(<PlaylistIntake />);
+
+    fireEvent.change(screen.getByLabelText('Playlist name'), {
+      target: { value: 'Organization queue' },
+    });
+    fireEvent.change(screen.getByLabelText('Playlist source'), {
+      target: { value: 'local:organization.csv' },
+    });
+    fireEvent.change(screen.getByLabelText('Playlist rows'), {
+      target: {
+        value: 'Stereolab,French Disko\nUntitled',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Import playlist for review' }));
+
+    fireEvent.change(
+      screen.getByLabelText('Organization album title for Organization queue'),
+      {
+        target: { value: 'Road Trip Tags' },
+      },
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Preview tag organization for Organization queue',
+      }),
+    );
+
+    expect(
+      screen.getByText(/Prepared tag and organization dry run for Organization queue/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/no tag write, cover-art write/i)).toBeInTheDocument();
+    expect(
+      screen.getByText('Stereolab/Road Trip Tags/01 - French Disko.flac'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Changed fields')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Copy tag organization report for Organization queue',
+      }),
+    );
+    expect(
+      screen.getByText(/Prepared tag and organization report for Organization queue/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Approve tag organization snapshot for Organization queue',
+      }),
+    );
+    expect(
+      screen.getByText(/Approved tag and organization snapshot for Organization queue/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Snapshot approved')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Clear tag organization snapshot for Organization queue',
+      }),
+    );
+    expect(
+      screen.getByText(/Cleared tag and organization snapshot for Organization queue/),
+    ).toBeInTheDocument();
+
+    const persisted = JSON.parse(localStorage.getItem(playlistIntakeStorageKey));
+    expect(persisted[0].organizationPlan.summary).toMatchObject({
+      matched: 1,
+      skipped: 1,
+    });
+    expect(persisted[0].organizationApproval).toBeNull();
+    expect(persisted[0].tracks.map((track) => track.state)).toEqual([
+      'Matched',
+      'Unmatched',
+    ]);
+  });
 });

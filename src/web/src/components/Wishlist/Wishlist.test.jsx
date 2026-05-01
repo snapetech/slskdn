@@ -32,6 +32,11 @@ describe('Wishlist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
     spotifyIntegrationAPI.getSpotifyStatus.mockResolvedValue({
       configured: false,
       connected: false,
@@ -88,5 +93,34 @@ describe('Wishlist', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Review')).toBeInTheDocument());
+  });
+
+  it('copies a wishlist request review packet', async () => {
+    renderWishlist();
+
+    expect(await screen.findByText('rare album')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Wishlist request review' }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('slskdN Wishlist request review'),
+      );
+    });
+  });
+
+  it('runs enabled wishlist searches in a bounded batch', async () => {
+    wishlistAPI.runSearch.mockResolvedValue({ responseCount: 4 });
+
+    renderWishlist();
+
+    expect(await screen.findByText('rare album')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run enabled Wishlist searches' }));
+
+    await waitFor(() => {
+      expect(wishlistAPI.runSearch).toHaveBeenCalledTimes(2);
+    });
+    expect(wishlistAPI.runSearch).toHaveBeenCalledWith('wish-1');
+    expect(wishlistAPI.runSearch).toHaveBeenCalledWith('wish-2');
+    expect(screen.getByText(/Ran 2 enabled Wishlist searches/)).toBeInTheDocument();
   });
 });

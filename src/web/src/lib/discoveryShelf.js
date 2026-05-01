@@ -101,6 +101,38 @@ export const getDiscoveryShelfSummary = () => {
   });
 };
 
+export const buildDiscoveryShelfInboxItem = (item = {}) => {
+  const title = [
+    item.artist,
+    item.album,
+    item.title,
+  ].map(normalizeText).filter(Boolean).join(' - ') || normalizeText(item.title);
+
+  return {
+    evidenceKey: `discovery-shelf:${item.key || item.contentId || title}`,
+    networkImpact:
+      'Review only; approving here does not start search, peer browse, download, rating sync, sharing, or file mutation.',
+    reason: `Player rating ${item.rating || 'unrated'} produced ${getDiscoveryShelfActionLabel(item.action).toLowerCase()}.`,
+    searchText: [
+      item.artist,
+      item.album,
+      item.title,
+    ].map(normalizeText).filter(Boolean).join(' '),
+    source: 'Discovery Shelf',
+    sourceId: item.key || item.contentId || title,
+    title,
+  };
+};
+
+export const getDiscoveryShelfPromoteItems = (
+  items = getDiscoveryShelf(),
+  { limit = 10 } = {},
+) =>
+  items
+    .filter((item) => item.action === 'promote-preview')
+    .slice(0, limit)
+    .map(buildDiscoveryShelfInboxItem);
+
 export const getDiscoveryShelfPolicyPreview = ({
   expiryDays = 14,
   items = getDiscoveryShelf(),

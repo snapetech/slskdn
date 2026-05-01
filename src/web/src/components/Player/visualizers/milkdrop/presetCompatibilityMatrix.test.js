@@ -35,6 +35,9 @@ describe('MilkDrop compatibility matrix', () => {
     expect(summary.maxWaveCount).toBe(20);
     expect(summary.qRegisters).toEqual(['q1', 'q2', 'q16', 'q32', 'q33', 'q34', 'q48', 'q63', 'q64']);
     expect(summary.unsupportedShaderSections).toEqual(['comp_shader']);
+    expect(summary.webGpuSupportedCount).toBe(5);
+    expect(summary.webGpuUnsupportedCount).toBe(1);
+    expect(summary.webGpuUnsupportedShaderSections).toEqual(['comp_shader']);
     expect(matrix.find((entry) => entry.id === 'milk2-double').presetCount).toBe(2);
     expect(matrix.find((entry) => entry.id === 'milkdrop3-q-registers').presetCount).toBe(2);
     expect(matrix.find((entry) => entry.id === 'milkdrop3-dense-primitives').metrics)
@@ -51,11 +54,12 @@ describe('MilkDrop compatibility matrix', () => {
     });
 
     expect(entry.supported).toBe(true);
+    expect(entry.webGpuSupported).toBe(true);
     expect(entry.metrics.maxShapeCount).toBe(40);
     expect(entry.metrics.maxWaveCount).toBe(20);
   });
 
-  it('tracks q-register pressure across MilkDrop3-style preset bodies', () => {
+  it('tracks q-register and WebGPU shader pressure across MilkDrop3-style preset bodies', () => {
     const entry = buildMilkdropCompatibilityEntry({
       format: 'milk2',
       id: 'q-register-pack-probe',
@@ -69,12 +73,25 @@ describe('MilkDrop compatibility matrix', () => {
         per_frame_1=q63=q1+treb;
         shape00_enabled=1
         shape00_per_frame1=q32=q63*0.5;
-        comp_shader=ret = vec3(q32, q63, q64);
+        comp_shader=ret = tex2D(album_art, uv).rgb * vec3(q32, get_fft(0.5), get_waveform(0.5));
       `,
     });
 
     expect(entry.supported).toBe(true);
+    expect(entry.webGpuSupported).toBe(true);
+    expect(entry.webGpuShaderSections).toEqual([]);
     expect(entry.metrics.maxQRegisterIndex).toBe(64);
     expect(entry.metrics.qRegisters).toEqual(['q1', 'q32', 'q48', 'q63', 'q64']);
+  });
+
+  it('reports WebGPU-only shader translation gaps separately from WebGL support', () => {
+    const entry = buildMilkdropCompatibilityEntry({
+      id: 'webgpu-shader-gap-probe',
+      source: 'comp_shader=ret = q1 > 0.5 ? vec3(1.0) : vec3(0.0);',
+    });
+
+    expect(entry.supported).toBe(true);
+    expect(entry.webGpuSupported).toBe(false);
+    expect(entry.webGpuShaderSections).toEqual(['comp_shader']);
   });
 });

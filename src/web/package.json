@@ -78,6 +78,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test --reporter=line",
     "test:native-milkdrop-compatibility": "node ./scripts/report-native-milkdrop-compatibility.mjs",
+    "test:native-milkdrop-performance": "node ./scripts/measure-native-milkdrop-performance.mjs",
     "test:native-milkdrop-smoke": "node ./scripts/smoke-native-milkdrop.mjs",
     "test-unattended": "vitest run"
   },

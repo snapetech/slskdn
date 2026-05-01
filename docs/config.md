@@ -220,11 +220,13 @@ Storing the cache on disk uses quite a bit less memory and allows the applicatio
 
 The cache is stored in memory by default.  If you find that the application uses too much memory or crashes with an `Out of Memory` exception, change this option to store the cache on disk.
 
-Scanning shares is an I/O intensive operation; all of the files and directories in each share have to be listed, and each file has to be read to gather metadata like length, bitrate, and sample rate. To speed things up, multiple 'workers'
+Scanning shares is an I/O intensive operation; all of the files and directories in each share have to be listed, and by default audio files are probed for metadata like length, bitrate, and sample rate. To speed things up, multiple 'workers'
 are used to allow metadata to be read from several files concurrently. The scan generally gets faster as additional workers are added, but each worker also adds additional I/O pressure and increases CPU and memory usage. At some number of workers
 performance will start to get worse as more are added.  The optimal number of workers will vary from system to system, so if scan performance is important to you it will be a good idea to experiment to see what the optimal number is for your system.
 
 The default number of workers is intentionally conservative: `1` worker on 1-2 core hosts, otherwise half of the detected cores capped at `4`. If your machine can comfortably handle more scan pressure, increase the value explicitly. If initial scans cause high load, reduce it to `1`, `2`, or `4`.
+
+If shares live on slow or remote storage, set `shares.probe_media_attributes` to `false` to skip TagLib audio probing during the share scan. Files remain shared, but Soulseek browse metadata may omit bitrate, length, sample rate, and bit depth until probing is enabled again.
 
 Shares can be configured to be automatically re-scanned at a regular interval by setting the retention limit for the cache.  This value is empty by default, and shares will not be re-scanned automatically.  The interval is set in minutes.
 
@@ -233,10 +235,12 @@ Shares can be configured to be automatically re-scanned at a regular interval by
 | `--share-cache-storage-mode` | `SLSKD_SHARE_CACHE_STORAGE_MODE` | The type of storage to use for the cache (Memory, Disk)   |
 | `--share-cache-workers`      | `SLSKD_SHARE_CACHE_WORKERS`      | The number of workers to use while scanning shares        |
 | `--share-cache-retention`    | `SLSKD_SHARE_CACHE_RETENTION`    | The interval on which the cache is re-scanned, in minutes |
+| `--shares-probe-media-attributes` | `SLSKD_SHARES_PROBE_MEDIA_ATTRIBUTES` | Whether to probe shared audio files for bitrate/length/sample metadata |
 
 #### **YAML**
 ```yaml
 shares:
+  probe_media_attributes: true # set false on slow/remote storage to skip TagLib audio probing
   cache:
     storage_mode: memory
     workers: 4 # default is conservative; lower this on weaker hosts, raise it carefully if scans are too slow

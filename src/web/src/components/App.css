@@ -11,39 +11,39 @@
 }
 
 :root.dark {
-    --slskd-primary-background: #101116;
-    --slskd-secondary-background: #18151f;
-    --slskd-overlay-background: #211a2d;
-    --slskd-tertiary-background: #2d2440;
-    --slskd-tertiary-border-color: rgba(214, 196, 255, 0.24);
-    --slskd-subtle-background: rgba(184, 154, 246, 0.16);
-    --slskd-color: #f4eefc;
-    --slskd-color-subtle: #c8bad8;
-    --slskd-hover-background: #3a2d55;
-    --slskd-color-inset: #08070d;
-    --slskd-emphasis-background: #775cb7;
-    --slskdn-accent-primary: #c7a7ff;
-    --slskdn-accent-primary-hover: #eadfff;
-    --slskdn-accent-primary-muted: rgba(199, 167, 255, 0.22);
-    --slskdn-accent-primary-border: rgba(199, 167, 255, 0.44);
-    --slskdn-accent-warm: #f0b86e;
-    --slskdn-accent-warm-hover: #ffd79b;
-    --slskdn-accent-warm-muted: rgba(240, 184, 110, 0.22);
-    --slskdn-nav-background: #1a141d;
-    --slskdn-nav-border: rgba(199, 167, 255, 0.32);
-    --slskdn-theme-trigger-background: #2d2440;
-    --slskdn-theme-trigger-hover-background: #463361;
-    --slskdn-theme-menu-background: #211a2d;
-    --slskdn-theme-menu-active-background: #60498a;
-    --slskdn-theme-menu-shadow: 0 16px 38px rgba(0, 0, 0, 0.58), 0 0 24px rgba(131, 91, 208, 0.18);
-    --slskdn-footer-background: linear-gradient(135deg, #101116 0%, #231a30 54%, #141018 100%);
-    --slskdn-footer-shadow: 0 -10px 30px rgba(0, 0, 0, 0.58), 0 -1px 0 rgba(199, 167, 255, 0.28);
+    --slskd-primary-background: #0e1012;
+    --slskd-secondary-background: #171615;
+    --slskd-overlay-background: #201b16;
+    --slskd-tertiary-background: #2a241d;
+    --slskd-tertiary-border-color: rgba(214, 168, 104, 0.24);
+    --slskd-subtle-background: rgba(214, 168, 104, 0.13);
+    --slskd-color: #f1eadf;
+    --slskd-color-subtle: #c5b7a7;
+    --slskd-hover-background: #372d23;
+    --slskd-color-inset: #070809;
+    --slskd-emphasis-background: #8a6338;
+    --slskdn-accent-primary: #b89af6;
+    --slskdn-accent-primary-hover: #d9c7ff;
+    --slskdn-accent-primary-muted: rgba(184, 154, 246, 0.14);
+    --slskdn-accent-primary-border: rgba(184, 154, 246, 0.26);
+    --slskdn-accent-warm: #d7a16b;
+    --slskdn-accent-warm-hover: #f0bc83;
+    --slskdn-accent-warm-muted: rgba(215, 161, 107, 0.2);
+    --slskdn-nav-background: #151210;
+    --slskdn-nav-border: rgba(215, 161, 107, 0.34);
+    --slskdn-theme-trigger-background: #2a241d;
+    --slskdn-theme-trigger-hover-background: #3c3125;
+    --slskdn-theme-menu-background: #201b16;
+    --slskdn-theme-menu-active-background: #5d4328;
+    --slskdn-theme-menu-shadow: 0 16px 38px rgba(0, 0, 0, 0.58), 0 0 22px rgba(215, 161, 107, 0.12);
+    --slskdn-footer-background: linear-gradient(135deg, #0e1012 0%, #221b14 54%, #11100e 100%);
+    --slskdn-footer-shadow: 0 -10px 30px rgba(0, 0, 0, 0.58), 0 -1px 0 rgba(215, 161, 107, 0.28);
     --slskdn-surface-shadow: 0 18px 46px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.045);
     --slskdn-surface-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.035);
-    --slskdn-focus-ring: 0 0 0 3px rgba(199, 167, 255, 0.28);
-    --slskdn-affordance-hover-background: rgba(199, 167, 255, 0.14);
-    --slskdn-affordance-active-background: rgba(199, 167, 255, 0.24);
-    --slskdn-affordance-outline: #d8c4ff;
+    --slskdn-focus-ring: 0 0 0 3px rgba(215, 161, 107, 0.26);
+    --slskdn-affordance-hover-background: rgba(215, 161, 107, 0.14);
+    --slskdn-affordance-active-background: rgba(215, 161, 107, 0.24);
+    --slskdn-affordance-outline: #edc08f;
 
     --background-color: var(--slskd-primary-background) !important;
 
@@ -84,7 +84,7 @@
 
     /* view/card */
     --smui-card-background: var(--slskd-secondary-background);
-    --smui-card-border-shadow: 0px 0px 0px 1px rgba(214, 196, 255, 0.22);
+    --smui-card-border-shadow: 0px 0px 0px 1px rgba(214, 168, 104, 0.22);
     --smui-card-floating-shadow: var(--slskdn-surface-shadow);
     --smui-card-text-color: var(--smui-site-body-text-color);
     --smui-card-meta-color: var(--slskd-color-subtle);
@@ -621,7 +621,7 @@ body {
     scrollbar-width: thin;
 }
 
-.vpn-port-change-notice.ui.segment {
+.network-endpoint-change-notice.ui.segment {
     align-items: flex-start;
     background: var(--slskd-secondary-background, #fff);
     border-left: 4px solid var(--slskdn-accent-warm, #f0883e);
@@ -635,42 +635,78 @@ body {
     padding: 12px 16px;
 }
 
-.vpn-port-change-notice-body {
+.network-endpoint-change-notice-body {
     align-items: flex-start;
     display: flex;
     gap: 12px;
     min-width: 0;
 }
 
-.vpn-port-change-notice-body > .icon {
+.network-endpoint-change-notice-body > .icon {
     color: var(--slskdn-accent-warm, #f0883e);
     flex: 0 0 auto;
     margin-top: 2px;
 }
 
-.vpn-port-change-notice-copy {
+.network-endpoint-change-notice-copy {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
 }
 
-.vpn-port-change-list {
+.network-endpoint-change-group {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.vpn-port-change-item {
+.network-endpoint-change-title {
+    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+    font-size: 0.86em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.network-endpoint-change-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.network-endpoint-change-item {
+    align-items: center;
     background: var(--slskd-subtle-background, rgba(110, 118, 129, 0.1));
     border: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15));
     border-radius: 4px;
-    font-family: monospace;
-    padding: 2px 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 7px;
     word-break: break-word;
 }
 
-.vpn-port-change-notice .ui.basic.button {
+.network-endpoint-change-service {
+    font-weight: 700;
+}
+
+.network-endpoint-change-item code {
+    background: transparent;
+    color: inherit;
+    font-family: monospace;
+    padding: 0;
+}
+
+.network-endpoint-change-item > .icon {
+    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+    margin: 0;
+}
+
+.network-endpoint-change-config {
+    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+}
+
+.network-endpoint-change-notice .ui.basic.button {
     color: var(--slskd-color, rgba(0, 0, 0, 0.87)) !important;
     flex: 0 0 auto;
 }

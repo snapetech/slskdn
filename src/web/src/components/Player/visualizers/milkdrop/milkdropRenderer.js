@@ -4,6 +4,29 @@ import {
   getMilkdropShaderTextureSamplers,
 } from './shaderTranslator';
 
+const translatedShaderCacheLimit = 64;
+const translatedShaderCache = new Map();
+
+const getCachedTranslatedShader = (shaderSource = '') => {
+  const key = String(shaderSource || '');
+  if (!key) return null;
+  const cached = translatedShaderCache.get(key);
+  if (cached) {
+    translatedShaderCache.delete(key);
+    translatedShaderCache.set(key, cached);
+    return cached;
+  }
+  const translated = {
+    fragmentSource: createTranslatedMilkdropFragmentShader(key),
+    textureSamplers: getMilkdropShaderTextureSamplers(key),
+  };
+  translatedShaderCache.set(key, translated);
+  if (translatedShaderCache.size > translatedShaderCacheLimit) {
+    translatedShaderCache.delete(translatedShaderCache.keys().next().value);
+  }
+  return translated;
+};
+
 const vertexShaderSource = `#version 300 es
 in vec2 position;
 out vec2 uv;
@@ -248,9 +271,10 @@ const createFullscreenTriangle = (gl, program) => {
 };
 
 const createOptionalShaderProgram = (gl, shaderSource) => {
-  const fragmentSource = createTranslatedMilkdropFragmentShader(shaderSource);
+  const translated = getCachedTranslatedShader(shaderSource);
+  const fragmentSource = translated?.fragmentSource;
   if (!fragmentSource) return null;
-  const textureSamplers = getMilkdropShaderTextureSamplers(shaderSource);
+  const textureSamplers = translated.textureSamplers;
   const program = createProgram(gl, vertexShaderSource, fragmentSource);
   gl.useProgram(program);
   const state = {
@@ -413,7 +437,7 @@ const normalizeTextureName = (value) =>
     .replace(/\\/g, '/')
     .toLowerCase();
 
-const getTextureNameAliases = (value) => {
+export const getTextureNameAliases = (value) => {
   const normalized = normalizeTextureName(value);
   const basename = normalized.replace(/^.*\//, '');
   const stem = basename.replace(/\.[^.]+$/, '');
@@ -481,7 +505,7 @@ const createNamedShapeTextures = (gl, textureAssets = {}) => {
   return textures;
 };
 
-const getShapeTexture = (shape, namedTextures, fallbackTexture) => {
+export const getShapeTexture = (shape, namedTextures, fallbackTexture) => {
   const name = getTextureAssetCandidates(shape).find((candidate) => namedTextures[candidate]);
   return name ? namedTextures[name] : fallbackTexture;
 };

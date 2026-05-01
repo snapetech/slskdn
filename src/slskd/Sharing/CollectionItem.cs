@@ -30,6 +30,18 @@ public class CollectionItem
     [MaxLength(32)]
     public string? MediaKind { get; set; }
 
+    [MaxLength(512)]
+    public string? FileName { get; set; }
+
+    [MaxLength(256)]
+    public string? Title { get; set; }
+
+    [MaxLength(256)]
+    public string? Artist { get; set; }
+
+    [MaxLength(256)]
+    public string? Album { get; set; }
+
     [MaxLength(128)]
     public string? ContentHash { get; set; }
 }

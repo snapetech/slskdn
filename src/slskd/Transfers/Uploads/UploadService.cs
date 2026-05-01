@@ -462,12 +462,6 @@ namespace slskd.Transfers.Uploads
 
                 TryFail(transfer.Id, "File could not be found", TransferStates.Completed | TransferStates.Aborted);
 
-                // todo: broadcast
-                if (syncRoot != null)
-                {
-                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
-                }
-
                 throw;
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TimeoutException)
@@ -476,12 +470,6 @@ namespace slskd.Transfers.Uploads
 
                 TryFail(transfer.Id, exception: ex);
 
-                // todo: broadcast
-                if (syncRoot != null)
-                {
-                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
-                }
-
                 throw;
             }
             catch (Exception ex)
@@ -489,12 +477,6 @@ namespace slskd.Transfers.Uploads
                 Log.Error(ex, "Upload of {Filename} to user {Username} failed: {Message}", transfer.Filename, transfer.Username, ex.Message);
 
                 TryFail(transfer.Id, exception: ex);
-
-                // todo: broadcast
-                if (syncRoot != null)
-                {
-                    SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
-                }
 
                 throw;
             }

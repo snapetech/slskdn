@@ -42,10 +42,16 @@ public sealed class ContentLocator : IContentLocator
 
         var repo = _shareService.GetLocalRepository();
         var ci = repo.FindContentItem(contentId);
-        if (ci == null || !ci.Value.IsAdvertisable)
+        if (ci == null)
         {
-            _log.LogDebug("[ContentLocator] ContentId {ContentId} not found or not advertisable", contentId);
+            _log.LogDebug("[ContentLocator] ContentId {ContentId} not found", contentId);
             return ResolveFromAllowedLocalRoots(contentId, cancellationToken);
+        }
+
+        if (!ci.Value.IsAdvertisable)
+        {
+            _log.LogDebug("[ContentLocator] ContentId {ContentId} is not advertisable", contentId);
+            return null;
         }
 
         var finfo = repo.FindFileInfo(ci.Value.MaskedFilename);

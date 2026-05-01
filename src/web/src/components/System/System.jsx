@@ -1,9 +1,11 @@
 import './System.css';
+import AdminPolicies from './AdminPolicies';
 import { Switch } from '../Shared';
 import AutomationCenter from './AutomationCenter';
 import Bridge from './Bridge';
 import Data from './Data';
 import Events from './Events';
+import ExperienceSettings from './ExperienceSettings';
 import Files from './Files';
 import Info from './Info';
 import Integrations from './Integrations';
@@ -127,6 +129,32 @@ const System = ({ options = {}, state = {}, theme }) => {
         </Tab.Pane>
       ),
       route: 'security',
+    },
+    {
+      menuItem: {
+        content: 'Policies',
+        icon: 'sliders horizontal',
+        key: 'policies',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <AdminPolicies options={options} />
+        </Tab.Pane>
+      ),
+      route: 'policies',
+    },
+    {
+      menuItem: {
+        content: 'Experience',
+        icon: 'compass',
+        key: 'experience',
+      },
+      render: () => (
+        <Tab.Pane className="full-height">
+          <ExperienceSettings />
+        </Tab.Pane>
+      ),
+      route: 'experience',
     },
     {
       menuItem: {

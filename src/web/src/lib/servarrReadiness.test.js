@@ -1,5 +1,7 @@
 import {
+  buildServarrCompatibilityPreview,
   buildServarrReadiness,
+  formatServarrCompatibilityReport,
   summarizeServarrReadiness,
 } from './servarrReadiness';
 
@@ -34,5 +36,40 @@ describe('servarrReadiness', () => {
     expect(summary.status).toBe('Needs Setup');
     expect(checks.find((check) => check.id === 'api-key').ready).toBe(false);
     expect(checks.find((check) => check.id === 'path-map').ready).toBe(false);
+  });
+
+  it('builds a compatibility preview for wanted and import handoffs', () => {
+    const preview = buildServarrCompatibilityPreview({
+      apiKey: 'fixture-key',
+      autoImportCompleted: true,
+      enabled: true,
+      importMode: 'move',
+      importPathFrom: '/downloads',
+      importPathTo: '/library',
+      syncWantedToWishlist: true,
+      url: 'http://example.invalid:8686',
+    });
+
+    expect(preview.summary.status).toBe('Ready');
+    expect(preview.supportsCompletedImport).toBe(true);
+    expect(preview.supportsWantedPull).toBe(true);
+    expect(preview.actions).toEqual([]);
+  });
+
+  it('formats compatibility reports without secrets', () => {
+    const report = formatServarrCompatibilityReport(
+      buildServarrCompatibilityPreview({
+        enabled: true,
+        importMode: 'move',
+        importPathFrom: '/downloads',
+        syncWantedToWishlist: false,
+      }),
+    );
+
+    expect(report).toContain('slskdN Servarr compatibility review');
+    expect(report).toContain('Wanted pull: not ready');
+    expect(report).toContain('Completed import: not ready');
+    expect(report).toContain('Enable completed import review');
+    expect(report).not.toContain('fixture-key');
   });
 });

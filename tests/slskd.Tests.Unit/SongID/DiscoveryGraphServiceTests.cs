@@ -80,6 +80,8 @@ public sealed class DiscoveryGraphServiceTests
         Assert.Contains(graph.Nodes, node => node.NodeId == "segment:seg-1");
         Assert.Contains(graph.Edges, edge => edge.EdgeType == "identity_candidate");
         Assert.Contains(graph.Edges, edge => edge.EdgeType == "segment_candidate");
+        Assert.Contains(graph.EvidenceSummary, lane => lane.Lane == "identity");
+        Assert.Contains(graph.EvidenceSummary, lane => lane.Lane == "provenance");
     }
 
     [Fact]
@@ -410,5 +412,60 @@ public sealed class DiscoveryGraphServiceTests
 
         Assert.Contains(graph.Nodes, node => node.NodeId == "artist:artist-compare");
         Assert.Contains(graph.Edges, edge => edge.EdgeType == "comparison");
+    }
+
+    [Fact]
+    public async Task BuildAsync_AddsEdgeEvidenceLanesAndGraphEvidenceSummary()
+    {
+        var runId = Guid.NewGuid();
+        var run = new SongIdRun
+        {
+            Id = runId,
+            Query = "evidence seed",
+            IdentityAssessment = new SongIdAssessment
+            {
+                Verdict = "recognized_cataloged_track",
+                Confidence = 0.82,
+            },
+            Tracks = new List<SongIdTrackCandidate>
+            {
+                new()
+                {
+                    CandidateId = "track-1",
+                    RecordingId = "rec-1",
+                    Artist = "Artist One",
+                    Title = "Track One",
+                    IdentityScore = 0.92,
+                    ByzantineScore = 0.74,
+                    ActionScore = 0.81,
+                },
+            },
+        };
+
+        var songIdService = new Mock<ISongIdService>();
+        songIdService.Setup(service => service.Get(runId)).Returns(run);
+
+        var releaseGraphService = new Mock<IArtistReleaseGraphService>(MockBehavior.Strict);
+        var service = new DiscoveryGraphService(songIdService.Object, releaseGraphService.Object);
+
+        var graph = await service.BuildAsync(new DiscoveryGraphRequest
+        {
+            Scope = "songid_run",
+            SongIdRunId = runId,
+        });
+
+        var identityEdge = Assert.Single(graph.Edges, edge => edge.EdgeType == "identity_candidate");
+        Assert.Contains(identityEdge.EvidenceLanes, lane =>
+            lane.Lane == "identity" &&
+            lane.Label == "Identity" &&
+            lane.Score == 0.92);
+        Assert.Contains(identityEdge.EvidenceLanes, lane =>
+            lane.Lane == "provenance" &&
+            lane.Summary == "Source: songid.");
+        Assert.Contains(graph.EvidenceSummary, lane =>
+            lane.Lane == "identity" &&
+            lane.Count == 1 &&
+            lane.Summary == "Identity appears on 1 graph edge.");
+        Assert.Contains(graph.EvidenceSummary, lane => lane.Lane == "action");
     }
 }

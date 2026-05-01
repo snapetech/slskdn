@@ -173,6 +173,9 @@ namespace slskd.Shares
                 var filters = options.Filters
                     .Select(filter => new Regex(filter, regexOptions))
                     .ToList();
+                var soulseekFileFactory = options.ProbeMediaAttributes
+                    ? SoulseekFileFactory
+                    : new SoulseekFileFactory(Files, probeMediaAttributes: false);
 
                 Log.Information("Starting shared file scan");
 
@@ -298,7 +301,7 @@ namespace slskd.Shares
                                 foreach (var originalFilename in newFiles)
                                 {
                                     var info = Files.ResolveFileInfo(originalFilename);
-                                    var file = SoulseekFileFactory.Create(originalFilename, maskedFilename: originalFilename.ReplaceFirst(share.LocalPath, share.RemotePath).NormalizePathForSoulseek());
+                                    var file = soulseekFileFactory.Create(originalFilename, maskedFilename: originalFilename.ReplaceFirst(share.LocalPath, share.RemotePath).NormalizePathForSoulseek());
 
                                     if (filters.Any(filter => filter.IsMatch(originalFilename)))
                                     {

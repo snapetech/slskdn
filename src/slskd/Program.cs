@@ -2191,9 +2191,13 @@ namespace slskd
             });
 
             // Transport dialers (Tor/I2P integration Phase 2)
-            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows())
+            if (Mesh.QuicRuntime.IsAvailable())
             {
                 services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
+            }
+            else if (OptionsAtStartup?.Mesh?.Transport?.EnableDirect == true)
+            {
+                Log.Warning("[DI] Direct mesh transport is enabled but QUIC runtime support is unavailable; direct clearnet mesh circuits will be disabled until QUIC support is installed or a non-QUIC direct transport is configured");
             }
 
             services.AddSingleton<Mesh.Transport.ITransportDialer>(sp =>
@@ -2468,6 +2472,7 @@ namespace slskd
             services.AddSingleton<IAcoustIdClient, AcoustIdClient>();
             services.AddSingleton<IAutoTaggingService, AutoTaggingService>();
             services.AddSingleton<IMusicBrainzClient, MusicBrainzClient>();
+            services.AddSingleton<Integrations.Brainz.IBrainzClient, Integrations.Brainz.BrainzClient>();
             services.AddAudioCore(Program.AppDirectory);
             services.AddSingleton<IMetadataFacade>(sp => new MetadataFacade(
                 sp.GetRequiredService<IMusicBrainzClient>(),
@@ -2549,6 +2554,30 @@ namespace slskd
             catch
             {
                 // Column already exists or DB is read-only; ignore.
+            }
+
+            foreach (var sql in new[]
+            {
+                "ALTER TABLE CollectionItems ADD COLUMN FileName TEXT",
+                "ALTER TABLE CollectionItems ADD COLUMN Title TEXT",
+                "ALTER TABLE CollectionItems ADD COLUMN Artist TEXT",
+                "ALTER TABLE CollectionItems ADD COLUMN Album TEXT",
+            })
+            {
+                try
+                {
+                    using (var collectionsContext = new Sharing.CollectionsDbContext(
+                        new DbContextOptionsBuilder<Sharing.CollectionsDbContext>()
+                            .UseSqlite($"Data Source={collectionsDbPath}")
+                            .Options))
+                    {
+                        collectionsContext.Database.ExecuteSqlRaw(sql);
+                    }
+                }
+                catch
+                {
+                    // Column already exists or DB is read-only; ignore.
+                }
             }
 
             // Identity / friends (PeerProfile, Contact) — behind Feature.IdentityFriends

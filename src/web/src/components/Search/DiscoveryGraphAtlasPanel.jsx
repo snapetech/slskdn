@@ -39,6 +39,8 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
   const [loading, setLoading] = useState(false);
   const [maxDepth, setMaxDepth] = useState(2);
   const [minNodeWeight, setMinNodeWeight] = useState(0.2);
+  const [activeEdgeTypes, setActiveEdgeTypes] = useState([]);
+  const [pinnedNode, setPinnedNode] = useState(null);
   const [savedBranches, setSavedBranches] = useState([]);
 
   const loadSavedBranches = () => {
@@ -101,6 +103,7 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
     try {
       const nextGraph = await discoveryGraph.buildDiscoveryGraph(request);
       setGraph(nextGraph);
+      setActiveEdgeTypes([]);
       if (persistRoute) {
         const query = discoveryGraph.toQueryString(request);
         navigate({
@@ -146,12 +149,22 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
     await handleBuild();
   };
 
+  const toggleEdgeType = (edgeType) => {
+    setActiveEdgeTypes((current) =>
+      current.includes(edgeType)
+        ? current.filter((item) => item !== edgeType)
+        : [...current, edgeType],
+    );
+  };
+
   const handleQueueNearby = async () => {
-    const queries = (graph?.nodes || [])
-      .filter((node) => node.nodeType === 'track')
-      .map((node) => node.label || '')
-      .filter(Boolean)
-      .slice(0, 10);
+    const queries = discoveryGraph.buildDiscoveryGraphBranchPlan({
+      edgeTypes: activeEdgeTypes,
+      graph,
+      maxDepth,
+      minNodeWeight,
+      pinnedNode,
+    }).searchQueries;
 
     if (queries.length === 0) {
       toast.error('No nearby track nodes were available to queue');
@@ -169,30 +182,48 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
     }
   };
 
+  const copyBranchReport = async () => {
+    const plan = discoveryGraph.buildDiscoveryGraphBranchPlan({
+      edgeTypes: activeEdgeTypes,
+      graph,
+      maxDepth,
+      minNodeWeight,
+      pinnedNode,
+    });
+    const report = discoveryGraph.formatDiscoveryGraphBranchReport(plan);
+
+    try {
+      await navigator.clipboard.writeText(report);
+      toast.success('Discovery Graph branch report copied');
+    } catch (error) {
+      console.error(error);
+      toast.error('Unable to copy Discovery Graph branch report');
+    }
+  };
+
   const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [];
   const nodeMap = nodes.reduce((accumulator, node) => {
     accumulator[node.nodeId] = node;
     return accumulator;
   }, {});
-  const visibleNodeIds = new Set(
-    nodes
-      .filter(
-        (node) =>
-          (node.depth || 0) <= maxDepth && (node.weight || 0) >= minNodeWeight,
-      )
-      .map((node) => node.nodeId),
-  );
-  const visibleEdges = (graph?.edges || []).filter(
-    (edge) =>
-      visibleNodeIds.has(edge.sourceNodeId) &&
-      visibleNodeIds.has(edge.targetNodeId),
-  );
-  const edgeTypeSummary = Array.from(
-    visibleEdges.reduce((accumulator, edge) => {
-      accumulator.set(edge.edgeType, (accumulator.get(edge.edgeType) || 0) + 1);
-      return accumulator;
-    }, new Map()),
-  );
+  const availableEdgeTypes = Array.from(
+    new Set((graph?.edges || []).map((edge) => edge.edgeType)),
+  ).sort();
+  const visibleGraph = discoveryGraph.getVisibleDiscoveryGraph({
+    edgeTypes: activeEdgeTypes,
+    graph,
+    maxDepth,
+    minNodeWeight,
+  });
+  const visibleEdges = visibleGraph.visibleEdges;
+  const branchPlan = discoveryGraph.buildDiscoveryGraphBranchPlan({
+    edgeTypes: activeEdgeTypes,
+    graph,
+    maxDepth,
+    minNodeWeight,
+    pinnedNode,
+  });
+  const edgeTypeSummary = Object.entries(branchPlan.edgeTypeCounts);
 
   return (
     <Segment
@@ -302,6 +333,19 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
             </Button>
           }
         />
+        <Popup
+          content="Copy a branch review report with visible node families, edge families, suggested routes, and nearby search seeds."
+          position="top center"
+          trigger={
+            <Button
+              aria-label="Copy Discovery Graph branch report"
+              disabled={!graph}
+              icon="copy"
+              onClick={copyBranchReport}
+              style={{ marginLeft: '0.5em' }}
+            />
+          }
+        />
       </Form>
       <div className="discovery-graph-controls">
         <label className="discovery-graph-range">
@@ -331,6 +375,22 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
           />
         </label>
       </div>
+      {availableEdgeTypes.length > 0 ? (
+        <div className="discovery-graph-edge-filter">
+          {availableEdgeTypes.map((edgeType) => (
+            <Label
+              as="button"
+              className="discovery-graph-edge-filter-label"
+              color={activeEdgeTypes.includes(edgeType) ? 'blue' : undefined}
+              key={edgeType}
+              onClick={() => toggleEdgeType(edgeType)}
+              size="tiny"
+            >
+              {edgeType}
+            </Label>
+          ))}
+        </div>
+      ) : null}
       {savedBranches.length > 0 ? (
         <div style={{ marginTop: '1em' }}>
           <Header as="h5">Saved Branches</Header>
@@ -360,6 +420,13 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
             {graph.title}
           </Header>
           <p style={{ marginTop: 0 }}>{graph.summary}</p>
+          {pinnedNode ? (
+            <div style={{ marginBottom: '0.75em' }}>
+              <Label color="pink" size="tiny">
+                Pinned {pinnedNode.label}
+              </Label>
+            </div>
+          ) : null}
           <div style={{ marginBottom: '0.75em' }}>
             {edgeTypeSummary.map(([edgeType, count]) => (
               <Label key={edgeType} size="tiny">
@@ -368,12 +435,68 @@ const DiscoveryGraphAtlasPanel = ({ disabled, persistRoute = false }) => {
             ))}
           </div>
           <DiscoveryGraphAtlas
-            edgeTypes={[]}
+            edgeTypes={activeEdgeTypes}
             graph={graph}
             maxDepth={maxDepth}
             minNodeWeight={minNodeWeight}
             onNodeClick={handleRecenter}
           />
+          {branchPlan.routeSuggestions.length > 0 ? (
+            <>
+              <Header as="h5" style={{ marginBottom: '0.35em', marginTop: '1em' }}>
+                Suggested Branch Routes
+              </Header>
+              <List divided relaxed>
+                {branchPlan.routeSuggestions.slice(0, 5).map((route) => (
+                  <List.Item
+                    key={`${route.edge.sourceNodeId}-${route.edge.targetNodeId}-${route.edge.edgeType}-route`}
+                  >
+                    <List.Content floated="right">
+                      <Popup
+                        content="Pin this route target as the comparison point for the current atlas branch."
+                        position="top center"
+                        trigger={
+                          <Button
+                            onClick={() =>
+                              setPinnedNode({
+                                label: route.target.label,
+                                nodeId: route.target.nodeId,
+                              })
+                            }
+                            size="mini"
+                          >
+                            Pin
+                          </Button>
+                        }
+                      />
+                      <Popup
+                        content="Recenter the atlas on this suggested branch route."
+                        position="top center"
+                        trigger={
+                          <Button
+                            onClick={() => handleRecenter(route.target.nodeId)}
+                            size="mini"
+                            style={{ marginLeft: '0.5em' }}
+                          >
+                            Recenter
+                          </Button>
+                        }
+                      />
+                    </List.Content>
+                    <List.Content>
+                      <List.Header>
+                        {route.source.label} → {route.target.label}
+                      </List.Header>
+                      <List.Description>
+                        {route.edge.edgeType} · score {Math.round(route.score * 100)} ·{' '}
+                        {route.edge.reason}
+                      </List.Description>
+                    </List.Content>
+                  </List.Item>
+                ))}
+              </List>
+            </>
+          ) : null}
           <Header as="h5" style={{ marginBottom: '0.35em', marginTop: '1em' }}>
             Why These Nodes Are Near
           </Header>

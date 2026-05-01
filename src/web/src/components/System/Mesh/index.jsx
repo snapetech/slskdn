@@ -1,5 +1,6 @@
 import * as mesh from '../../../lib/mesh';
 import MeshEvidencePolicy from './MeshEvidencePolicy';
+import RealmSubjectIndexConflicts from './RealmSubjectIndexConflicts';
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -306,6 +307,10 @@ const Mesh = () => {
 
         <Grid.Column width={16}>
           <MeshEvidencePolicy />
+        </Grid.Column>
+
+        <Grid.Column width={16}>
+          <RealmSubjectIndexConflicts />
         </Grid.Column>
       </Grid>
     </div>

@@ -63,6 +63,37 @@ public class ContentLocatorTests
     }
 
     [Fact]
+    public void Resolve_ContentItemNotAdvertisable_DoesNotUseAllowedRootFallback()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "ContentLoc_" + Guid.NewGuid().ToString("N")[..8]);
+        var path = Path.Combine(root, "blocked.flac");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllBytes(path, new byte[] { 1, 2, 3, 4 });
+            var contentId = $"path:{slskd.Compute.Sha256Hash($"{path}|4")}";
+            var locator = CreateLocator(new slskd.Options
+            {
+                Directories = new slskd.Options.DirectoriesOptions
+                {
+                    Downloads = root,
+                    Incomplete = Path.GetTempPath(),
+                },
+            });
+            _repoMock.Setup(x => x.FindContentItem(contentId))
+                .Returns(("Music", "w1", path, false, "blocked", 0L));
+
+            var r = locator.Resolve(contentId);
+
+            Assert.Null(r);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Resolve_FileInfoNotFound_ReturnsNull()
     {
         var locator = CreateLocator();

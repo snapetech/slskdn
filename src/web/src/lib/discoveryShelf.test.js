@@ -2,6 +2,7 @@ import {
   clearDiscoveryShelf,
   discoveryShelfStorageKey,
   exportDiscoveryShelfPolicyReport,
+  getDiscoveryShelfPromoteItems,
   getDiscoveryShelfAction,
   getDiscoveryShelfPolicyPreview,
   getDiscoveryShelfSummary,
@@ -117,5 +118,28 @@ describe('discoveryShelf', () => {
     expect(report).toContain('Promote candidates: 1');
     expect(report).toContain('Consensus required for destructive actions: yes');
     expect(report).toContain('Promote preview: Report Track by Fixture Artist (Fixture Album) [rating 5]');
+  });
+
+  it('builds bounded Discovery Inbox promote handoffs', () => {
+    upsertDiscoveryShelfItem({
+      album: 'Fixture Album',
+      artist: 'Fixture Artist',
+      contentId: 'sha256:promote',
+      title: 'Promote Track',
+    }, 5, '2026-04-30T00:00:00.000Z');
+    upsertDiscoveryShelfItem({
+      artist: 'Archive Artist',
+      contentId: 'sha256:archive',
+      title: 'Archive Track',
+    }, 1, '2026-04-30T00:00:00.000Z');
+
+    expect(getDiscoveryShelfPromoteItems()).toEqual([
+      expect.objectContaining({
+        evidenceKey: 'discovery-shelf:content:sha256:promote',
+        searchText: 'Fixture Artist Fixture Album Promote Track',
+        source: 'Discovery Shelf',
+        title: 'Fixture Artist - Fixture Album - Promote Track',
+      }),
+    ]);
   });
 });

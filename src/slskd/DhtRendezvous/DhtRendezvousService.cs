@@ -45,11 +45,13 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     // SECURITY: Use a bounded collection to prevent memory exhaustion
     private readonly ConcurrentDictionary<string, IPEndPoint> _discoveredPeers = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _peerConnectionAttemptedAt = new();
+    private readonly ConcurrentDictionary<string, int> _peerConnectionFailureCounts = new();
     private readonly ConcurrentDictionary<string, byte> _pendingPeerConnections = new();
     private const int MaxDiscoveredPeers = 1000;
     internal const int MaxConcurrentPeerConnectionAttempts = MeshOverlayConnector.MaxConcurrentAttempts;
     internal const int MaxOverlayStartAttempts = 5;
     private static readonly TimeSpan PeerReconnectInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MaxPeerReconnectInterval = TimeSpan.FromHours(1);
     private static readonly TimeSpan OverlayStartRetryDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan SummaryLogInterval = TimeSpan.FromMinutes(2);
     private DateTimeOffset? _lastAnnounceTime;
@@ -545,6 +547,10 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         var now = DateTimeOffset.UtcNow;
         var peer = _peerManager.GetPeer(peerId);
         _peerConnectionAttemptedAt.TryGetValue(peerId, out var lastAttempt);
+        var reconnectInterval = GetPeerReconnectInterval(
+            _peerConnectionFailureCounts.TryGetValue(peerId, out var failureCount)
+                ? failureCount
+                : 0);
 
         if (_pendingPeerConnections.Count >= MaxConcurrentPeerConnectionAttempts)
         {
@@ -563,11 +569,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 _registry.IsConnectedTo(endpoint),
                 peer?.SupportsOnionRouting == true,
                 _pendingPeerConnections.ContainsKey(peerId),
-                PeerReconnectInterval))
+                reconnectInterval))
         {
             if (_peerConnectionAttemptedAt.ContainsKey(peerId) &&
                 lastAttempt != default &&
-                now - lastAttempt < PeerReconnectInterval &&
+                now - lastAttempt < reconnectInterval &&
                 !_registry.IsConnectedTo(endpoint) &&
                 peer?.SupportsOnionRouting != true &&
                 !_pendingPeerConnections.ContainsKey(peerId))
@@ -604,14 +610,17 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                     version: "overlay-verified",
                     supportsOnionRouting: true);
                 _peerManager.RecordConnectionSuccess(peerId, latencyMs);
+                _peerConnectionFailureCounts.TryRemove(peerId, out _);
                 return;
             }
 
             _peerManager.RecordConnectionFailure(peerId);
+            RecordPeerConnectionFailure(peerId);
         }
         catch (Exception ex)
         {
             _peerManager.RecordConnectionFailure(peerId);
+            RecordPeerConnectionFailure(peerId);
             _logger.LogDebug(ex, "Failed to connect to discovered peer {Endpoint}", OverlayLogSanitizer.Endpoint(endpoint));
         }
         finally
@@ -634,6 +643,29 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         }
 
         return !lastAttempt.HasValue || now - lastAttempt.Value >= reconnectInterval;
+    }
+
+    internal static TimeSpan GetPeerReconnectInterval(int consecutiveFailures)
+    {
+        if (consecutiveFailures <= 1)
+        {
+            return PeerReconnectInterval;
+        }
+
+        var minutes = consecutiveFailures switch
+        {
+            2 => 15,
+            3 => 30,
+            _ => 60,
+        };
+
+        var interval = TimeSpan.FromMinutes(minutes);
+        return interval <= MaxPeerReconnectInterval ? interval : MaxPeerReconnectInterval;
+    }
+
+    private void RecordPeerConnectionFailure(string peerId)
+    {
+        _peerConnectionFailureCounts.AddOrUpdate(peerId, 1, (_, count) => Math.Min(count + 1, 4));
     }
 
     internal static bool IsLikelyDhtContactPort(int candidatePort, int dhtPort, int overlayPort)

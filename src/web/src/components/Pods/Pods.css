@@ -47,3 +47,44 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+
+.pod-channel-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pod-channel-chat.ui.segment {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  min-height: 500px;
+}
+
+.pod-channel-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.pod-channel-heading .ui.header {
+  margin-bottom: 2px;
+}
+
+.pod-channel-subtitle {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+}
+
+.pod-message-history {
+  flex: 1;
+  max-height: 560px;
+  min-height: 360px;
+  overflow-y: auto;
+}
+
+.pod-message-composer {
+  flex: 0 0 auto;
+}

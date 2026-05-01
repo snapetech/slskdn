@@ -456,6 +456,19 @@
   width: 100%;
 }
 
+.discovery-graph-edge-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.discovery-graph-edge-filter-label.ui.label {
+  border: 0;
+  cursor: pointer;
+  margin: 0 !important;
+}
+
 .discovery-graph-canvas-shell {
   background: radial-gradient(
     circle at top,

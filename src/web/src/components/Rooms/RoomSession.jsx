@@ -294,7 +294,7 @@ class RoomSession extends Component {
                                   {this.formatTimestamp(message.timestamp)}
                                 </span>
                                 <span className="room-message-name">
-                                  <UserCard username={message.username}>{message.username}</UserCard>:{' '}
+                                  {message.username}:{' '}
                                 </span>
                                 <span className="room-message-message">
                                   {message.message}

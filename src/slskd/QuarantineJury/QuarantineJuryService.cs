@@ -169,6 +169,33 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
         });
     }
 
+    public Task<QuarantineJuryAuditReport> GetAuditReportAsync(
+        int staleAfterHours = 72,
+        CancellationToken cancellationToken = default)
+    {
+        var staleAfter = TimeSpan.FromHours(Math.Max(1, staleAfterHours));
+        var generatedAt = DateTimeOffset.UtcNow;
+        var entries = _requests.Values
+            .OrderByDescending(request => request.CreatedAt)
+            .ThenBy(request => request.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(request => BuildAuditEntry(request, generatedAt, staleAfter))
+            .ToList();
+
+        var report = new QuarantineJuryAuditReport
+        {
+            GeneratedAt = generatedAt,
+            RequestCount = entries.Count,
+            AcceptedReleaseCandidateCount = entries.Count(entry => entry.Status == "accepted-release-candidate"),
+            PendingReleaseCandidateCount = entries.Count(entry => entry.Status == "pending-release-acceptance"),
+            PendingManualReviewCount = entries.Count(entry => entry.Status == "manual-review"),
+            UpholdQuarantineCount = entries.Count(entry => entry.Status == "uphold-quarantine"),
+            StaleRequestCount = entries.Count(entry => entry.IsStale),
+            Entries = entries,
+        };
+
+        return Task.FromResult(report);
+    }
+
     public Task<QuarantineJuryAcceptanceResult> AcceptReleaseCandidateAsync(
         string requestId,
         QuarantineJuryAcceptanceRequest acceptanceRequest,
@@ -230,6 +257,125 @@ public sealed class QuarantineJuryService : IQuarantineJuryService
 
         result.Decision = decision;
         return Task.FromResult(result);
+    }
+
+    public Task<QuarantineJuryReleasePackageResult> GetReleasePackageAsync(
+        string requestId,
+        CancellationToken cancellationToken = default)
+    {
+        requestId = requestId.Trim();
+        var result = new QuarantineJuryReleasePackageResult();
+        if (!_requests.TryGetValue(requestId, out var request))
+        {
+            result.Errors.Add("Request not found.");
+            return Task.FromResult(result);
+        }
+
+        if (!_reviewDecisions.TryGetValue(requestId, out var acceptance) ||
+            acceptance.AcceptedRecommendation != QuarantineJuryVerdict.ReleaseCandidate)
+        {
+            result.Errors.Add("Release candidate has not been accepted locally.");
+            return Task.FromResult(result);
+        }
+
+        var currentAggregate = BuildAggregate(requestId);
+        var verdicts = GetVerdictsForRequest(requestId)
+            .OrderBy(verdict => verdict.Juror, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var routeAttempts = GetRouteAttemptsForRequest(requestId)
+            .OrderByDescending(attempt => attempt.CreatedAt)
+            .ThenBy(attempt => attempt.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var warnings = new List<string>
+        {
+            "Release package is evidence-only and does not change local quarantine enforcement.",
+        };
+
+        if (currentAggregate.Recommendation != acceptance.AggregateSnapshot.Recommendation ||
+            currentAggregate.TotalVerdicts != acceptance.AggregateSnapshot.TotalVerdicts)
+        {
+            warnings.Add("Current verdict aggregate differs from the aggregate accepted by the operator.");
+        }
+
+        result.Package = new QuarantineJuryReleasePackage
+        {
+            GeneratedAt = DateTimeOffset.UtcNow,
+            RequestId = request.Id,
+            LocalReason = request.LocalReason,
+            RequestCreatedAt = request.CreatedAt,
+            RequestEvidence = request.Evidence
+                .OrderBy(evidence => evidence.Type)
+                .ThenBy(evidence => evidence.Reference, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            Jurors = request.Jurors
+                .OrderBy(juror => juror, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            CurrentAggregate = currentAggregate,
+            Acceptance = acceptance,
+            Verdicts = verdicts,
+            RouteAttempts = routeAttempts,
+            Warnings = warnings,
+            MutatesLocalQuarantineState = false,
+        };
+
+        return Task.FromResult(result);
+    }
+
+    private QuarantineJuryAuditEntry BuildAuditEntry(
+        QuarantineJuryRequest request,
+        DateTimeOffset generatedAt,
+        TimeSpan staleAfter)
+    {
+        var aggregate = BuildAggregate(request.Id);
+        var verdicts = GetVerdictsForRequest(request.Id);
+        var routeAttempts = GetRouteAttemptsForRequest(request.Id);
+        _reviewDecisions.TryGetValue(request.Id, out var acceptance);
+        var canAccept = CanAcceptReleaseCandidate(aggregate, acceptance);
+        var status = BuildAuditStatus(aggregate, acceptance);
+        var isStale = acceptance == null &&
+            generatedAt - request.CreatedAt >= staleAfter &&
+            status is "manual-review" or "pending-release-acceptance";
+
+        return new QuarantineJuryAuditEntry
+        {
+            RequestId = request.Id,
+            LocalReason = request.LocalReason,
+            CreatedAt = request.CreatedAt,
+            EvidenceCount = request.Evidence.Count,
+            JurorCount = request.Jurors.Count,
+            VerdictCount = verdicts.Count,
+            RequiredVotes = aggregate.RequiredVotes,
+            Recommendation = aggregate.Recommendation,
+            QuorumReached = aggregate.QuorumReached,
+            HasAcceptance = acceptance != null,
+            CanAcceptReleaseCandidate = canAccept,
+            HasRouteAttempts = routeAttempts.Count > 0,
+            HasFailedRouteAttempts = routeAttempts.Any(attempt => !attempt.Success || attempt.FailedJurors.Count > 0),
+            IsStale = isStale,
+            Status = status,
+            Reason = acceptance != null ? "Release-candidate recommendation accepted locally." : aggregate.Reason,
+            DissentingJurors = aggregate.DissentingJurors,
+        };
+    }
+
+    private static string BuildAuditStatus(QuarantineJuryAggregate aggregate, QuarantineJuryReviewDecision? acceptance)
+    {
+        if (acceptance != null)
+        {
+            return "accepted-release-candidate";
+        }
+
+        if (aggregate.Recommendation == QuarantineJuryVerdict.ReleaseCandidate && aggregate.QuorumReached)
+        {
+            return "pending-release-acceptance";
+        }
+
+        if (aggregate.Recommendation == QuarantineJuryVerdict.UpholdQuarantine && aggregate.QuorumReached)
+        {
+            return "uphold-quarantine";
+        }
+
+        return "manual-review";
     }
 
     private QuarantineJuryAggregate BuildAggregate(string requestId)

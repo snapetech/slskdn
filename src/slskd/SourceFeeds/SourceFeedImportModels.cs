@@ -46,6 +46,47 @@ public sealed class SourceFeedImportResult
     public List<SourceFeedSkippedRow> SkippedRows { get; init; } = [];
 }
 
+public sealed class SourceFeedImportHistoryEntry
+{
+    public string ImportId { get; init; } = string.Empty;
+
+    public DateTimeOffset ImportedAt { get; init; }
+
+    public string Provider { get; init; } = "local";
+
+    public string SourceKind { get; init; } = "auto";
+
+    public string SourceId { get; init; } = string.Empty;
+
+    public string SourceFingerprint { get; init; } = string.Empty;
+
+    public string SourcePreview { get; init; } = string.Empty;
+
+    public int Limit { get; init; }
+
+    public bool IncludeAlbum { get; init; }
+
+    public bool FetchProviderUrls { get; init; }
+
+    public int TotalRows { get; init; }
+
+    public int SuggestionCount { get; init; }
+
+    public int DuplicateCount { get; init; }
+
+    public int SkippedCount { get; init; }
+
+    public int NetworkRequestCount { get; init; }
+
+    public bool RequiresAccessToken { get; init; }
+
+    public string RequiredScopeHint { get; init; } = string.Empty;
+
+    public List<SourceFeedSuggestion> Suggestions { get; init; } = [];
+
+    public List<SourceFeedSkippedRow> SkippedRows { get; init; } = [];
+}
+
 public sealed class SourceFeedSuggestion
 {
     public string Title { get; init; } = string.Empty;

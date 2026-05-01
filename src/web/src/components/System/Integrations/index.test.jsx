@@ -22,6 +22,11 @@ vi.mock('../../../lib/options', () => ({
 describe('Integrations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('surfaces VPN and Lidarr settings without exposing secrets', () => {
@@ -60,7 +65,7 @@ describe('Integrations', () => {
 
     expect(screen.getByText('VPN')).toBeInTheDocument();
     expect(screen.getByText('203.0.113.7')).toBeInTheDocument();
-    expect(screen.getByText('Lidarr')).toBeInTheDocument();
+    expect(screen.getAllByText('Lidarr').length).toBeGreaterThan(0);
     expect(screen.getByText('http://lidarr.local:8686')).toBeInTheDocument();
     expect(screen.getByText('API Key Configured')).toBeInTheDocument();
     expect(screen.queryByText('secret-key')).not.toBeInTheDocument();
@@ -89,14 +94,23 @@ describe('Integrations', () => {
     expect(screen.getByText(/Wanted sync: 1 created/)).toBeInTheDocument();
   });
 
-  it('shows media-server adapter cards and path diagnostics', () => {
+  it('shows media-server adapter cards and path diagnostics', async () => {
     render(<Integrations />);
 
     expect(screen.getByText('Media Servers')).toBeInTheDocument();
-    expect(screen.getByText('Plex')).toBeInTheDocument();
+    expect(screen.getAllByText('Plex').length).toBeGreaterThan(0);
     expect(screen.getByText('Jellyfin / Emby')).toBeInTheDocument();
     expect(screen.getByText('Navidrome')).toBeInTheDocument();
+    expect(screen.getByText('Sync Review Plan')).toBeInTheDocument();
+    expect(screen.getByText('Needs setup')).toBeInTheDocument();
 
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Review Jellyfin / Emby sync readiness' }),
+    );
+    fireEvent.change(screen.getByLabelText('Media server base URL'), {
+      target: { value: 'http://media.example.invalid' },
+    });
+    fireEvent.click(screen.getByLabelText('Media server token configured'));
     fireEvent.change(screen.getByLabelText('slskdN local file path'), {
       target: { value: '/downloads/complete/Artist/Album/track.flac' },
     });
@@ -114,6 +128,34 @@ describe('Integrations', () => {
     expect(
       screen.getByText('Mapped path: /library/music/Artist/Album/track.flac'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Ready for live adapter')).toBeInTheDocument();
+    expect(screen.getByText('3/3 checks ready')).toBeInTheDocument();
+    expect(screen.getByText('Live Execution Contracts')).toBeInTheDocument();
+    expect(screen.getByText('Execution contract blocked')).toBeInTheDocument();
+    expect(screen.getByLabelText('Enable Play history import')).toBeChecked();
+    expect(screen.getByLabelText('Enable Completed file scan')).toBeChecked();
+    expect(screen.getByLabelText('Enable Scrobble and rating export')).not.toBeChecked();
+
+    fireEvent.click(screen.getByLabelText('Media server user mapping configured'));
+    fireEvent.click(screen.getByLabelText('Enable Scrobble and rating export'));
+
+    expect(screen.getByText('Execution contract ready')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy media-server sync review' }));
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('Adapter: Jellyfin / Emby'),
+      );
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Copy media-server execution contract' }),
+    );
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('slskdN media-server execution contract'),
+      );
+    });
   });
 
   it('shows Servarr setup readiness without running actions', () => {
@@ -136,10 +178,136 @@ describe('Integrations', () => {
     );
 
     expect(screen.getByText('Servarr Setup')).toBeInTheDocument();
+    expect(screen.getByText('Compatibility Review')).toBeInTheDocument();
     expect(screen.getByText('5/5 checks ready')).toBeInTheDocument();
-    expect(screen.getByText('Base URL configured')).toBeInTheDocument();
+    expect(screen.getAllByText('Base URL configured').length).toBeGreaterThan(0);
     expect(screen.getByText('Wanted pull enabled')).toBeInTheDocument();
+    expect(screen.getByText('Wanted Pull Ready')).toBeInTheDocument();
+    expect(screen.getByText('Import Ready')).toBeInTheDocument();
     expect(screen.queryByText('fixture-key')).not.toBeInTheDocument();
+  });
+
+  it('copies a Servarr compatibility review without running actions', async () => {
+    render(<Integrations />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy Servarr compatibility review' }));
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        expect.stringContaining('slskdN Servarr compatibility review'),
+      );
+    });
+    expect(lidarr.getStatus).not.toHaveBeenCalled();
+    expect(lidarr.syncWanted).not.toHaveBeenCalled();
+  });
+
+  it('runs ready Servarr wanted sync from compatibility review', async () => {
+    lidarr.syncWanted.mockResolvedValue({
+      createdCount: 2,
+      duplicateCount: 1,
+      skippedCount: 0,
+    });
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            lidarr: {
+              apiKey: 'fixture-key',
+              autoImportCompleted: true,
+              enabled: true,
+              importPathFrom: '/downloads',
+              importPathTo: '/library',
+              syncWantedToWishlist: true,
+              url: 'http://example.invalid:8686',
+            },
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run ready Servarr actions' }));
+
+    await waitFor(() => {
+      expect(lidarr.syncWanted).toHaveBeenCalled();
+    });
+    expect(screen.getByText(/Wanted sync ran: 2 created/)).toBeInTheDocument();
+  });
+
+  it('persists metadata and Servarr settings to YAML without exposing secrets', async () => {
+    optionsApi.getYaml.mockResolvedValue('integrations: {}\n');
+    optionsApi.updateYaml.mockResolvedValue({});
+
+    render(
+      <Integrations
+        options={{
+          integration: {
+            acoustid: {
+              clientId: '*****',
+              enabled: false,
+            },
+            chromaprint: {
+              enabled: false,
+            },
+            lidarr: {
+              apiKey: '*****',
+              enabled: false,
+            },
+            musicbrainz: {
+              baseUrl: 'https://musicbrainz.org/ws/2',
+            },
+          },
+          remoteConfiguration: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Metadata and Servarr Settings')).toBeInTheDocument();
+    expect(screen.getByText('AcoustID Client Configured')).toBeInTheDocument();
+    expect(screen.getByText('Lidarr API Key Configured')).toBeInTheDocument();
+    expect(screen.queryByText('*****')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Enable Chromaprint fingerprinting'));
+    fireEvent.change(screen.getByLabelText('Chromaprint ffmpeg path'), {
+      target: { value: '/usr/bin/ffmpeg' },
+    });
+    fireEvent.click(screen.getByLabelText('Enable AcoustID lookup'));
+    fireEvent.change(screen.getByLabelText('AcoustID base URL'), {
+      target: { value: 'https://api.acoustid.org/v2' },
+    });
+    fireEvent.change(screen.getByLabelText('MusicBrainz user agent'), {
+      target: { value: 'slskdN-test/1.0' },
+    });
+    fireEvent.click(screen.getByLabelText('Enable Lidarr integration settings'));
+    fireEvent.change(screen.getByLabelText('Lidarr base URL setting'), {
+      target: { value: 'http://lidarr.local:8686' },
+    });
+    fireEvent.click(screen.getByLabelText('Enable Lidarr wanted sync setting'));
+    fireEvent.change(screen.getByLabelText('Lidarr import path from setting'), {
+      target: { value: '/downloads' },
+    });
+    fireEvent.change(screen.getByLabelText('Lidarr import path to setting'), {
+      target: { value: '/library' },
+    });
+    fireEvent.click(screen.getAllByText('Save YAML')[0]);
+
+    await waitFor(() => {
+      expect(optionsApi.updateYaml).toHaveBeenCalled();
+    });
+
+    const yaml = optionsApi.updateYaml.mock.calls[0][0].yaml;
+    expect(yaml).toContain('chromaprint');
+    expect(yaml).toContain('ffmpeg_path: /usr/bin/ffmpeg');
+    expect(yaml).toContain('acoustid');
+    expect(yaml).toContain('musicbrainz');
+    expect(yaml).toContain('user_agent: slskdN-test/1.0');
+    expect(yaml).toContain('lidarr');
+    expect(yaml).toContain('url: http://lidarr.local:8686');
+    expect(yaml).toContain('sync_wanted_to_wishlist: true');
+    expect(yaml).not.toContain('*****');
+    expect(
+      screen.getByText('Metadata and Servarr integration settings saved to YAML.'),
+    ).toBeInTheDocument();
   });
 
   it('applies source-feed integration toggles without exposing secrets', async () => {
@@ -237,7 +405,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('YouTube Data API key'), {
       target: { value: 'youtube-key' },
     });
-    fireEvent.click(screen.getAllByText('Save YAML')[1]);
+    fireEvent.click(screen.getAllByText('Save YAML')[2]);
 
     await waitFor(() => {
       expect(optionsApi.updateYaml).toHaveBeenCalled();
@@ -347,7 +515,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('Pushover API token'), {
       target: { value: 'pushover-token' },
     });
-    fireEvent.click(screen.getAllByText('Save YAML')[0]);
+    fireEvent.click(screen.getAllByText('Save YAML')[1]);
 
     await waitFor(() => {
       expect(optionsApi.updateYaml).toHaveBeenCalled();
@@ -449,7 +617,7 @@ describe('Integrations', () => {
     fireEvent.change(screen.getByLabelText('FTP password'), {
       target: { value: 'ftp-secret' },
     });
-    fireEvent.click(screen.getAllByText('Save YAML')[2]);
+    fireEvent.click(screen.getAllByText('Save YAML')[3]);
 
     await waitFor(() => {
       expect(optionsApi.updateYaml).toHaveBeenCalled();

@@ -62,6 +62,56 @@ const getQuarantineReviewIssues = (issues = []) =>
 const getSafeFixIssues = (issues = []) =>
   issues.filter((issue) => issue.canAutoFix);
 
+export const getLibraryHealthReplacementSearchQueries = (
+  issues = [],
+  { limit = 3 } = {},
+) => {
+  const candidates = getReplacementSearchIssues(issues)
+    .map((issue) => buildReplacementQuery(issue))
+    .filter(Boolean);
+
+  return candidates
+    .filter((query, index) =>
+      candidates.findIndex((other) =>
+        other.toLowerCase() === query.toLowerCase()) === index)
+    .slice(0, limit);
+};
+
+export const getLibraryHealthSafeFixIssueIds = (
+  issues = [],
+  { limit = 25 } = {},
+) =>
+  getSafeFixIssues(issues)
+    .map((issue) => issue.issueId)
+    .filter(Boolean)
+    .slice(0, limit);
+
+export const getLibraryHealthQuarantineReviewItems = (
+  issues = [],
+  { limit = 25 } = {},
+) =>
+  getQuarantineReviewIssues(issues)
+    .filter((issue) => issue.issueId)
+    .slice(0, limit)
+    .map((issue) => ({
+      evidenceKey: `library-health:${issue.issueId}`,
+      networkImpact:
+        'Review only; approving here does not move, quarantine, search, browse, or download files.',
+      reason: issue.reason || `${getIssueTypeLabel(issue.type)} requires review.`,
+      searchText: buildReplacementQuery(issue),
+      source: 'Library Health',
+      sourceId: issue.issueId,
+      title: [
+        issue.artist,
+        issue.album,
+        issue.title,
+      ].map(normalizeText).filter(Boolean).join(' - ') ||
+        issue.path ||
+        issue.filePath ||
+        issue.filename ||
+        issue.issueId,
+    }));
+
 export const buildLibraryHealthReport = ({
   generatedAt = new Date(),
   issues = [],
@@ -174,15 +224,14 @@ export const buildLibraryHealthSearchSeeds = ({
   issues = [],
   libraryPath = '',
 } = {}) => {
-  const candidates = getReplacementSearchIssues(issues)
-    .map((issue) => ({
-      issue,
-      query: buildReplacementQuery(issue),
-    }))
-    .filter((candidate) => candidate.query);
-  const dedupedCandidates = candidates.filter((candidate, index) =>
-    candidates.findIndex((other) =>
-      other.query.toLowerCase() === candidate.query.toLowerCase()) === index);
+  const queries = getLibraryHealthReplacementSearchQueries(issues, {
+    limit: Number.MAX_SAFE_INTEGER,
+  });
+  const dedupedCandidates = queries.map((query) => ({
+    issue: getReplacementSearchIssues(issues).find((issue) =>
+      buildReplacementQuery(issue).toLowerCase() === query.toLowerCase()),
+    query,
+  }));
 
   return [
     'Library Health Replacement Search Seeds',

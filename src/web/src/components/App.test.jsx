@@ -245,7 +245,7 @@ describe('App', () => {
     expect(await screen.findByTestId('nav-rooms-alert')).toBeInTheDocument();
   });
 
-  it('shows a dismissible VPN forwarded port notice when VPN ports are reported', async () => {
+  it('shows a dismissible network endpoint notice when ports are reported', async () => {
     render(
       <MemoryRouter>
         <App />
@@ -271,7 +271,7 @@ describe('App', () => {
           },
           {
             localPort: 50305,
-            proto: 'udp',
+            proto: 'tcp',
             publicIPAddress: '203.0.113.20',
             publicPort: 51001,
             slot: 1,
@@ -284,10 +284,23 @@ describe('App', () => {
     expect(
       await screen.findByTestId('vpn-port-change-notice'),
     ).toBeInTheDocument();
-    expect(screen.getByText(/203\.0\.113\.10:51000/)).toBeInTheDocument();
-    expect(screen.getByText(/203\.0\.113\.20:51001 -> 50305/)).toBeInTheDocument();
+    expect(screen.getByText('slskdN ingress ports were reduced.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Soulseek peer/file transfers'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('TCP 203.0.113.10:51000'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('TCP localhost:50300')).toBeInTheDocument();
+    expect(screen.getByText('slsk.listen_port 51000')).toBeInTheDocument();
+    expect(screen.getByText('slskdN mesh overlay')).toBeInTheDocument();
+    expect(
+      screen.getByText('TCP 203.0.113.20:51001'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('TCP localhost:50305')).toBeInTheDocument();
+    expect(screen.getByText('dht.overlay_port 50305')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTitle('Dismiss VPN port notice'));
+    fireEvent.click(screen.getByTitle('Dismiss port migration reminder'));
 
     await waitFor(() => {
       expect(

@@ -11,6 +11,11 @@ export const getRun = async (id) => {
   return response.data;
 };
 
+export const getForensicMatrix = async (id) => {
+  const response = await api.get(`/songid/runs/${encodeURIComponent(id)}/forensic-matrix`);
+  return response.data;
+};
+
 export const getRuns = async (limit = 10) => {
   const response = await api.get(`/songid/runs?limit=${limit}`);
   return Array.isArray(response.data) ? response.data : [];

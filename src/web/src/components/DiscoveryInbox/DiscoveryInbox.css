@@ -45,6 +45,41 @@
   margin-top: 0 !important;
 }
 
+.discovery-inbox-mobile-review.ui.segment {
+  border-left: 4px solid var(--slskdn-accent-purple, #a277ff);
+  margin-bottom: 1rem;
+}
+
+.discovery-inbox-mobile-review-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.discovery-inbox-mobile-review-head .ui.header {
+  margin: 0 !important;
+}
+
+.discovery-inbox-mobile-review-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.discovery-inbox-mobile-review-actions {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr)) auto;
+  margin-top: 0.85rem;
+}
+
+.discovery-inbox-mobile-review-actions .ui.button {
+  justify-content: center;
+  min-height: 42px;
+}
+
 .discovery-inbox-watchlists.ui.segment {
   margin-bottom: 1rem;
 }
@@ -77,6 +112,26 @@
 .discovery-inbox-plan-grid {
   display: grid;
   gap: 0.5rem;
+}
+
+.discovery-inbox-plans-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.discovery-inbox-plan-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.discovery-inbox-plan-status {
+  color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+  margin-bottom: 0.75rem;
 }
 
 .discovery-inbox-plan {
@@ -156,14 +211,17 @@
 @media only screen and (max-width: 760px) {
   .discovery-inbox-header,
   .discovery-inbox-card-head,
+  .discovery-inbox-mobile-review-head,
   .discovery-inbox-plan,
+  .discovery-inbox-plans-header,
   .discovery-inbox-watchlist {
     align-items: stretch;
     flex-direction: column;
   }
 
   .discovery-inbox-actions,
-  .discovery-inbox-card-actions {
+  .discovery-inbox-card-actions,
+  .discovery-inbox-plan-actions {
     justify-content: flex-start;
   }
 
@@ -188,10 +246,12 @@
 
   .discovery-inbox-card-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .discovery-inbox-card-actions .ui.button {
+  .discovery-inbox-card-actions .ui.button,
+  .discovery-inbox-mobile-review-actions .ui.button,
+  .discovery-inbox-plan-actions .ui.button {
     justify-content: center;
     min-height: 42px;
     width: 100%;
@@ -199,6 +259,7 @@
 }
 
 @media only screen and (max-width: 420px) {
+  .discovery-inbox-mobile-review-actions,
   .discovery-inbox-card-actions {
     grid-template-columns: 1fr;
   }

@@ -475,6 +475,10 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
             Provenance = provenance,
             ScoreComponents = scoreComponents ?? new Dictionary<string, double>(),
             Evidence = evidence?.Where(item => !string.IsNullOrWhiteSpace(item)).ToList() ?? new List<string>(),
+            EvidenceLanes = BuildEdgeEvidenceLanes(
+                provenance,
+                scoreComponents ?? new Dictionary<string, double>(),
+                evidence ?? Array.Empty<string>()),
         });
     }
 
@@ -731,6 +735,7 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
         graph.Title = title;
         graph.Summary = summary;
         graph.SeedNodeId = graph.Nodes.First(node => node.Depth == 0).NodeId;
+        graph.EvidenceSummary = BuildGraphEvidenceSummary(graph);
     }
 
     private static string NormalizeId(string value)
@@ -739,4 +744,73 @@ public sealed class DiscoveryGraphService : IDiscoveryGraphService
             .ToLowerInvariant()
             .Split(new[] { ' ', '/', '\\', ':', '.', ',', '|', '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries));
     }
+
+    private static List<DiscoveryGraphEvidenceLane> BuildEdgeEvidenceLanes(
+        string provenance,
+        Dictionary<string, double> scoreComponents,
+        IEnumerable<string> evidence)
+    {
+        var lanes = scoreComponents
+            .Where(component => component.Value > 0)
+            .OrderByDescending(component => component.Value)
+            .Select(component => new DiscoveryGraphEvidenceLane
+            {
+                Lane = component.Key,
+                Label = FormatLaneLabel(component.Key),
+                Score = Math.Max(0, Math.Min(1, component.Value)),
+                Count = 1,
+                Summary = $"{FormatLaneLabel(component.Key)} contributed {Math.Round(component.Value * 100)}%.",
+            })
+            .ToList();
+
+        var evidenceCount = evidence.Count(item => !string.IsNullOrWhiteSpace(item));
+        if (evidenceCount > 0)
+        {
+            lanes.Add(new DiscoveryGraphEvidenceLane
+            {
+                Lane = "evidence",
+                Label = "Evidence",
+                Score = Math.Min(1, evidenceCount / 4.0),
+                Count = evidenceCount,
+                Summary = $"{evidenceCount} evidence item{(evidenceCount == 1 ? string.Empty : "s")} attached.",
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(provenance))
+        {
+            lanes.Add(new DiscoveryGraphEvidenceLane
+            {
+                Lane = "provenance",
+                Label = "Provenance",
+                Score = 1,
+                Count = 1,
+                Summary = $"Source: {provenance}.",
+            });
+        }
+
+        return lanes;
+    }
+
+    private static List<DiscoveryGraphEvidenceLane> BuildGraphEvidenceSummary(DiscoveryGraphResult graph)
+        => graph.Edges
+            .SelectMany(edge => edge.EvidenceLanes)
+            .GroupBy(lane => lane.Lane, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new DiscoveryGraphEvidenceLane
+            {
+                Lane = group.Key,
+                Label = FormatLaneLabel(group.Key),
+                Score = Math.Round(group.Average(lane => lane.Score), 3),
+                Count = group.Sum(lane => Math.Max(1, lane.Count)),
+                Summary = $"{FormatLaneLabel(group.Key)} appears on {group.Count()} graph edge{(group.Count() == 1 ? string.Empty : "s")}.",
+            })
+            .OrderByDescending(lane => lane.Score)
+            .ThenBy(lane => lane.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static string FormatLaneLabel(string lane)
+        => string.Join(
+            " ",
+            (lane ?? string.Empty)
+                .Split(new[] { '_', '-' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
 }

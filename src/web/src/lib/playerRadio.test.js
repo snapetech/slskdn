@@ -1,6 +1,8 @@
 import {
+  buildPlayerRadioDiscoveryItems,
   buildPlayerRadioPlan,
   buildPlayerRadioSearchPath,
+  getPlayerRadioQueries,
   getPlayerRadioCopyText,
 } from './playerRadio';
 
@@ -74,6 +76,21 @@ describe('playerRadio', () => {
     expect(getPlayerRadioCopyText(plan)).toContain(
       'Similar track seed: "Fixture Artist Fixture Track"',
     );
+    expect(getPlayerRadioQueries(plan, { limit: 2 })).toEqual([
+      'Fixture Artist Fixture Track',
+      'Fixture Artist',
+    ]);
+    expect(buildPlayerRadioDiscoveryItems(plan)).toEqual([
+      expect.objectContaining({
+        acquisitionProfile: 'mesh-preferred',
+        evidenceKey: 'smart-radio:similar track seed:fixture artist fixture track',
+        searchText: 'Fixture Artist Fixture Track',
+        source: 'Smart Radio',
+      }),
+      expect.objectContaining({
+        searchText: 'Fixture Artist',
+      }),
+    ]);
   });
 
   it('returns an inert plan without a selected track', () => {

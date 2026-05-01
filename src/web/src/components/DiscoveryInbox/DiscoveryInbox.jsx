@@ -2,6 +2,8 @@ import './DiscoveryInbox.css';
 import { getAcquisitionProfile } from '../../lib/acquisitionProfiles';
 import {
   createAcquisitionPlansFromDiscoveryInbox,
+  executeAcquisitionPlanSearches,
+  executeAcquisitionPlanWishlistRequests,
   getAcquisitionPlans,
 } from '../../lib/acquisitionPlans';
 import {
@@ -32,6 +34,8 @@ import {
   watchlistScheduleOptions,
 } from '../../lib/watchlists';
 import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
+import { create as createSearch } from '../../lib/searches';
+import { create as createWishlist } from '../../lib/wishlist';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
@@ -88,6 +92,8 @@ const expansionCandidateIcon = (status) => {
 const DiscoveryInbox = () => {
   const [items, setItems] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [planExecutionStatus, setPlanExecutionStatus] = useState('');
+  const [mobileReviewId, setMobileReviewId] = useState('');
   const [watchlists, setWatchlists] = useState([]);
   const [watchTarget, setWatchTarget] = useState('');
   const [watchKind, setWatchKind] = useState('Artist');
@@ -122,6 +128,14 @@ const DiscoveryInbox = () => {
     () => items.filter((item) => item.state === 'Approved'),
     [items],
   );
+  const executablePlans = useMemo(
+    () => plans.filter((plan) => ['Planned', 'Ready'].includes(plan.state)),
+    [plans],
+  );
+  const wishlistEligiblePlans = useMemo(
+    () => executablePlans.filter((plan) => !plan.wishlistRequestId),
+    [executablePlans],
+  );
 
   const stateCounts = useMemo(
     () =>
@@ -138,6 +152,11 @@ const DiscoveryInbox = () => {
     () => buildDiscoveryInboxReviewSummary(items),
     [items],
   );
+  const mobileReviewIndex = useMemo(() => {
+    const foundIndex = items.findIndex((item) => item.id === mobileReviewId);
+    return foundIndex >= 0 ? foundIndex : 0;
+  }, [items, mobileReviewId]);
+  const mobileReviewItem = items[mobileReviewIndex] || null;
   const watchlistSummary = useMemo(
     () => buildWatchlistSummary(watchlists),
     [watchlists],
@@ -151,6 +170,16 @@ const DiscoveryInbox = () => {
     setItems(snoozeDiscoveryInboxItem(item.id, days));
   };
 
+  const setMobileReviewOffset = (offset) => {
+    if (items.length === 0) {
+      setMobileReviewId('');
+      return;
+    }
+
+    const nextIndex = (mobileReviewIndex + offset + items.length) % items.length;
+    setMobileReviewId(items[nextIndex].id);
+  };
+
   const bulkSetSuggested = (state) => {
     setItems(bulkUpdateDiscoveryInboxItems(suggestedIds, state));
   };
@@ -159,6 +188,13 @@ const DiscoveryInbox = () => {
     const result = createAcquisitionPlansFromDiscoveryInbox(approvedItems);
     const createdIds = new Set(result.createdPlans.map((plan) => plan.sourceId));
     setPlans(result.plans);
+    setPlanExecutionStatus(
+      result.createdPlans.length > 0
+        ? `Created ${result.createdPlans.length} acquisition plan${
+            result.createdPlans.length === 1 ? '' : 's'
+          }.`
+        : 'No new acquisition plans were created.',
+    );
 
     if (createdIds.size > 0) {
       setItems(
@@ -170,6 +206,34 @@ const DiscoveryInbox = () => {
         ),
       );
     }
+  };
+
+  const executeReadyPlans = async () => {
+    setPlanExecutionStatus('Queueing bounded acquisition searches...');
+    const result = await executeAcquisitionPlanSearches(
+      executablePlans.map((plan) => plan.id),
+      { createSearch },
+    );
+    setPlans(result.plans);
+    setPlanExecutionStatus(
+      `Queued ${result.executed} acquisition search job${
+        result.executed === 1 ? '' : 's'
+      }; ${result.failed} failed; ${result.skipped} skipped by policy.`,
+    );
+  };
+
+  const createWishlistForReadyPlans = async () => {
+    setPlanExecutionStatus('Creating manual Wishlist requests...');
+    const result = await executeAcquisitionPlanWishlistRequests(
+      wishlistEligiblePlans.map((plan) => plan.id),
+      { createWishlist },
+    );
+    setPlans(result.plans);
+    setPlanExecutionStatus(
+      `Created ${result.created} Wishlist request${
+        result.created === 1 ? '' : 's'
+      }; ${result.failed} failed; ${result.skipped} skipped by policy.`,
+    );
   };
 
   const addWatchlist = () => {
@@ -222,9 +286,10 @@ const DiscoveryInbox = () => {
         <Header as="h2">
           <Icon name="inbox" />
           <Header.Content>
-            Discovery Inbox
+            Acquisition Review
             <Header.Subheader>
-              Review acquisition candidates before any network activity starts.
+              Review passive, imported, and generated acquisition candidates.
+              Manual Search stays direct.
             </Header.Subheader>
           </Header.Content>
         </Header>
@@ -328,9 +393,110 @@ const DiscoveryInbox = () => {
         </div>
       </Segment>
 
+      {mobileReviewItem && (
+        <Segment className="discovery-inbox-mobile-review">
+          <div className="discovery-inbox-mobile-review-head">
+            <Header as="h3">
+              <Icon name="mobile alternate" />
+              Mobile Review
+              <Header.Subheader>
+                One-at-a-time discovery review for narrow screens. Actions only
+                update local review state.
+              </Header.Subheader>
+            </Header>
+            <Label color={stateColors[mobileReviewItem.state] || 'grey'}>
+              {mobileReviewIndex + 1} / {items.length}
+            </Label>
+          </div>
+          <div className="discovery-inbox-mobile-review-title">
+            Reviewing: {mobileReviewItem.title}
+          </div>
+          <div className="discovery-inbox-meta">
+            <Icon name="map signs" />
+            {mobileReviewItem.source}
+            <span> · </span>
+            <Icon name={getAcquisitionProfile(mobileReviewItem.acquisitionProfile).icon} />
+            {getAcquisitionProfile(mobileReviewItem.acquisitionProfile).label}
+          </div>
+          <div className="discovery-inbox-impact">
+            {mobileReviewItem.networkImpact}
+          </div>
+          <div className="discovery-inbox-mobile-review-actions">
+            <Popup
+              content="Move to the previous discovery candidate without changing review state."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label="Review previous discovery item"
+                  disabled={items.length < 2}
+                  icon="chevron left"
+                  onClick={() => setMobileReviewOffset(-1)}
+                />
+              }
+            />
+            <Popup
+              content="Approve this candidate for a later acquisition plan. No search or download starts here."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label={`Review tray approve ${mobileReviewItem.title}`}
+                  disabled={mobileReviewItem.state === 'Approved'}
+                  onClick={() => setItemState(mobileReviewItem, 'Approved')}
+                  positive
+                >
+                  <Icon name="check" />
+                  Approve
+                </Button>
+              }
+            />
+            <Popup
+              content="Snooze this candidate for seven days while keeping its evidence."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label={`Review tray snooze ${mobileReviewItem.title}`}
+                  disabled={mobileReviewItem.state === 'Snoozed'}
+                  onClick={() => snoozeItem(mobileReviewItem, 7)}
+                >
+                  <Icon name="clock" />
+                  Snooze
+                </Button>
+              }
+            />
+            <Popup
+              content="Reject this candidate and keep the local decision with the saved evidence."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label={`Review tray reject ${mobileReviewItem.title}`}
+                  disabled={mobileReviewItem.state === 'Rejected'}
+                  negative
+                  onClick={() => setItemState(mobileReviewItem, 'Rejected')}
+                >
+                  <Icon name="ban" />
+                  Reject
+                </Button>
+              }
+            />
+            <Popup
+              content="Move to the next discovery candidate without changing review state."
+              position="top center"
+              trigger={
+                <Button
+                  aria-label="Review next discovery item"
+                  disabled={items.length < 2}
+                  icon="chevron right"
+                  onClick={() => setMobileReviewOffset(1)}
+                />
+              }
+            />
+          </div>
+        </Segment>
+      )}
+
       <Segment className="discovery-inbox-watchlists">
         <Header as="h3">
-          <Icon name="radar" />
+          <Icon name="rss" />
           Watchlists
           <Header.Subheader>
             Local release-radar targets. Manual scans are previews until
@@ -633,13 +799,55 @@ const DiscoveryInbox = () => {
 
       {plans.length > 0 && (
         <Segment className="discovery-inbox-plans">
-          <Header as="h3">
-            <Icon name="tasks" />
-            Acquisition Plans
-            <Header.Subheader>
-              Review-only plan queue. Execution remains manual and disabled here.
-            </Header.Subheader>
-          </Header>
+          <div className="discovery-inbox-plans-header">
+            <Header as="h3">
+              <Icon name="tasks" />
+              Acquisition Plans
+              <Header.Subheader>
+                Manual plan queue. Execution starts bounded search jobs only.
+              </Header.Subheader>
+            </Header>
+            <div className="discovery-inbox-plan-actions">
+              <Popup
+                content="Create Wishlist entries for the first ready acquisition plans with auto-download disabled. This saves follow-up work without starting searches, peer browses, or downloads."
+                position="top center"
+                trigger={
+                  <Button
+                    aria-label="Create Wishlist requests for ready acquisition plans"
+                    disabled={wishlistEligiblePlans.length === 0}
+                    icon
+                    onClick={createWishlistForReadyPlans}
+                    size="small"
+                  >
+                    <Icon name="star outline" />
+                    Wishlist Ready
+                  </Button>
+                }
+              />
+              <Popup
+                content="Queue backend searches for the first ready acquisition plans using their selected profiles. This may contact the Soulseek network through normal search, but it does not browse peers or download files."
+                position="top center"
+                trigger={
+                  <Button
+                    aria-label="Execute ready acquisition plans"
+                    disabled={executablePlans.length === 0}
+                    icon
+                    onClick={executeReadyPlans}
+                    primary
+                    size="small"
+                  >
+                    <Icon name="play" />
+                    Execute Ready
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+          {planExecutionStatus && (
+            <div className="discovery-inbox-plan-status">
+              {planExecutionStatus}
+            </div>
+          )}
           <div className="discovery-inbox-plan-grid">
             {plans.map((plan) => {
               const profile = getAcquisitionProfile(plan.acquisitionProfile);
@@ -661,6 +869,18 @@ const DiscoveryInbox = () => {
                     <div className="discovery-inbox-plan-providers">
                       {plan.providerPriority.join(' → ')}
                     </div>
+                    {plan.queuedSearchId && (
+                      <div className="discovery-inbox-meta">
+                        <Icon name="search" />
+                        Search job {plan.queuedSearchId}
+                      </div>
+                    )}
+                    {plan.wishlistRequestId && (
+                      <div className="discovery-inbox-meta">
+                        <Icon name="star outline" />
+                        Wishlist request {plan.wishlistRequestId}
+                      </div>
+                    )}
                   </div>
                   <Label color="blue">{plan.state}</Label>
                 </div>
@@ -746,6 +966,20 @@ const DiscoveryInbox = () => {
                   />
                 </div>
                 <div className="discovery-inbox-card-actions">
+                  <Popup
+                    content="Load this candidate into the one-at-a-time mobile review tray."
+                    position="top center"
+                    trigger={
+                      <Button
+                        aria-label={`Select ${item.title} for mobile review`}
+                        onClick={() => setMobileReviewId(item.id)}
+                        size="small"
+                      >
+                        <Icon name="mobile alternate" />
+                        Review
+                      </Button>
+                    }
+                  />
                   <Popup
                     content="Mark this candidate approved for a later acquisition step. No download starts from this button."
                     position="top center"

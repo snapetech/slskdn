@@ -176,6 +176,13 @@ class Pods extends Component {
     }
   };
 
+  getChannelIndex = (podDetail, channelId) =>
+    Math.max(
+      0,
+      podDetail?.channels?.findIndex((channel) => channel.channelId === channelId) ??
+        0,
+    );
+
   selectPod = async (podId, channelId = null) => {
     // Avoid redundant updates
     if (
@@ -197,6 +204,7 @@ class Pods extends Component {
 
     this.setState({
       activeChannelId: channelId,
+      activeDetailTab: this.getChannelIndex(podDetail, channelId),
       loading: false,
     });
 
@@ -215,6 +223,33 @@ class Pods extends Component {
     if (channelId) {
       await this.fetchMessages();
     }
+  };
+
+  handleDetailTabChange = (_event, { activeIndex }) => {
+    const { activePodId, podDetail } = this.state;
+    const channel = podDetail?.channels?.[activeIndex];
+
+    this.setState({ activeDetailTab: activeIndex });
+
+    if (!channel || !activePodId) {
+      return;
+    }
+
+    this.setState({ activeChannelId: channel.channelId }, async () => {
+      const currentPodId = this.props.params?.podId;
+      const currentChannelId = this.props.params?.channelId;
+
+      if (
+        activePodId !== currentPodId ||
+        channel.channelId !== currentChannelId
+      ) {
+        this.props.navigate(
+          `${urlBase}/pods/${activePodId}/channels/${channel.channelId}`,
+        );
+      }
+
+      await this.fetchMessages();
+    });
   };
 
   handleSendMessage = async () => {
@@ -396,89 +431,9 @@ class Pods extends Component {
     const localPeerId = this.getLocalPeerId();
     const isMember = members.some((member) => member.peerId === localPeerId);
     const isGoldStarClub = podDetail?.podId === GOLD_STAR_CLUB_POD_ID;
-
-    const panes =
-      podDetail?.channels?.map((channel) => ({
-        menuItem: channel.name,
-        render: () => (
-          <Tab.Pane>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-              }}
-            >
-              <Segment
-                style={{
-                  flex: 1,
-                  maxHeight: '600px',
-                  minHeight: '400px',
-                  overflowY: 'auto',
-                }}
-              >
-                {currentMessages.length === 0 ? (
-                  <PlaceholderSegment
-                    caption="No messages yet"
-                    icon="comments"
-                  />
-                ) : (
-                  <List relaxed="very">
-                    {currentMessages.map((message, index) => (
-                      <List.Item key={index}>
-                        <List.Content>
-                          <List.Header>
-                            {message.senderPeerId}
-                            <span
-                              style={{
-                                color: '#999',
-                                fontSize: '0.8em',
-                                marginLeft: '10px',
-                              }}
-                            >
-                              {new Date(
-                                message.timestampUnixMs,
-                              ).toLocaleTimeString()}
-                            </span>
-                          </List.Header>
-                          <List.Description>{message.body}</List.Description>
-                        </List.Content>
-                      </List.Item>
-                    ))}
-                  </List>
-                )}
-              </Segment>
-              <Segment>
-                <Input
-                  action={
-                    <Popup
-                      content="Send this message to the active pod channel."
-                      trigger={
-                        <Button
-                          icon="send"
-                          onClick={this.handleSendMessage}
-                          primary
-                        />
-                      }
-                    />
-                  }
-                  fluid
-                  onChange={(e) =>
-                    this.setState({ messageInput: e.target.value })
-                  }
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      this.handleSendMessage();
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  value={messageInput}
-                />
-              </Segment>
-            </div>
-          </Tab.Pane>
-        ),
-      })) || [];
+    const activeChannel = podDetail?.channels?.find(
+      (channel) => channel.channelId === activeChannelId,
+    );
 
     return (
       <div className="pods-workspace">
@@ -675,53 +630,145 @@ class Pods extends Component {
                   />
                 )}
               </div>
-              {activeChannelId && (
+              {activeChannelId && activeChannel?.kind !== 'Direct' && (
                 <PodListenAlongPanel
                   channelId={activeChannelId}
+                  compact
                   podId={activePodId}
                   user={this.props.state?.user?.username}
                 />
               )}
 
               {podDetail.channels?.length > 0 ? (
-                <Tab
-                  activeIndex={this.state.activeDetailTab}
-                  menu={{ pointing: true }}
-                  onTabChange={(_event, { activeIndex }) =>
-                    this.setState({ activeDetailTab: activeIndex })
-                  }
-                  panes={[
-                    ...panes,
-                    {
-                      menuItem: {
-                        content: 'VPN Gateway',
-                        icon: 'shield',
-                        key: 'vpn-gateway',
-                      },
-                      render: () => (
-                        <Tab.Pane>
-                          <VpnGatewayConfig
-                            podDetail={podDetail}
-                            podId={activePodId}
+                <>
+                  <div className="pod-channel-selector">
+                    {podDetail.channels.map((channel, index) => (
+                      <Button
+                        active={channel.channelId === activeChannelId}
+                        icon={channel.kind === 'Direct' ? 'comments' : 'comment alternate'}
+                        key={channel.channelId}
+                        labelPosition="left"
+                        onClick={() =>
+                          this.handleDetailTabChange(null, { activeIndex: index })
+                        }
+                        size="small"
+                      >
+                        {channel.name || channel.channelId}
+                      </Button>
+                    ))}
+                  </div>
+                  <Segment className="pod-channel-chat">
+                    <div className="pod-channel-heading">
+                      <div>
+                        <Header
+                          as="h3"
+                          content={activeChannel?.name || activeChannelId}
+                        />
+                        <span className="pod-channel-subtitle">
+                          {activeChannel?.kind === 'Direct'
+                            ? 'Direct pod channel'
+                            : `${activeChannel?.kind || 'Pod'} channel`}
+                        </span>
+                      </div>
+                      <Label basic>
+                        {currentMessages.length}{' '}
+                        {currentMessages.length === 1 ? 'message' : 'messages'}
+                      </Label>
+                    </div>
+                    <Segment className="pod-message-history">
+                      {currentMessages.length === 0 ? (
+                        <PlaceholderSegment
+                          caption="No messages yet"
+                          icon="comments"
+                        />
+                      ) : (
+                        <List relaxed="very">
+                          {currentMessages.map((message, index) => (
+                            <List.Item key={index}>
+                              <List.Content>
+                                <List.Header>
+                                  {message.senderPeerId}
+                                  <span
+                                    style={{
+                                      color: '#999',
+                                      fontSize: '0.8em',
+                                      marginLeft: '10px',
+                                    }}
+                                  >
+                                    {new Date(
+                                      message.timestampUnixMs,
+                                    ).toLocaleTimeString()}
+                                  </span>
+                                </List.Header>
+                                <List.Description>{message.body}</List.Description>
+                              </List.Content>
+                            </List.Item>
+                          ))}
+                        </List>
+                      )}
+                    </Segment>
+                    <Segment className="pod-message-composer">
+                      <Input
+                        action={
+                          <Popup
+                            content="Send this message to the active pod channel."
+                            trigger={
+                              <Button
+                                icon="send"
+                                onClick={this.handleSendMessage}
+                                primary
+                              />
+                            }
                           />
-                        </Tab.Pane>
-                      ),
-                    },
-                    {
-                      menuItem: {
-                        content: 'Port Forwarding',
-                        icon: 'exchange',
-                        key: 'port-forwarding',
+                        }
+                        fluid
+                        onChange={(e) =>
+                          this.setState({ messageInput: e.target.value })
+                        }
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            this.handleSendMessage();
+                          }
+                        }}
+                        placeholder="Type a message..."
+                        value={messageInput}
+                      />
+                    </Segment>
+                  </Segment>
+                  <Tab
+                    menu={{ pointing: true }}
+                    panes={[
+                      {
+                        menuItem: {
+                          content: 'VPN Gateway',
+                          icon: 'shield',
+                          key: 'vpn-gateway',
+                        },
+                        render: () => (
+                          <Tab.Pane>
+                            <VpnGatewayConfig
+                              podDetail={podDetail}
+                              podId={activePodId}
+                            />
+                          </Tab.Pane>
+                        ),
                       },
-                      render: () => (
-                        <Tab.Pane>
-                          <PortForwarding />
-                        </Tab.Pane>
-                      ),
-                    },
-                  ]}
-                  renderActiveOnly={false}
-                />
+                      {
+                        menuItem: {
+                          content: 'Port Forwarding',
+                          icon: 'exchange',
+                          key: 'port-forwarding',
+                        },
+                        render: () => (
+                          <Tab.Pane>
+                            <PortForwarding />
+                          </Tab.Pane>
+                        ),
+                      },
+                    ]}
+                    renderActiveOnly={false}
+                  />
+                </>
               ) : (
                 <PlaceholderSegment
                   caption="No channels available"

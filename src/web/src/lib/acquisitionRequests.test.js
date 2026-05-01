@@ -1,9 +1,12 @@
 import {
   addWishlistItemToDiscoveryInbox,
+  buildWishlistRequestReviewPacket,
   buildWishlistRequestSummary,
   buildWishlistDiscoveryInboxItem,
+  formatWishlistRequestReviewPacket,
   getWishlistEvidenceKey,
   getWishlistRequestState,
+  getRunnableWishlistRequests,
 } from './acquisitionRequests';
 import { discoveryInboxStorageKey } from './discoveryInbox';
 
@@ -132,5 +135,40 @@ describe('acquisitionRequests', () => {
         total: 3,
       }),
     );
+  });
+
+  it('formats review packets for operator approval without starting work', () => {
+    const packet = buildWishlistRequestReviewPacket({
+      items: [
+        {
+          autoDownload: true,
+          enabled: true,
+          id: 'wish-1',
+          searchText: 'rare album',
+        },
+      ],
+      quota: 1,
+    });
+    const report = formatWishlistRequestReviewPacket(packet);
+
+    expect(packet.rows[0]).toEqual(
+      expect.objectContaining({
+        searchText: 'rare album',
+        state: 'Automatic',
+      }),
+    );
+    expect(report).toContain('slskdN Wishlist request review');
+    expect(report).toContain('[Automatic] rare album');
+  });
+
+  it('selects bounded runnable wishlist requests', () => {
+    const requests = getRunnableWishlistRequests([
+      { enabled: true, id: 'one', searchText: 'one' },
+      { enabled: false, id: 'two', searchText: 'two' },
+      { enabled: true, id: 'three', searchText: 'three' },
+      { enabled: true, id: 'four', searchText: 'four' },
+    ], { limit: 2 });
+
+    expect(requests.map((item) => item.id)).toEqual(['one', 'three']);
   });
 });

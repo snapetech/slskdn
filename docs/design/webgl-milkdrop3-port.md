@@ -150,6 +150,9 @@ Current parser/VM scope:
 - Native mode includes first safe parameter editing for common global values such as decay, zoom, rotation, and waveform color/alpha. Edits rebuild the active renderer, persist as an edited browser-local preset, and can be exported as preset text.
 - Native mode can randomize the same bounded visual parameter set to create a local mashup/edit, exposes pointer position/delta/button state as MilkDrop-style mouse variables, and has a compact debug snapshot overlay for preset format, primitive counts, shader sections, and active title.
 - Native mode includes browser-local quality presets, FPS caps, WebGPU capability reporting in the debug overlay, and a debug frame-time readout so users can trade smoothness for lower GPU load.
+- Native renderer creation reuses a bounded translated-shader cache for repeated shader bodies, and `npm run test:native-milkdrop-performance` measures supported curated fixtures or supplied local preset files/folders in Chromium with per-frame timing and skipped unsupported preset reporting.
+- Native mode now has an explicit WebGPU renderer option: adapter capability probing, debug adapter details, a ping-pong feedback texture pair, a WebGPU canvas display pass, first waveform, shape-outline, motion-vector, screen-border, filled-shape, and sprite primitive draws into the feedback texture. WebGPU can upload imported texture assets, resolve them through the same path/basename/stem aliases as WebGL2, sample textured shapes/sprites with procedural fallback, and run the first safe translated WGSL subset for warp/comp feedback passes with `get_fft`, `get_fft_hz`, `get_waveform`, and named shader texture samplers. The visualizer overlay cycles through Butterchurn, native MilkDrop3 WebGL2, and native MilkDrop3 WebGPU; Butterchurn remains the default and WebGL2 remains the native compatibility baseline while WebGPU grows through broader real-pack/device measurement.
+- The compatibility matrix now reports WebGPU readiness separately from WebGL2 support, including WebGPU-only shader-section blockers. This lets curated fixtures and imported real packs show when a preset is WebGL2-compatible but still not WebGPU-promotable.
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
@@ -194,12 +197,18 @@ Current parser/VM scope:
 
 ### Phase 4: WebGPU And Native-Like Polish
 
-- Add optional WebGPU renderer for heavier shaders and better texture pipelines.
+- [x] Add first optional WebGPU renderer foothold for heavier shaders and better texture pipelines.
 - [x] Add first WebGPU capability reporting while keeping WebGL2 as the renderer baseline.
-- Add shader cache/precompile where browser APIs allow it.
+- [x] Add first WebGPU texture upload and textured shape/sprite primitive sampling.
+- [x] Add first WebGPU safe-subset translated warp/comp shader execution.
+- [x] Add first WebGPU shader-side FFT/waveform helper uniforms.
+- [x] Add first WebGPU named shader texture sampler bindings.
+- [x] Add WebGPU-specific readiness reporting to the compatibility matrix.
+- [x] Expose WebGPU as an explicit player visualizer backend alongside Butterchurn and native WebGL2.
+- [x] Add first shader translation cache/precompile-adjacent path where browser APIs allow it.
 - [x] Add performance quality presets, FPS caps, and GPU load indicators.
 - [x] Add first browser-local FPS caps and debug frame-time indicator.
-- Keep WebGL2 as the compatibility baseline.
+- Keep WebGL2 as the compatibility baseline until WebGPU has enough real-pack/device measurements.
 
 ## Risks
 
@@ -215,4 +224,7 @@ Current parser/VM scope:
 - Headless Playwright screenshots with pixel statistics across desktop/mobile sizes.
 - WebGL context loss/recovery smoke tests. `npm run test:native-milkdrop-smoke` now verifies the standard WebGL context-loss extension loses and restores the smoke canvas after fixture rendering.
 - Performance checks for FPS, GPU memory pressure, and bundle chunk sizes.
+- `npm run test:native-milkdrop-performance` measures native render timing for curated fixtures or local `.milk` / `.milk2` files and folders.
+- Focused WebGPU unit coverage validates adapter probing, feedback texture setup, waveform/shape/motion-vector/screen-border/sprite primitive conversion, textured primitive UV/color packing, texture upload, safe-subset WGSL shader translation, shader-side FFT/waveform helper uniforms, named shader texture bindings, and the opt-in WebGPU canvas pipeline without making it the default renderer.
+- Compatibility matrix tests now validate WebGPU support counts and WebGPU-only shader blockers separately from the WebGL2 compatibility verdict.
 - Manual compatibility runs against a curated MilkDrop/MilkDrop3 preset matrix.

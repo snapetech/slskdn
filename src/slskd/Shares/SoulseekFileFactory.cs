@@ -55,12 +55,15 @@ namespace slskd.Shares
         ///     Initializes a new instance of the <see cref="SoulseekFileFactory"/> class.
         /// </summary>
         /// <param name="fileService"></param>
-        public SoulseekFileFactory(FileService fileService)
+        /// <param name="probeMediaAttributes">Whether to read audio media attributes with TagLib.</param>
+        public SoulseekFileFactory(FileService fileService, bool probeMediaAttributes = true)
         {
             Files = fileService;
+            ProbeMediaAttributes = probeMediaAttributes;
         }
 
         private FileService Files { get; }
+        private bool ProbeMediaAttributes { get; }
         private ILogger Log { get; } = Serilog.Log.ForContext<SoulseekFileFactory>();
 
         /// <summary>
@@ -78,7 +81,7 @@ namespace slskd.Shares
 
             // Keep the share-scan hot path cheap on slow or remote storage. Video metadata probing
             // via TagLib can dominate scans without materially improving browse/share usefulness.
-            if (AudioExtensionsSet.Contains(extension))
+            if (ProbeMediaAttributes && AudioExtensionsSet.Contains(extension))
             {
                 attributeList = new List<FileAttribute>();
                 TagLib.File? file = null;

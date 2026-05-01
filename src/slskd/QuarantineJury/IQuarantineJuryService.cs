@@ -21,9 +21,17 @@ public interface IQuarantineJuryService
 
     Task<QuarantineJuryReview?> GetReviewAsync(string requestId, CancellationToken cancellationToken = default);
 
+    Task<QuarantineJuryAuditReport> GetAuditReportAsync(
+        int staleAfterHours = 72,
+        CancellationToken cancellationToken = default);
+
     Task<QuarantineJuryAcceptanceResult> AcceptReleaseCandidateAsync(
         string requestId,
         QuarantineJuryAcceptanceRequest acceptanceRequest,
+        CancellationToken cancellationToken = default);
+
+    Task<QuarantineJuryReleasePackageResult> GetReleasePackageAsync(
+        string requestId,
         CancellationToken cancellationToken = default);
 
     Task<QuarantineJuryRouteAttempt> RouteRequestAsync(

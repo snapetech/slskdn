@@ -89,6 +89,19 @@ public class ShareTokenServiceTests
     }
 
     [Fact]
+    public async Task ValidateAsync_TamperedSignature_ReturnsNull()
+    {
+        var svc = CreateService();
+        var token = await svc.CreateAsync("s1", "c1", null, true, true, 1, TimeSpan.FromHours(1));
+        var parts = token.Split('.');
+        Assert.Equal(3, parts.Length);
+
+        var tampered = string.Join('.', parts[0], parts[1], parts[2][..^1] + (parts[2][^1] == 'A' ? "B" : "A"));
+
+        Assert.Null(await svc.ValidateAsync(tampered));
+    }
+
+    [Fact]
     public async Task ValidateAsync_ExpiredToken_ReturnsNull()
     {
         var svc = CreateService();

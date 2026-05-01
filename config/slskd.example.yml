@@ -50,6 +50,7 @@
 #     - \.ini$
 #     - Thumbs.db$
 #     - \.DS_Store$
+#   probe_media_attributes: true # set false on slow/remote storage to skip TagLib audio probing during scans
 #   cache:
 #     storage_mode: memory
 #     workers: 4 # default is conservative; lower this on weaker hosts, raise it carefully if scans are too slow

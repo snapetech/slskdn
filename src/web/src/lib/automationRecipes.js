@@ -5,6 +5,8 @@ import {
 } from './storage';
 
 const storageKey = 'slskdn.automationRecipeState';
+const inputStorageKey = 'slskdn.automationRecipeInputs';
+const executableRecipeIds = new Set(['wishlist-retry', 'library-health-scan']);
 
 export const automationRecipes = [
   {
@@ -174,6 +176,20 @@ const readStoredState = () => {
   }
 };
 
+const readStoredInputs = () => {
+  const stored = getLocalStorageItem(inputStorageKey);
+  if (!stored) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    removeLocalStorageItem(inputStorageKey);
+    return {};
+  }
+};
+
 export const buildAutomationDryRunReport = (
   recipe,
   timestamp = new Date().toISOString(),
@@ -189,10 +205,100 @@ export const buildAutomationDryRunReport = (
   title: recipe.title,
 });
 
+export const isAutomationRecipeExecutable = (recipe) =>
+  executableRecipeIds.has(recipe?.id);
+
+export const buildAutomationExecutionReport = (
+  recipe,
+  result = {},
+  timestamp = new Date().toISOString(),
+) => ({
+  approvalGate: recipe.approvalGate,
+  cooldown: recipe.cooldown,
+  executed: true,
+  failed: result.failed || 0,
+  fileImpact: recipe.fileImpact,
+  generatedAt: timestamp,
+  maxRunTime: recipe.maxRunTime,
+  networkImpact: recipe.networkImpact,
+  recipeId: recipe.id,
+  runLimit: result.runLimit || 0,
+  ...(result.scanId ? { scanId: result.scanId } : {}),
+  skipped: result.skipped || 0,
+  started: result.started || 0,
+  summary:
+    result.summary ||
+    `Started ${result.started || 0} action(s); ${result.failed || 0} failed; ${result.skipped || 0} skipped.`,
+  title: recipe.title,
+});
+
+export const buildAutomationRunHistory = (state = getAutomationRecipeState()) =>
+  automationRecipes
+    .map((recipe) => ({
+      enabled: state[recipe.id]?.enabled === true,
+      lastDryRunAt: state[recipe.id]?.lastDryRunAt || null,
+      lastDryRunReport: state[recipe.id]?.lastDryRunReport || null,
+      lastRunAt: state[recipe.id]?.lastRunAt || null,
+      lastRunReport: state[recipe.id]?.lastRunReport || null,
+      recipeId: recipe.id,
+      title: recipe.title,
+    }))
+    .filter((entry) => entry.enabled || entry.lastDryRunAt || entry.lastRunAt);
+
+export const formatAutomationRunHistoryReport = (
+  history = buildAutomationRunHistory(),
+) => {
+  const lines = [
+    'slskdN automation review history',
+    `Entries: ${history.length}`,
+    '',
+  ];
+
+  if (history.length === 0) {
+    lines.push('No enabled recipes or dry-run checkpoints.');
+    return lines.join('\n');
+  }
+
+  history.forEach((entry) => {
+    lines.push(`- ${entry.title}`);
+    lines.push(`  Enabled: ${entry.enabled ? 'yes' : 'no'}`);
+    lines.push(`  Last run: ${entry.lastRunAt || 'not recorded'}`);
+    if (entry.lastRunReport) {
+      lines.push(`  Run summary: ${entry.lastRunReport.summary}`);
+      lines.push(`  Network impact: ${entry.lastRunReport.networkImpact}`);
+      lines.push(`  File impact: ${entry.lastRunReport.fileImpact}`);
+    }
+    lines.push(`  Last dry run: ${entry.lastDryRunAt || 'not recorded'}`);
+    if (entry.lastDryRunReport) {
+      lines.push(`  Executed: ${entry.lastDryRunReport.executed ? 'yes' : 'no'}`);
+      lines.push(`  Network impact: ${entry.lastDryRunReport.networkImpact}`);
+      lines.push(`  File impact: ${entry.lastDryRunReport.fileImpact}`);
+    }
+  });
+
+  return lines.join('\n');
+};
+
 export const getAutomationRecipeState = () => ({
   ...defaultState,
   ...readStoredState(),
 });
+
+export const getAutomationRecipeInputs = () => readStoredInputs();
+
+export const setAutomationRecipeInput = (id, input) => {
+  const inputs = getAutomationRecipeInputs();
+  const nextInputs = {
+    ...inputs,
+    [id]: {
+      ...(inputs[id] || {}),
+      ...input,
+    },
+  };
+
+  setLocalStorageItem(inputStorageKey, JSON.stringify(nextInputs));
+  return nextInputs;
+};
 
 export const setAutomationRecipeEnabled = (id, enabled) => {
   const state = getAutomationRecipeState();
@@ -228,4 +334,25 @@ export const setAutomationRecipeDryRun = (id, timestamp = new Date().toISOString
   return nextState;
 };
 
+export const setAutomationRecipeExecution = (
+  id,
+  report,
+  timestamp = new Date().toISOString(),
+) => {
+  const state = getAutomationRecipeState();
+  const recipeState = state[id] ?? {};
+  const nextState = {
+    ...state,
+    [id]: {
+      ...recipeState,
+      lastRunAt: timestamp,
+      lastRunReport: report,
+    },
+  };
+
+  setLocalStorageItem(storageKey, JSON.stringify(nextState));
+  return nextState;
+};
+
 export const automationRecipeStorageKey = storageKey;
+export const automationRecipeInputStorageKey = inputStorageKey;

@@ -36,9 +36,35 @@ public sealed class SongIdRunStoreTests : IDisposable
             SourceType = "youtube_url",
             Status = "running",
             Summary = "Running SongID analysis.",
+            CurrentStage = "evidence_pipeline",
+            PercentComplete = 0.52,
+            QueuePosition = 4,
+            WorkerSlot = 2,
             Query = "artist title",
             ArtifactDirectory = Path.Combine(_tempDir, "artifacts"),
             Evidence = new List<string> { "initial evidence" },
+            ForensicMatrix = new SongIdForensicMatrix
+            {
+                IdentityScore = 82,
+                SyntheticScore = 11,
+                ConfidenceScore = 79,
+                FamilyLabel = "none",
+                QualityClass = "clean_excerpt",
+                TopEvidenceFor = new List<string> { "recognizer agreement" },
+                TopEvidenceAgainst = new List<string> { "short excerpt" },
+                Notes = new List<string> { "identity beats synthetic" },
+                LaneScores = new Dictionary<string, double>
+                {
+                    ["identity"] = 0.82,
+                },
+                ConfidenceLane = new SongIdForensicLane
+                {
+                    Label = "medium",
+                    Score = 0.79,
+                    Confidence = 79,
+                    Summary = "stable enough for review",
+                },
+            },
         };
 
         store.Upsert(run);
@@ -48,8 +74,17 @@ public sealed class SongIdRunStoreTests : IDisposable
         Assert.Equal(run.Id, stored!.Id);
         Assert.Equal(run.Source, stored.Source);
         Assert.Equal(run.Status, stored.Status);
+        Assert.Equal(run.CurrentStage, stored.CurrentStage);
+        Assert.Equal(run.PercentComplete, stored.PercentComplete);
+        Assert.Equal(run.QueuePosition, stored.QueuePosition);
+        Assert.Equal(run.WorkerSlot, stored.WorkerSlot);
         Assert.Equal(run.Query, stored.Query);
         Assert.Single(stored.Evidence);
+        Assert.NotNull(stored.ForensicMatrix);
+        Assert.Equal(82, stored.ForensicMatrix!.IdentityScore);
+        Assert.Equal("clean_excerpt", stored.ForensicMatrix.QualityClass);
+        Assert.Equal(0.79, stored.ForensicMatrix.ConfidenceLane.Score);
+        Assert.Contains("identity", stored.ForensicMatrix.LaneScores.Keys);
     }
 
     [Fact]

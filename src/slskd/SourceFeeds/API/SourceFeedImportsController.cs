@@ -45,4 +45,27 @@ public sealed class SourceFeedImportsController : ControllerBase
         var result = await SourceFeedImportService.PreviewAsync(request, cancellationToken).ConfigureAwait(false);
         return Ok(result);
     }
+
+    [HttpGet("history")]
+    [Authorize(Policy = AuthPolicy.Any)]
+    [ProducesResponseType(typeof(IReadOnlyList<SourceFeedImportHistoryEntry>), 200)]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var history = await SourceFeedImportService.GetHistoryAsync(limit, cancellationToken).ConfigureAwait(false);
+        return Ok(history);
+    }
+
+    [HttpGet("history/{importId}")]
+    [Authorize(Policy = AuthPolicy.Any)]
+    [ProducesResponseType(typeof(SourceFeedImportHistoryEntry), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetHistoryEntry(
+        [FromRoute] string importId,
+        CancellationToken cancellationToken = default)
+    {
+        var entry = await SourceFeedImportService.GetHistoryEntryAsync(importId, cancellationToken).ConfigureAwait(false);
+        return entry == null ? NotFound() : Ok(entry);
+    }
 }

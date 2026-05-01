@@ -204,7 +204,7 @@ export const scoreMetadataCandidate = (expected = {}, candidate = {}) => {
     artistScore * 0.24 +
     albumScore * 0.12 +
     duration.score * 0.16 +
-    Math.min(identifierMatches * 0.08, 0.16);
+    Math.min(identifierMatches * 0.12, 0.2);
 
   const warnings = [];
   const evidence = [

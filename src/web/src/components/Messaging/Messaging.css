@@ -59,10 +59,17 @@
   gap: 5px;
 }
 
+.messaging-list-action-row {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .messaging-list-button.ui.button {
   justify-content: flex-start;
   margin: 0 !important;
   text-align: left;
+  width: 100%;
 }
 
 .messaging-main {
@@ -106,7 +113,8 @@
   display: flex;
   justify-content: space-between;
   min-height: 42px;
-  padding: 8px 10px !important;
+  padding: 8px 128px 8px 10px !important;
+  position: relative;
 }
 
 .messaging-window-heading {
@@ -123,11 +131,22 @@
   white-space: nowrap;
 }
 
+.messaging-window-heading .user-card {
+  min-width: 0;
+}
+
+.messaging-window-heading .user-card-stats {
+  flex: 0 0 auto;
+}
+
 .messaging-window-actions {
   align-items: center;
   display: flex;
   flex: 0 0 auto;
   gap: 4px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
 }
 
 .messaging-window-body {
@@ -135,14 +154,43 @@
 }
 
 .messaging-window-body .chat,
-.messaging-window-body .room {
+.messaging-window-body .room,
+.pod-message-session {
   height: min(520px, calc(100vh - 280px));
   margin-top: 0;
 }
 
+.messaging-window-body .room,
+.pod-message-session-main {
+  align-items: stretch;
+  display: flex;
+  gap: 0;
+  min-height: 0;
+}
+
 .messaging-window-body .chat-history,
-.messaging-window-body .room-history {
-  height: min(480px, calc(100vh - 320px));
+.messaging-window-body .room-history,
+.pod-message-session-history.ui.segment {
+  height: min(430px, calc(100vh - 360px));
+}
+
+.messaging-window-body .room-active-card > .content > .room > .segments,
+.pod-message-session-main > .segments {
+  min-width: 0;
+  width: 100% !important;
+}
+
+.messaging-window-body .room-users.ui.segment,
+.pod-message-users.ui.segment {
+  display: block;
+  flex: 0 0 220px;
+  max-width: 220px;
+  min-width: 220px;
+}
+
+.messaging-window-body .room-users,
+.pod-message-users {
+  max-height: min(520px, calc(100vh - 280px));
 }
 
 .messaging-window-body .chat-active-card.ui.card,
@@ -160,6 +208,66 @@
 .messaging-window-body .chat-active-card.ui.card > .content > .header,
 .messaging-window-body .room-active-card.ui.card > .content > .header {
   display: none;
+}
+
+.messaging-window-body .chat-input.ui.segment,
+.messaging-window-body .room-input.ui.segment,
+.pod-message-session-composer.ui.segment {
+  border-top: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15)) !important;
+  padding: 8px !important;
+}
+
+.messaging-window-body .chat-input .ui.input > input,
+.messaging-window-body .room-input .ui.input > input,
+.pod-message-session-input.ui.input > input {
+  border: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.2)) !important;
+  border-radius: 4px 0 0 4px !important;
+  min-height: 42px;
+  padding: 0 12px !important;
+}
+
+.messaging-window-body .chat-input .ui.input > .button,
+.messaging-window-body .room-input .ui.input > .button,
+.pod-message-session-input.ui.input > .button {
+  min-height: 42px;
+}
+
+.pod-message-session {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+}
+
+.pod-message-session-history.ui.segment {
+  display: grid;
+  flex: 1;
+  margin: 0 !important;
+  overflow-y: auto;
+  padding: 0.5em 0.5em 0 !important;
+}
+
+.pod-message-session-history > .list {
+  align-self: end;
+  margin-bottom: 0.5em !important;
+}
+
+.pod-message-session-composer.ui.segment {
+  flex: 0 0 auto;
+  margin: 0 !important;
+  padding: 8px !important;
+}
+
+.pod-message-session-composer .messaging-start-row .ui.input {
+  flex: 1 1 auto;
+}
+
+.pod-message-session .pod-listen-along-compact.ui.segment {
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  border-right: 0 !important;
+  margin: 0 !important;
+  min-height: 36px;
 }
 
 .messaging-dock {
@@ -190,6 +298,23 @@
   border-color: var(--slskd-tertiary-border-color, rgba(214, 196, 255, 0.24)) !important;
 }
 
+:root.dark .messaging-window-body .chat-input .ui.input > input,
+:root.dark .messaging-window-body .room-input .ui.input > input,
+:root.dark .pod-message-session-input.ui.input > input {
+  background: #0a0907 !important;
+  border-color: rgba(169, 122, 52, 0.44) !important;
+  color: var(--slskd-color, #efe7dc) !important;
+}
+
+:root.dark .messaging-window-body .chat-input.ui.segment,
+:root.dark .messaging-window-body .room-input.ui.segment,
+:root.dark .pod-message-session-composer.ui.segment {
+  background:
+    linear-gradient(180deg, rgba(169, 122, 52, 0.12), rgba(169, 122, 52, 0.04)),
+    #100e0b !important;
+  border-color: rgba(169, 122, 52, 0.34) !important;
+}
+
 @media only screen and (max-width: 900px) {
   .messaging-shell {
     grid-template-columns: 1fr;
@@ -197,8 +322,24 @@
 
   .messaging-window-body .chat,
   .messaging-window-body .room,
+  .pod-message-session,
   .messaging-window-body .chat-history,
-  .messaging-window-body .room-history {
+  .messaging-window-body .room-history,
+  .pod-message-session-history.ui.segment {
     height: 420px;
+  }
+
+  .messaging-window-body .room,
+  .pod-message-session-main {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .messaging-window-body .room-users.ui.segment,
+  .pod-message-users.ui.segment {
+    flex-basis: auto;
+    max-height: 180px;
+    max-width: none;
+    min-width: 0;
   }
 }

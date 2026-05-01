@@ -61,6 +61,19 @@ public sealed class SongIdController : ControllerBase
         return Ok(_songIdService.List(limit));
     }
 
+    [HttpGet("runs/queue")]
+    [ProducesResponseType(typeof(SongIdQueueSummary), 200)]
+    public IActionResult GetQueueSummary([FromQuery] int activeLimit = 25)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        activeLimit = activeLimit <= 0 ? 25 : activeLimit;
+        return Ok(_songIdService.GetQueueSummary(activeLimit));
+    }
+
     [HttpGet("runs/{id:guid}")]
     public IActionResult GetRun(Guid id)
     {
@@ -71,6 +84,37 @@ public sealed class SongIdController : ControllerBase
 
         var run = _songIdService.Get(id);
         return run == null ? NotFound() : Ok(run);
+    }
+
+    [HttpGet("runs/{id:guid}/evidence-package")]
+    [ProducesResponseType(typeof(SongIdRunEvidencePackage), 200)]
+    [ProducesResponseType(404)]
+    public IActionResult GetEvidencePackage(Guid id)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var package = _songIdService.GetEvidencePackage(id);
+        return package == null ? NotFound() : Ok(package);
+    }
+
+    [HttpGet("runs/{id:guid}/forensic-matrix")]
+    public IActionResult GetForensicMatrix(Guid id)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var run = _songIdService.Get(id);
+        if (run == null || run.ForensicMatrix == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(run.ForensicMatrix);
     }
 }
 

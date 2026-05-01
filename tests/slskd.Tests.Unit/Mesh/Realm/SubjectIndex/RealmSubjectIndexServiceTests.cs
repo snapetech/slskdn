@@ -99,6 +99,277 @@ public sealed class RealmSubjectIndexServiceTests
     }
 
     [Fact]
+    public async Task GetConflictReportAsync_FlagsExternalIdConflictForSameSubject()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].ExternalIds["musicbrainz:recording"] = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        second.Entries[0].WorkRef.ExternalIds["musicbrainz"] = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+        Sign(second);
+
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        Assert.True(report.HasConflicts);
+        Assert.Equal(2, report.IndexCount);
+        Assert.Equal(2, report.EntryCount);
+        var conflict = Assert.Single(report.Conflicts, item => item.Type == "external-id" && item.Key == "musicbrainz:recording");
+        Assert.Equal("subject:rare-track", conflict.SubjectId);
+        Assert.Equal(2, conflict.Values.Count);
+        Assert.All(conflict.Values, value => Assert.StartsWith("realm:scene-realm:subject-index:", value.Provenance));
+    }
+
+    [Fact]
+    public async Task GetConflictReportAsync_FlagsRecordingMappedToMultipleSubjects()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].SubjectId = "subject:rare-track-remaster";
+        second.Entries[0].Aliases = new List<string> { "Rare Track remaster" };
+        Sign(second);
+
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        var conflict = Assert.Single(report.Conflicts, item => item.Type == "recording-subject");
+        Assert.Equal("12345678-1234-1234-1234-1234567890ab", conflict.Key);
+        Assert.Equal(new[] { "subject:rare-track", "subject:rare-track-remaster" }, conflict.Values.Select(value => value.Value).Order());
+    }
+
+    [Fact]
+    public async Task GetConflictReportAsync_FlagsConflictingWorkIdentityForSameSubject()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].WorkRef.Title = "Rare Track (Live)";
+        Sign(second);
+
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        var conflict = Assert.Single(report.Conflicts, item => item.Type == "workref-identity");
+        Assert.Equal("subject:rare-track", conflict.SubjectId);
+        Assert.Contains(conflict.Values, value => value.Value == "Rare Track|Scene Artist");
+        Assert.Contains(conflict.Values, value => value.Value == "Rare Track (Live)|Scene Artist");
+    }
+
+    [Fact]
+    public async Task GetConflictReportAsync_FlagsAliasMappedToMultipleSubjects()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].SubjectId = "subject:other-track";
+        second.Entries[0].WorkRef.Title = "Other Track";
+        Sign(second);
+
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        var conflict = Assert.Single(report.Conflicts, item => item.Type == "alias-subject");
+        Assert.Equal("Rare Track (dubplate)", conflict.Key);
+        Assert.Equal(new[] { "subject:other-track", "subject:rare-track" }, conflict.Values.Select(value => value.Value).Order());
+    }
+
+    [Fact]
+    public async Task SetAuthorityEnabledAsync_DisablesIndexForResolutionsAndConflicts()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].SubjectId = "subject:other-track";
+        second.Entries[0].WorkRef.Title = "Other Track";
+        Sign(second);
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+
+        var decision = await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "scene-index-alt",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = false,
+                DecidedBy = "local-curator",
+                Note = "conflicting alias evidence",
+            });
+        var resolutions = await service.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        Assert.True(decision.IsAccepted);
+        Assert.False(decision.Enabled);
+        Assert.Single(resolutions);
+        Assert.Equal("scene-index", resolutions[0].IndexId);
+        Assert.False(report.HasConflicts);
+        Assert.Equal(1, report.IndexCount);
+        Assert.Equal(1, report.DisabledAuthorityCount);
+        Assert.Equal(1, report.EntryCount);
+    }
+
+    [Fact]
+    public async Task SetAuthorityEnabledAsync_CanReenableIndexAuthority()
+    {
+        var service = CreateService();
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].SubjectId = "subject:other-track";
+        second.Entries[0].WorkRef.Title = "Other Track";
+        Sign(second);
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+        await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "scene-index-alt",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = false,
+                DecidedBy = "local-curator",
+            });
+
+        var decision = await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "scene-index-alt",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = true,
+                DecidedBy = "local-curator",
+            });
+        var report = await service.GetConflictReportAsync("scene-realm");
+
+        Assert.True(decision.IsAccepted);
+        Assert.True(decision.Enabled);
+        Assert.True(report.HasConflicts);
+        Assert.Equal(2, report.IndexCount);
+        Assert.Equal(0, report.DisabledAuthorityCount);
+    }
+
+    [Fact]
+    public async Task SetAuthorityEnabledAsync_RejectsUnsafeActorAndMissingIndex()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+        await service.StoreAsync(index);
+
+        var decision = await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "missing-index",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = false,
+                DecidedBy = "https://private.example/user",
+            });
+        var decisions = await service.GetAuthorityDecisionsForRealmAsync("scene-realm");
+
+        Assert.False(decision.IsAccepted);
+        Assert.Contains("Index authority was not found.", decision.Errors);
+        Assert.Contains("Decided-by identifier must be opaque and safe.", decision.Errors);
+        Assert.Empty(decisions);
+    }
+
+    [Fact]
+    public async Task GetAuthorityDecisionsForRealmAsync_ReturnsStoredDecisions()
+    {
+        var service = CreateService();
+        var index = CreateIndex();
+        await service.StoreAsync(index);
+        await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "scene-index",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = false,
+                DecidedBy = "local-curator",
+                Note = "prefer another authority",
+            });
+
+        var decisions = await service.GetAuthorityDecisionsForRealmAsync("scene-realm");
+
+        var decision = Assert.Single(decisions);
+        Assert.Equal("scene-index", decision.IndexId);
+        Assert.False(decision.Enabled);
+        Assert.Equal("prefer another authority", decision.Note);
+    }
+
+    [Fact]
+    public async Task Constructor_LoadsPersistedIndexesAndAuthorityDecisions()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(storagePath);
+        var first = CreateIndex();
+        var second = CreateIndex();
+        second.Id = "scene-index-alt";
+        second.Revision = 4;
+        second.Entries[0].SubjectId = "subject:other-track";
+        second.Entries[0].WorkRef.Title = "Other Track";
+        Sign(second);
+        await service.StoreAsync(first);
+        await service.StoreAsync(second);
+        await service.SetAuthorityEnabledAsync(
+            "scene-realm",
+            "scene-index-alt",
+            new RealmSubjectIndexAuthorityDecisionRequest
+            {
+                Enabled = false,
+                DecidedBy = "local-curator",
+                Note = "restart-safe disable",
+            });
+
+        var reloaded = CreateService(storagePath);
+        var resolutions = await reloaded.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+        var decisions = await reloaded.GetAuthorityDecisionsForRealmAsync("scene-realm");
+        var report = await reloaded.GetConflictReportAsync("scene-realm");
+
+        Assert.Single(resolutions);
+        Assert.Equal("scene-index", resolutions[0].IndexId);
+        var decision = Assert.Single(decisions);
+        Assert.False(decision.Enabled);
+        Assert.Equal("restart-safe disable", decision.Note);
+        Assert.Equal(1, report.DisabledAuthorityCount);
+    }
+
+    [Fact]
+    public async Task Constructor_LoadsPersistedProposalReviewState()
+    {
+        var storagePath = CreateStoragePath();
+        var service = CreateService(storagePath);
+        var index = CreateIndex();
+        var proposal = await service.ProposeAsync(index, "local-curator");
+        await service.ReviewProposalAsync(proposal.ProposalId, "trusted-root", accept: true, "approved");
+
+        var reloaded = CreateService(storagePath);
+        var proposals = await reloaded.GetProposalsForRealmAsync("scene-realm");
+        var resolutions = await reloaded.ResolveByRecordingIdAsync("12345678-1234-1234-1234-1234567890ab");
+
+        var reloadedProposal = Assert.Single(proposals);
+        Assert.Equal(RealmSubjectIndexProposalStatus.Accepted, reloadedProposal.Status);
+        Assert.NotNull(reloadedProposal.Review);
+        Assert.Equal("trusted-root", reloadedProposal.Review.ReviewedBy);
+        Assert.Single(resolutions);
+    }
+
+    [Fact]
     public async Task ProposeAsync_StoresGovernanceProposalWithoutPublishingIndex()
     {
         var service = CreateService();
@@ -192,10 +463,21 @@ public sealed class RealmSubjectIndexServiceTests
 
     private RealmSubjectIndexService CreateService()
     {
+        return CreateService(CreateStoragePath());
+    }
+
+    private RealmSubjectIndexService CreateService(string storagePath)
+    {
         return new RealmSubjectIndexService(
             _realmService.Object,
             NullLogger<RealmSubjectIndexService>.Instance,
+            storagePath,
             _governanceClient.Object);
+    }
+
+    private static string CreateStoragePath()
+    {
+        return Path.Combine(Path.GetTempPath(), "slskdn-subject-index-tests", $"{Guid.NewGuid():N}.json");
     }
 
     private static RealmSubjectIndex CreateIndex()

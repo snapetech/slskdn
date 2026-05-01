@@ -192,8 +192,20 @@ const scoreProvider = (response = {}) => {
 };
 
 const scoreCommunityQuality = (summary) => {
-  if (!summary || summary.signals.length === 0) {
+  if (!summary || (summary.signals.length === 0 && !summary.override)) {
     return { points: 0, reason: null };
+  }
+
+  if (summary.override?.mode === 'ignore') {
+    return { points: 0, reason: 'local quality signals ignored' };
+  }
+
+  if (summary.override?.mode === 'trust') {
+    return { points: 8, reason: 'local trust override' };
+  }
+
+  if (summary.override?.mode === 'caution') {
+    return { points: -6, reason: 'local caution override' };
   }
 
   if (summary.score >= 8) {

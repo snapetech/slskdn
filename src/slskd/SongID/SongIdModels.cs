@@ -82,6 +82,104 @@ public sealed class SongIdRun
     public SongIdForensicMatrix? ForensicMatrix { get; set; }
 }
 
+public sealed class SongIdQueueSummary
+{
+    public int QueuedCount { get; set; }
+
+    public int RunningCount { get; set; }
+
+    public int CompletedCount { get; set; }
+
+    public int FailedCount { get; set; }
+
+    public int MaxConcurrentRuns { get; set; }
+
+    public List<SongIdQueueSummaryRun> ActiveRuns { get; set; } = new();
+}
+
+public sealed class SongIdQueueSummaryRun
+{
+    public Guid RunId { get; set; }
+
+    public string SourceType { get; set; } = string.Empty;
+
+    public string Status { get; set; } = string.Empty;
+
+    public string CurrentStage { get; set; } = string.Empty;
+
+    public double PercentComplete { get; set; }
+
+    public int? QueuePosition { get; set; }
+
+    public int? WorkerSlot { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
+}
+
+public sealed class SongIdRunEvidencePackage
+{
+    public Guid RunId { get; set; }
+
+    public string SourceType { get; set; } = string.Empty;
+
+    public string Status { get; set; } = string.Empty;
+
+    public string Query { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string CurrentStage { get; set; } = string.Empty;
+
+    public double PercentComplete { get; set; }
+
+    public SongIdScorecard Scorecard { get; set; } = new();
+
+    public SongIdAssessment IdentityAssessment { get; set; } = new();
+
+    public SongIdSyntheticAssessment SyntheticAssessment { get; set; } = new();
+
+    public SongIdForensicMatrix? ForensicMatrix { get; set; }
+
+    public List<SongIdTrackCandidate> TrackCandidates { get; set; } = new();
+
+    public List<SongIdAlbumCandidate> AlbumCandidates { get; set; } = new();
+
+    public List<SongIdArtistCandidate> ArtistCandidates { get; set; } = new();
+
+    public List<SongIdSegmentResult> Segments { get; set; } = new();
+
+    public List<SongIdMixGroup> MixGroups { get; set; } = new();
+
+    public List<SongIdPlan> Plans { get; set; } = new();
+
+    public List<SongIdAcquisitionOption> AcquisitionOptions { get; set; } = new();
+
+    public List<string> Evidence { get; set; } = new();
+
+    public List<SongIdEvidenceArtifact> Artifacts { get; set; } = new();
+
+    public List<string> Warnings { get; set; } = new();
+}
+
+public sealed class SongIdEvidenceArtifact
+{
+    public string Kind { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Path { get; set; } = string.Empty;
+
+    public double? StartSeconds { get; set; }
+
+    public double? DurationSeconds { get; set; }
+}
+
 public sealed class SongIdTrackCandidate
 {
     public string CandidateId { get; set; } = string.Empty;

@@ -30,7 +30,14 @@ import {
 } from 'semantic-ui-react';
 
 const SLSKDN_RELEASES_URL = 'https://github.com/snapetech/slskdn/releases';
-const VPN_PORT_NOTICE_STORAGE_KEY = 'slskdn.vpnForwardedPorts.dismissedSignature';
+const NETWORK_ENDPOINT_NOTICE_STORAGE_KEY =
+  'slskdn.networkEndpoints.v2.dismissedSignature';
+const NETWORK_ENDPOINT_SNAPSHOT_STORAGE_KEY =
+  'slskdn.networkEndpoints.v2.lastDismissedSnapshot';
+const LEGACY_NETWORK_ENDPOINT_SNAPSHOT_STORAGE_KEY =
+  'slskdn.networkEndpoints.lastDismissedSnapshot';
+const LEGACY_VPN_PORT_NOTICE_STORAGE_KEY =
+  'slskdn.vpnForwardedPorts.dismissedSignature';
 const ROOM_ACTIVITY_SEEN_STORAGE_KEY = 'slskdn.rooms.lastSeenActivity';
 const NAV_ACTIVITY_POLL_INTERVAL_MS = 10_000;
 
@@ -42,7 +49,6 @@ const DiscoveryGraphAtlasPage = lazy(() =>
   import('./Search/DiscoveryGraphAtlasPage'));
 const ImportStaging = lazy(() => import('./ImportStaging/ImportStaging'));
 const Messaging = lazy(() => import('./Messaging/Messaging'));
-const Pods = lazy(() => import('./Pods/Pods'));
 const PlaylistIntake = lazy(() => import('./PlaylistIntake/PlaylistIntake'));
 const Searches = lazy(() => import('./Search/Searches'));
 const ShareGroups = lazy(() => import('./ShareGroups/ShareGroups'));
@@ -82,11 +88,8 @@ const getVpnPortForwards = (vpn = {}) => {
     return vpn.portForwards
       .filter((forward) => forward?.publicPort > 0)
       .map((forward) => ({
-        label:
-          forward.slot === 0
-            ? 'Soulseek'
-            : normalizePortForwardProtocol(forward.proto) || 'Forward',
         localPort: forward.localPort,
+        namespace: forward.namespace,
         proto: normalizePortForwardProtocol(forward.proto),
         publicIp: forward.publicIPAddress || forward.publicIp,
         publicPort: forward.publicPort,
@@ -99,7 +102,6 @@ const getVpnPortForwards = (vpn = {}) => {
   if (vpn.forwardedPort > 0) {
     return [
       {
-        label: 'Soulseek',
         proto: 'TCP',
         publicIp: vpn.publicIPAddress,
         publicPort: vpn.forwardedPort,
@@ -125,12 +127,76 @@ const getVpnPortSignature = (forwards) =>
     )
     .join('|');
 
-const hasDismissedVpnPortNotice = (signature) => {
-  return getLocalStorageItem(VPN_PORT_NOTICE_STORAGE_KEY) === signature;
+const parseLegacyVpnPortSignature = (signature) => {
+  if (!signature) return null;
+
+  const portForwards = signature
+    .split('|')
+    .map((entry) => {
+      const [slot, proto, publicIp, publicPort, localPort, targetPort] =
+        entry.split(':');
+      const slotNumber = Number.parseInt(slot, 10);
+      const normalizedProto = normalizePortForwardProtocol(proto);
+
+      return {
+        label:
+          slotNumber === 0
+            ? 'Soulseek'
+            : normalizedProto || 'Forward',
+        localPort: Number.parseInt(localPort, 10) || undefined,
+        proto: normalizedProto,
+        publicIp: publicIp || undefined,
+        publicPort: Number.parseInt(publicPort, 10) || undefined,
+        slot: Number.isFinite(slotNumber) ? slotNumber : undefined,
+        targetPort: Number.parseInt(targetPort, 10) || undefined,
+      };
+    })
+    .filter((forward) => forward.publicPort > 0);
+
+  return portForwards.length ? { portForwards, signature } : null;
 };
 
-const storeDismissedVpnPortNotice = (signature) => {
-  setLocalStorageItem(VPN_PORT_NOTICE_STORAGE_KEY, signature);
+const hasDismissedVpnPortNotice = (signature) => {
+  return getLocalStorageItem(NETWORK_ENDPOINT_NOTICE_STORAGE_KEY) === signature;
+};
+
+const getStoredNetworkEndpointSnapshot = () => {
+  try {
+    const snapshot = JSON.parse(
+      getLocalStorageItem(NETWORK_ENDPOINT_SNAPSHOT_STORAGE_KEY, 'null'),
+    );
+    if (snapshot?.signature) {
+      return snapshot;
+    }
+  } catch {
+    // Fall through to the legacy key used by the earlier VPN-only banner.
+  }
+
+  try {
+    const snapshot = JSON.parse(
+      getLocalStorageItem(LEGACY_NETWORK_ENDPOINT_SNAPSHOT_STORAGE_KEY, 'null'),
+    );
+    if (snapshot?.signature) {
+      return snapshot;
+    }
+  } catch {
+    // Fall through to the original single-signature key.
+  }
+
+  return parseLegacyVpnPortSignature(
+    getLocalStorageItem(LEGACY_VPN_PORT_NOTICE_STORAGE_KEY, ''),
+  );
+};
+
+const storeDismissedVpnPortNotice = (signature, portForwards) => {
+  setLocalStorageItem(NETWORK_ENDPOINT_NOTICE_STORAGE_KEY, signature);
+  setLocalStorageItem(
+    NETWORK_ENDPOINT_SNAPSHOT_STORAGE_KEY,
+    JSON.stringify({
+      portForwards,
+      signature,
+    }),
+  );
 };
 
 const getStoredRoomActivity = () => {
@@ -179,47 +245,133 @@ const NavigationIcon = ({ alert, alertTestId, name }) => (
   </span>
 );
 
-const VpnPortChangeNotice = ({ onDismiss, portForwards }) => {
-  if (!portForwards.length) {
+const getNetworkEndpointPurpose = (forward) => {
+  const proto = normalizePortForwardProtocol(forward.proto);
+
+  if (forward.slot === 0 || forward.localPort === 50300) {
+    return {
+      config: 'slsk.listen_port',
+      service: 'Soulseek peer/file transfers',
+    };
+  }
+
+  if (proto === 'TCP' && forward.localPort === 50305) {
+    return {
+      config: 'dht.overlay_port',
+      service: 'slskdN mesh overlay',
+    };
+  }
+
+  if (proto === 'UDP' && forward.localPort === 50305) {
+    return {
+      config: 'dht.dht_port',
+      service: 'DHT rendezvous',
+    };
+  }
+
+  return {
+    config: forward.targetPort ? `selected ${forward.targetPort}` : 'selected port',
+    service: forward.namespace || `Forward slot ${forward.slot ?? '?'}`,
+  };
+};
+
+const formatPublicEndpoint = (forward) => {
+  const proto = normalizePortForwardProtocol(forward.proto) || 'TCP/UDP';
+  const host = forward.publicIp || 'public IP';
+
+  return `${proto} ${host}:${forward.publicPort}`;
+};
+
+const formatLocalEndpoint = (forward) => {
+  const proto = normalizePortForwardProtocol(forward.proto) || 'TCP/UDP';
+  const localPort = forward.localPort || forward.targetPort || forward.publicPort;
+
+  return `${proto} localhost:${localPort}`;
+};
+
+const formatSelectedPort = (forward) => {
+  const purpose = getNetworkEndpointPurpose(forward);
+  const selectedPort =
+    forward.slot === 0 && !forward.targetPort
+      ? forward.publicPort
+      : forward.targetPort || forward.localPort || forward.publicPort;
+
+  return `${purpose.config} ${selectedPort}`;
+};
+
+const NetworkEndpointList = ({ endpoints, title }) => {
+  if (!endpoints?.length) {
     return null;
   }
 
   return (
+    <div className="network-endpoint-change-group">
+      {title ? <span className="network-endpoint-change-title">{title}</span> : null}
+      <div className="network-endpoint-change-list">
+        {endpoints.map((forward) => {
+          const purpose = getNetworkEndpointPurpose(forward);
+
+          return (
+            <div
+              className="network-endpoint-change-item"
+              key={`${forward.slot}-${forward.proto}-${forward.publicPort}`}
+            >
+              <span className="network-endpoint-change-service">
+                {purpose.service}
+              </span>
+              <code>{formatPublicEndpoint(forward)}</code>
+              <Icon name="long arrow alternate right" />
+              <code>{formatLocalEndpoint(forward)}</code>
+              <span className="network-endpoint-change-config">
+                {formatSelectedPort(forward)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const VpnPortChangeNotice = ({ onDismiss, portForwards, previousSnapshot }) => {
+  if (!portForwards.length) {
+    return null;
+  }
+
+  const previousForwards =
+    previousSnapshot?.signature &&
+    previousSnapshot.signature !== getVpnPortSignature(portForwards)
+      ? previousSnapshot.portForwards
+      : [];
+
+  return (
     <Segment
-      className="vpn-port-change-notice"
+      className="network-endpoint-change-notice"
       data-testid="vpn-port-change-notice"
     >
-      <div className="vpn-port-change-notice-body">
+      <div className="network-endpoint-change-notice-body">
         <Icon name="exchange" />
-        <div className="vpn-port-change-notice-copy">
-          <strong>VPN forwarded ports changed.</strong>
+        <div className="network-endpoint-change-notice-copy">
+          <strong>slskdN ingress ports were reduced.</strong>
           <span>
-            Update any router, firewall, or remote peer configuration that uses
-            fixed ports.
+            Remove stale router, firewall, and VPN forwards from older slskdN
+            builds. The current configuration expects these public mappings:
           </span>
-          <div className="vpn-port-change-list">
-            {portForwards.map((forward) => (
-              <span
-                className="vpn-port-change-item"
-                key={`${forward.slot}-${forward.proto}-${forward.publicPort}`}
-              >
-                {forward.label} {forward.proto ? `${forward.proto} ` : ''}
-                {forward.publicIp ? `${forward.publicIp}:` : ''}
-                {forward.publicPort}
-                {forward.targetPort && forward.targetPort !== forward.publicPort
-                  ? ` -> ${forward.targetPort}`
-                  : ''}
-              </span>
-            ))}
-          </div>
+          <NetworkEndpointList endpoints={previousForwards} title="Previous" />
+          <NetworkEndpointList endpoints={portForwards} title="Current" />
         </div>
       </div>
-      <Button
-        basic
-        compact
-        icon="close"
-        onClick={onDismiss}
-        title="Dismiss VPN port notice"
+      <Popup
+        content="Dismiss this port migration reminder until the forwarded ports change again."
+        trigger={
+          <Button
+            basic
+            compact
+            icon="close"
+            onClick={onDismiss}
+            title="Dismiss port migration reminder"
+          />
+        }
       />
     </Segment>
   );
@@ -685,8 +837,8 @@ class App extends Component {
     this.setState({ themeMenuOpen: false });
   };
 
-  dismissVpnPortNotice = (signature) => {
-    storeDismissedVpnPortNotice(signature);
+  dismissVpnPortNotice = (signature, portForwards) => {
+    storeDismissedVpnPortNotice(signature, portForwards);
     this.forceUpdate();
   };
 
@@ -754,6 +906,7 @@ class App extends Component {
       vpnPortSignature &&
       applicationState.vpn?.isReady &&
       !hasDismissedVpnPortNotice(vpnPortSignature);
+    const previousNetworkEndpointSnapshot = getStoredNetworkEndpointSnapshot();
 
     const { controller, mode } = relay;
 
@@ -873,7 +1026,7 @@ class App extends Component {
                   <NavLink to="/discovery-inbox">
                     <Menu.Item data-testid="nav-discovery-inbox">
                       <Icon name="inbox" />
-                      Discovery Inbox
+                      Acquisition Review
                     </Menu.Item>
                   </NavLink>
                   <NavLink to="/import-staging">
@@ -928,12 +1081,6 @@ class App extends Component {
                     <Menu.Item data-testid="nav-contacts">
                       <Icon name="address book" />
                       Contacts
-                    </Menu.Item>
-                  </NavLink>
-                  <NavLink to="/pods">
-                    <Menu.Item data-testid="nav-pods">
-                      <Icon name="star outline" />
-                      Pods
                     </Menu.Item>
                   </NavLink>
                   <NavLink to="/solid">
@@ -1107,8 +1254,11 @@ class App extends Component {
             <Sidebar.Pusher className="app-content">
               {showVpnPortNotice && (
                 <VpnPortChangeNotice
-                  onDismiss={() => this.dismissVpnPortNotice(vpnPortSignature)}
+                  onDismiss={() =>
+                    this.dismissVpnPortNotice(vpnPortSignature, vpnPortForwards)
+                  }
                   portForwards={vpnPortForwards}
+                  previousSnapshot={previousNetworkEndpointSnapshot}
                 />
               )}
               <AppContext.Provider
@@ -1326,15 +1476,22 @@ class App extends Component {
                   />
                   <Route
                     path="/pods"
-                    element={this.withTokenCheck(<Pods state={applicationState} />)}
+                    element={
+                      this.withTokenCheck(
+                        <Messaging
+                          initialKind="pod"
+                          state={applicationState}
+                        />,
+                      )
+                    }
                   />
                   <Route
                     path="/pods/:podId"
-                    element={this.withTokenCheck(<Pods state={applicationState} />)}
+                    element={<Navigate replace to="/messages" />}
                   />
                   <Route
                     path="/pods/:podId/channels/:channelId"
-                    element={this.withTokenCheck(<Pods state={applicationState} />)}
+                    element={<Navigate replace to="/messages" />}
                   />
                   <Route
                     path="/rooms"

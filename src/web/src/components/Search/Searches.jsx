@@ -5,7 +5,6 @@ import {
   getStoredAcquisitionProfileId,
   setStoredAcquisitionProfileId,
 } from '../../lib/acquisitionProfiles';
-import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import { createSearchHubConnection } from '../../lib/hubFactory';
 import { getCapabilities } from '../../lib/slskdn';
 import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
@@ -14,8 +13,10 @@ import ErrorSegment from '../Shared/ErrorSegment';
 import LoaderSegment from '../Shared/LoaderSegment';
 import PlaceholderSegment from '../Shared/PlaceholderSegment';
 import AlbumCompletionPanel from './AlbumCompletionPanel';
+import ArtistReleaseRadarPanel from './ArtistReleaseRadarPanel';
 import DiscographyCoveragePanel from './DiscographyCoveragePanel';
 import DiscoveryGraphAtlasPanel from './DiscoveryGraphAtlasPanel';
+import FederatedTasteRecommendationsPanel from './FederatedTasteRecommendationsPanel';
 import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
@@ -320,29 +321,6 @@ const Searches = ({ server } = {}) => {
     }
   };
 
-  const addCurrentSearchToDiscoveryInbox = () => {
-    const ref = inputRef?.current?.inputRef?.current;
-    const searchText = `${ref?.value || ''}`.trim();
-
-    if (!searchText) {
-      toast.error('Please enter a search phrase');
-      return;
-    }
-
-    const item = addDiscoveryInboxItem({
-      acquisitionProfile: acquisitionProfile.id,
-      evidenceKey: `manual-search:${searchText.toLowerCase()}:${acquisitionProfile.id}`,
-      networkImpact:
-        'Local review only; no peer browse, search, or download starts until approval is wired to an acquisition action.',
-      reason: `Saved from Search while using the ${acquisitionProfile.label} acquisition profile.`,
-      searchText,
-      source: 'Search',
-      title: searchText,
-    });
-
-    toast.success(`Added "${item.title}" to Discovery Inbox`);
-  };
-
   // delete a search
   const remove = async (search) => {
     try {
@@ -468,18 +446,6 @@ const Searches = ({ server } = {}) => {
                       disabled={creating || !normalizedServer.isConnected}
                       icon="search"
                       onClick={() => create({ navigate: true })}
-                    />
-                  }
-                />
-                <Popup
-                  content="Save this search phrase to the Discovery Inbox for review before any acquisition work starts."
-                  position="top center"
-                  trigger={
-                    <Button
-                      aria-label="Add search phrase to Discovery Inbox"
-                      disabled={creating}
-                      icon="inbox"
-                      onClick={addCurrentSearchToDiscoveryInbox}
                     />
                   }
                 />
@@ -613,6 +579,20 @@ const Searches = ({ server } = {}) => {
         title="Discography Concierge"
       >
         <DiscographyCoveragePanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.artistReleaseRadar"
+        title="Artist Release Radar"
+      >
+        <ArtistReleaseRadarPanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.federatedTaste"
+        title="Federated Taste"
+      >
+        <FederatedTasteRecommendationsPanel disabled={!normalizedServer.isConnected} />
       </CollapsibleSection>
       <CollapsibleSection
         defaultOpen={false}

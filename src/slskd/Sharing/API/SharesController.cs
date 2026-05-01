@@ -397,7 +397,7 @@ public class SharesController : ControllerBase
         {
             var claims = await _tokens.ValidateAsync(tokenForStream, ct);
             if (claims == null) return Unauthorized();
-            if (claims.ShareId != id.ToString()) return NotFound();
+            if (!SecurityUtils.ConstantTimeEquals(claims.ShareId, id.ToString())) return NotFound();
             var m = await _sharing.GetManifestAsync(id, tokenForStream, null, ct);
             if (m == null) return NotFound();
             return Ok(m);

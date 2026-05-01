@@ -117,6 +117,21 @@ public sealed class QuarantineJuryController : ControllerBase
         return review == null ? NotFound() : Ok(review);
     }
 
+    [HttpGet("audit")]
+    [ProducesResponseType(typeof(QuarantineJuryAuditReport), 200)]
+    public async Task<IActionResult> GetAuditReport(
+        [FromQuery] int staleAfterHours = 72,
+        CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var report = await _juryService.GetAuditReportAsync(staleAfterHours, cancellationToken).ConfigureAwait(false);
+        return Ok(report);
+    }
+
     [HttpPost("requests/{requestId}/accept-release-candidate")]
     [ProducesResponseType(typeof(QuarantineJuryAcceptanceResult), 200)]
     public async Task<IActionResult> AcceptReleaseCandidate(
@@ -139,6 +154,24 @@ public sealed class QuarantineJuryController : ControllerBase
         }
 
         return result.IsAccepted ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("requests/{requestId}/release-package")]
+    [ProducesResponseType(typeof(QuarantineJuryReleasePackageResult), 200)]
+    public async Task<IActionResult> GetReleasePackage(string requestId, CancellationToken cancellationToken = default)
+    {
+        if (Program.IsRelayAgent)
+        {
+            return Forbid();
+        }
+
+        var result = await _juryService.GetReleasePackageAsync(requestId, cancellationToken).ConfigureAwait(false);
+        if (result.Errors.Contains("Request not found."))
+        {
+            return NotFound(result);
+        }
+
+        return result.IsReady ? Ok(result) : BadRequest(result);
     }
 
     [HttpPost("requests/{requestId}/routes")]

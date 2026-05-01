@@ -118,6 +118,27 @@ public sealed class QuarantineJuryControllerTests
     }
 
     [Fact]
+    public async Task GetAuditReport_ReturnsServiceResult()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetAuditReportAsync(24, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryAuditReport
+            {
+                RequestCount = 2,
+                PendingReleaseCandidateCount = 1,
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetAuditReport(24, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var report = Assert.IsType<QuarantineJuryAuditReport>(ok.Value);
+        Assert.Equal(2, report.RequestCount);
+        Assert.Equal(1, report.PendingReleaseCandidateCount);
+    }
+
+    [Fact]
     public async Task AcceptReleaseCandidate_ReturnsBadRequestForRejectedAcceptance()
     {
         var service = new Mock<IQuarantineJuryService>();
@@ -181,6 +202,65 @@ public sealed class QuarantineJuryControllerTests
         var ok = Assert.IsType<OkObjectResult>(result);
         var acceptance = Assert.IsType<QuarantineJuryAcceptanceResult>(ok.Value);
         Assert.True(acceptance.IsAccepted);
+    }
+
+    [Fact]
+    public async Task GetReleasePackage_ReturnsAcceptedPackage()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetReleasePackageAsync("request-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryReleasePackageResult
+            {
+                Package = new QuarantineJuryReleasePackage
+                {
+                    RequestId = "request-1",
+                    MutatesLocalQuarantineState = false,
+                },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetReleasePackage("request-1", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var packageResult = Assert.IsType<QuarantineJuryReleasePackageResult>(ok.Value);
+        Assert.True(packageResult.IsReady);
+        Assert.NotNull(packageResult.Package);
+        Assert.False(packageResult.Package.MutatesLocalQuarantineState);
+    }
+
+    [Fact]
+    public async Task GetReleasePackage_ReturnsBadRequestBeforeAcceptance()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetReleasePackageAsync("request-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryReleasePackageResult
+            {
+                Errors = new List<string> { "Release candidate has not been accepted locally." },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetReleasePackage("request-1", CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetReleasePackage_ReturnsNotFoundForMissingRequest()
+    {
+        var service = new Mock<IQuarantineJuryService>();
+        service
+            .Setup(s => s.GetReleasePackageAsync("missing-request", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QuarantineJuryReleasePackageResult
+            {
+                Errors = new List<string> { "Request not found." },
+            });
+        var controller = new QuarantineJuryController(service.Object);
+
+        var result = await controller.GetReleasePackage("missing-request", CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);
     }
 
     [Fact]

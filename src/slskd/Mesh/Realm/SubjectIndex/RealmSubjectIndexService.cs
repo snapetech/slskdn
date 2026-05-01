@@ -4,15 +4,24 @@
 namespace slskd.Mesh.Realm.SubjectIndex;
 
 using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using slskd.Mesh.Governance;
 using slskd.SocialFederation;
 
 public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
     private const string ProposalDocumentType = "realm-subject-index.proposal";
     private const string ReviewDocumentType = "realm-subject-index.review";
     private const int MaxProposalNoteLength = 512;
+    private const int MaxAuthorityDecisionNoteLength = 512;
 
     private static readonly HashSet<string> AllowedEvidenceSchemes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -26,17 +35,44 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
     private readonly IRealmService _realmService;
     private readonly ILogger<RealmSubjectIndexService> _logger;
     private readonly IRealmAwareGovernanceClient? _governanceClient;
+    private readonly object _storageSync = new();
+    private readonly string _storagePath;
     private readonly ConcurrentDictionary<string, RealmSubjectIndex> _indexes = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, RealmSubjectIndexProposal> _proposals = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, RealmSubjectIndexAuthorityDecision> _authorityDecisions = new(StringComparer.OrdinalIgnoreCase);
+
+    private sealed record IndexedSubjectEntry(
+        RealmSubjectIndex Index,
+        RealmSubjectIndexEntry Entry,
+        IReadOnlyDictionary<string, string> ExternalIds);
 
     public RealmSubjectIndexService(
         IRealmService realmService,
         ILogger<RealmSubjectIndexService> logger,
         IRealmAwareGovernanceClient? governanceClient = null)
+        : this(
+            realmService,
+            logger,
+            Path.Combine(
+                string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory)
+                    ? global::slskd.Program.DefaultAppDirectory
+                    : global::slskd.Program.AppDirectory,
+                "realm-subject-indexes.json"),
+            governanceClient)
+    {
+    }
+
+    public RealmSubjectIndexService(
+        IRealmService realmService,
+        ILogger<RealmSubjectIndexService> logger,
+        string storagePath,
+        IRealmAwareGovernanceClient? governanceClient = null)
     {
         _realmService = realmService;
         _logger = logger;
+        _storagePath = storagePath;
         _governanceClient = governanceClient;
+        LoadState();
     }
 
     public Task<RealmSubjectIndexValidationResult> ValidateAsync(
@@ -57,6 +93,7 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
         }
 
         _indexes[BuildIndexKey(index.RealmId, index.Id)] = index;
+        PersistState();
         _logger.LogInformation(
             "[RealmSubjectIndex] Stored index {IndexId} revision {Revision} for realm {RealmId}",
             index.Id,
@@ -89,12 +126,14 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
         {
             proposal.Status = RealmSubjectIndexProposalStatus.Failed;
             _proposals[proposal.ProposalId] = proposal;
+            PersistState();
             return proposal;
         }
 
         var document = BuildProposalDocument(proposal);
         proposal.GovernanceDocumentId = document.Id;
         _proposals[proposal.ProposalId] = proposal;
+        PersistState();
 
         if (_governanceClient != null)
         {
@@ -174,6 +213,8 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
             _indexes[BuildIndexKey(proposal.Index.RealmId, proposal.Index.Id)] = proposal.Index;
         }
 
+        PersistState();
+
         _logger.LogInformation(
             "[RealmSubjectIndex] {Action} proposal {ProposalId} for index {IndexId} revision {Revision}",
             accept ? "Accepted" : "Rejected",
@@ -208,6 +249,7 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
 
         var normalizedRecordingId = recordingId.Trim();
         var resolutions = _indexes.Values
+            .Where(IsAuthorityEnabled)
             .SelectMany(index => index.Entries
                 .Where(entry => MatchesRecordingId(entry, normalizedRecordingId))
                 .Select(entry => new RealmSubjectIndexResolution
@@ -237,6 +279,113 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
             .ToList();
 
         return Task.FromResult<IReadOnlyList<RealmSubjectIndex>>(indexes);
+    }
+
+    public Task<RealmSubjectIndexConflictReport> GetConflictReportAsync(
+        string realmId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRealmId = realmId.Trim();
+        var allIndexes = _indexes.Values
+            .Where(index => string.Equals(index.RealmId, normalizedRealmId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(index => index.Id, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(index => index.Revision)
+            .ToList();
+        var indexes = allIndexes
+            .Where(IsAuthorityEnabled)
+            .ToList();
+
+        var entries = indexes
+            .SelectMany(index => index.Entries.Select(entry => new IndexedSubjectEntry(index, entry, BuildExternalIdMap(entry))))
+            .ToList();
+
+        var report = new RealmSubjectIndexConflictReport
+        {
+            RealmId = normalizedRealmId,
+            IndexCount = indexes.Count,
+            DisabledAuthorityCount = allIndexes.Count - indexes.Count,
+            EntryCount = entries.Count,
+        };
+
+        report.Conflicts.AddRange(BuildExternalIdConflicts(entries));
+        report.Conflicts.AddRange(BuildRecordingSubjectConflicts(entries));
+        report.Conflicts.AddRange(BuildWorkIdentityConflicts(entries));
+        report.Conflicts.AddRange(BuildAliasSubjectConflicts(entries));
+
+        report.Conflicts = report.Conflicts
+            .OrderBy(conflict => conflict.Type, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(conflict => conflict.Key, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(conflict => conflict.SubjectId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Task.FromResult(report);
+    }
+
+    public Task<IReadOnlyList<RealmSubjectIndexAuthorityDecision>> GetAuthorityDecisionsForRealmAsync(
+        string realmId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRealmId = realmId.Trim();
+        var decisions = _authorityDecisions.Values
+            .Where(decision => string.Equals(decision.RealmId, normalizedRealmId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(decision => decision.IndexId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<RealmSubjectIndexAuthorityDecision>>(decisions);
+    }
+
+    public Task<RealmSubjectIndexAuthorityDecision> SetAuthorityEnabledAsync(
+        string realmId,
+        string indexId,
+        RealmSubjectIndexAuthorityDecisionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        request ??= new RealmSubjectIndexAuthorityDecisionRequest();
+        var decision = new RealmSubjectIndexAuthorityDecision
+        {
+            RealmId = realmId.Trim(),
+            IndexId = indexId.Trim(),
+            Enabled = request.Enabled,
+            DecidedBy = string.IsNullOrWhiteSpace(request.DecidedBy) ? "local-user" : request.DecidedBy.Trim(),
+            Note = request.Note?.Trim() ?? string.Empty,
+            DecidedAt = DateTimeOffset.UtcNow,
+        };
+
+        if (string.IsNullOrWhiteSpace(decision.RealmId))
+        {
+            decision.Errors.Add("Realm id is required.");
+        }
+        else if (!_realmService.IsSameRealm(decision.RealmId))
+        {
+            decision.Errors.Add("Realm id does not match the local realm.");
+        }
+
+        if (string.IsNullOrWhiteSpace(decision.IndexId))
+        {
+            decision.Errors.Add("Index id is required.");
+        }
+        else if (!_indexes.ContainsKey(BuildIndexKey(decision.RealmId, decision.IndexId)))
+        {
+            decision.Errors.Add("Index authority was not found.");
+        }
+
+        if (!IsSafeOpaqueReference(decision.DecidedBy))
+        {
+            decision.Errors.Add("Decided-by identifier must be opaque and safe.");
+        }
+
+        if (decision.Note.Length > MaxAuthorityDecisionNoteLength)
+        {
+            decision.Errors.Add("Authority decision note must be 512 characters or fewer.");
+        }
+
+        if (decision.Errors.Count == 0)
+        {
+            _authorityDecisions[BuildIndexKey(decision.RealmId, decision.IndexId)] = decision;
+            PersistState();
+        }
+
+        return Task.FromResult(decision);
     }
 
     private RealmSubjectIndexValidationResult Validate(RealmSubjectIndex index)
@@ -359,6 +508,317 @@ public sealed class RealmSubjectIndexService : IRealmSubjectIndexService
             string.Equals(externalRecordingId, recordingId, StringComparison.OrdinalIgnoreCase);
 
         return workRefMatches || externalIdMatches;
+    }
+
+    private static IReadOnlyList<RealmSubjectIndexConflict> BuildExternalIdConflicts(
+        IReadOnlyCollection<IndexedSubjectEntry> entries)
+    {
+        return entries
+            .SelectMany(indexed => indexed.ExternalIds.Select(externalId => new
+            {
+                Indexed = indexed,
+                Key = externalId.Key,
+                Value = externalId.Value,
+            }))
+            .GroupBy(
+                item => $"{Normalize(item.Indexed.Index.SubjectNamespace)}:{Normalize(item.Indexed.Entry.SubjectId)}:{Normalize(item.Key)}",
+                StringComparer.OrdinalIgnoreCase)
+            .Where(group => group
+                .Select(item => Normalize(item.Value))
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() > 1)
+            .Select(group =>
+            {
+                var first = group.First();
+                return BuildConflict(
+                    "external-id",
+                    first.Indexed.Index.SubjectNamespace,
+                    first.Indexed.Entry.SubjectId,
+                    first.Key,
+                    $"Subject '{first.Indexed.Entry.SubjectId}' has conflicting external id values for '{first.Key}'.",
+                    group.Select(item => BuildConflictValue(item.Indexed, item.Value)));
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<RealmSubjectIndexConflict> BuildRecordingSubjectConflicts(
+        IReadOnlyCollection<IndexedSubjectEntry> entries)
+    {
+        return entries
+            .SelectMany(indexed => GetRecordingIds(indexed).Select(recordingId => new
+            {
+                Indexed = indexed,
+                RecordingId = recordingId,
+            }))
+            .GroupBy(item => Normalize(item.RecordingId), StringComparer.OrdinalIgnoreCase)
+            .Where(group => group
+                .Select(item => Normalize(item.Indexed.Entry.SubjectId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() > 1)
+            .Select(group =>
+            {
+                var first = group.First();
+                return BuildConflict(
+                    "recording-subject",
+                    first.Indexed.Index.SubjectNamespace,
+                    string.Empty,
+                    first.RecordingId,
+                    $"Recording '{first.RecordingId}' maps to multiple realm subjects.",
+                    group.Select(item => BuildConflictValue(item.Indexed, item.Indexed.Entry.SubjectId)));
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<RealmSubjectIndexConflict> BuildWorkIdentityConflicts(
+        IReadOnlyCollection<IndexedSubjectEntry> entries)
+    {
+        return entries
+            .GroupBy(
+                indexed => $"{Normalize(indexed.Index.SubjectNamespace)}:{Normalize(indexed.Entry.SubjectId)}",
+                StringComparer.OrdinalIgnoreCase)
+            .Where(group => group
+                .Select(indexed => BuildWorkIdentity(indexed.Entry))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() > 1)
+            .Select(group =>
+            {
+                var first = group.First();
+                return BuildConflict(
+                    "workref-identity",
+                    first.Index.SubjectNamespace,
+                    first.Entry.SubjectId,
+                    "workref",
+                    $"Subject '{first.Entry.SubjectId}' has conflicting title or creator values.",
+                    group.Select(indexed => BuildConflictValue(indexed, BuildWorkIdentity(indexed.Entry))));
+            })
+            .ToList();
+    }
+
+    private static IReadOnlyList<RealmSubjectIndexConflict> BuildAliasSubjectConflicts(
+        IReadOnlyCollection<IndexedSubjectEntry> entries)
+    {
+        return entries
+            .SelectMany(indexed => indexed.Entry.Aliases
+                .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                .Select(alias => new
+                {
+                    Indexed = indexed,
+                    Alias = alias.Trim(),
+                }))
+            .GroupBy(
+                item => $"{Normalize(item.Indexed.Index.SubjectNamespace)}:{Normalize(item.Alias)}",
+                StringComparer.OrdinalIgnoreCase)
+            .Where(group => group
+                .Select(item => Normalize(item.Indexed.Entry.SubjectId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() > 1)
+            .Select(group =>
+            {
+                var first = group.First();
+                return BuildConflict(
+                    "alias-subject",
+                    first.Indexed.Index.SubjectNamespace,
+                    string.Empty,
+                    first.Alias,
+                    $"Alias '{first.Alias}' maps to multiple realm subjects.",
+                    group.Select(item => BuildConflictValue(item.Indexed, item.Indexed.Entry.SubjectId)));
+            })
+            .ToList();
+    }
+
+    private static RealmSubjectIndexConflict BuildConflict(
+        string type,
+        string subjectNamespace,
+        string subjectId,
+        string key,
+        string description,
+        IEnumerable<RealmSubjectIndexConflictValue> values)
+    {
+        var sortedValues = values
+            .GroupBy(
+                value => $"{Normalize(value.AuthorityKey)}:{Normalize(value.SubjectId)}:{Normalize(value.Value)}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(value => value.AuthorityKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value.SubjectId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value.Value, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new RealmSubjectIndexConflict
+        {
+            Id = BuildConflictId(type, subjectNamespace, subjectId, key),
+            Type = type,
+            SubjectNamespace = subjectNamespace,
+            SubjectId = subjectId,
+            Key = key,
+            Description = description,
+            Values = sortedValues,
+        };
+    }
+
+    private static RealmSubjectIndexConflictValue BuildConflictValue(IndexedSubjectEntry indexed, string value)
+    {
+        return new RealmSubjectIndexConflictValue
+        {
+            RealmId = indexed.Index.RealmId,
+            IndexId = indexed.Index.Id,
+            Revision = indexed.Index.Revision,
+            SubjectId = indexed.Entry.SubjectId,
+            Value = value,
+            WorkTitle = indexed.Entry.WorkRef.Title,
+            WorkCreator = indexed.Entry.WorkRef.Creator ?? string.Empty,
+            Aliases = indexed.Entry.Aliases
+                .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                .Select(alias => alias.Trim())
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            ExternalIds = indexed.ExternalIds
+                .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase),
+            AuthorityKey = $"{indexed.Index.RealmId}:{indexed.Index.Id}:r{indexed.Index.Revision}",
+            Provenance = BuildProvenance(indexed.Index),
+        };
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildExternalIdMap(RealmSubjectIndexEntry entry)
+    {
+        var externalIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in entry.WorkRef.ExternalIds.Concat(entry.ExternalIds))
+        {
+            var key = pair.Key.Trim();
+            var value = pair.Value.Trim();
+            if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value))
+            {
+                externalIds[key] = value;
+            }
+        }
+
+        return externalIds;
+    }
+
+    private static IReadOnlyList<string> GetRecordingIds(IndexedSubjectEntry indexed)
+    {
+        return indexed.ExternalIds
+            .Where(pair =>
+                string.Equals(pair.Key, "musicbrainz", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pair.Key, "musicbrainz:recording", StringComparison.OrdinalIgnoreCase))
+            .Select(pair => pair.Value.Trim())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildWorkIdentity(RealmSubjectIndexEntry entry)
+    {
+        return $"{entry.WorkRef.Title.Trim()}|{entry.WorkRef.Creator?.Trim() ?? string.Empty}";
+    }
+
+    private static string BuildConflictId(string type, string subjectNamespace, string subjectId, string key)
+    {
+        return $"{Normalize(type)}:{Normalize(subjectNamespace)}:{Normalize(subjectId)}:{Normalize(key)}";
+    }
+
+    private static string BuildProvenance(RealmSubjectIndex index)
+    {
+        return $"realm:{index.RealmId}:subject-index:{index.Id}:r{index.Revision}";
+    }
+
+    private bool IsAuthorityEnabled(RealmSubjectIndex index)
+    {
+        return !_authorityDecisions.TryGetValue(BuildIndexKey(index.RealmId, index.Id), out var decision) || decision.Enabled;
+    }
+
+    private void LoadState()
+    {
+        lock (_storageSync)
+        {
+            if (!File.Exists(_storagePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_storagePath);
+                var state = JsonSerializer.Deserialize<RealmSubjectIndexStoreState>(json, JsonOptions);
+                if (state == null)
+                {
+                    return;
+                }
+
+                foreach (var index in state.Indexes)
+                {
+                    _indexes[BuildIndexKey(index.RealmId, index.Id)] = index;
+                }
+
+                foreach (var proposal in state.Proposals)
+                {
+                    _proposals[proposal.ProposalId] = proposal;
+                }
+
+                foreach (var decision in state.AuthorityDecisions)
+                {
+                    _authorityDecisions[BuildIndexKey(decision.RealmId, decision.IndexId)] = decision;
+                }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "[RealmSubjectIndex] Failed to load persisted subject-index state from {Path}", _storagePath);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "[RealmSubjectIndex] Failed to parse persisted subject-index state from {Path}", _storagePath);
+            }
+        }
+    }
+
+    private void PersistState()
+    {
+        lock (_storageSync)
+        {
+            var directory = Path.GetDirectoryName(_storagePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var state = new RealmSubjectIndexStoreState
+            {
+                Indexes = _indexes.Values
+                    .OrderBy(index => index.RealmId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(index => index.Id, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                Proposals = _proposals.Values
+                    .OrderBy(proposal => proposal.RealmId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(proposal => proposal.IndexId, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(proposal => proposal.Revision)
+                    .ToList(),
+                AuthorityDecisions = _authorityDecisions.Values
+                    .OrderBy(decision => decision.RealmId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(decision => decision.IndexId, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+            };
+
+            var tempPath = $"{_storagePath}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(state, JsonOptions));
+            File.Move(tempPath, _storagePath, overwrite: true);
+        }
+    }
+
+    private sealed class RealmSubjectIndexStoreState
+    {
+        public List<RealmSubjectIndex> Indexes { get; set; } = new();
+
+        public List<RealmSubjectIndexProposal> Proposals { get; set; } = new();
+
+        public List<RealmSubjectIndexAuthorityDecision> AuthorityDecisions { get; set; } = new();
+    }
+
+    private static string Normalize(string value)
+    {
+        return value.Trim().ToLowerInvariant();
     }
 
     private static bool TryGetRecordingId(WorkRef workRef, out string recordingId)

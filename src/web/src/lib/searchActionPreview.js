@@ -33,6 +33,14 @@ export const buildSearchActionPreview = ({
     warnings.push('Local caution signals exist for this peer');
   }
 
+  if (communityQualitySummary?.override?.note) {
+    warnings.push(`Local quality note: ${communityQualitySummary.override.note}`);
+  }
+
+  if (communityQualitySummary?.override?.mode === 'ignore') {
+    warnings.push('Local quality signals are ignored by reviewer override');
+  }
+
   if ((candidateRank?.score || 0) > 0 && candidateRank.score < 45) {
     warnings.push(`Candidate score is ${candidateRank.score}/100`);
   }

@@ -12,6 +12,22 @@
   margin-bottom: 1em !important;
 }
 
+.wishlist-request-summary-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.wishlist-request-summary-header > .ui.popup,
+.wishlist-request-summary-header > .ui.button {
+  flex: 0 0 auto;
+}
+
+.wishlist-request-summary-header .ui.header {
+  margin-top: 0 !important;
+}
+
 .wishlist-request-summary-grid {
   display: flex;
   flex-wrap: wrap;
@@ -47,6 +63,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+@media only screen and (max-width: 760px) {
+  .wishlist-request-summary-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wishlist-request-summary-header .ui.button {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
 /* Dark theme for placeholder segment */

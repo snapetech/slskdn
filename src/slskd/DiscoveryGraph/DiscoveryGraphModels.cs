@@ -39,6 +39,8 @@ public sealed class DiscoveryGraphResult
     public List<DiscoveryGraphNode> Nodes { get; set; } = new();
 
     public List<DiscoveryGraphEdge> Edges { get; set; } = new();
+
+    public List<DiscoveryGraphEvidenceLane> EvidenceSummary { get; set; } = new();
 }
 
 public sealed class DiscoveryGraphNode
@@ -77,4 +79,19 @@ public sealed class DiscoveryGraphEdge
     public Dictionary<string, double> ScoreComponents { get; set; } = new();
 
     public List<string> Evidence { get; set; } = new();
+
+    public List<DiscoveryGraphEvidenceLane> EvidenceLanes { get; set; } = new();
+}
+
+public sealed class DiscoveryGraphEvidenceLane
+{
+    public string Lane { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public double Score { get; set; }
+
+    public int Count { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
 }

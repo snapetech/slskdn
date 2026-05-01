@@ -228,8 +228,10 @@
 - [x] All access control capability-based (share tokens) or normal auth.  
 - [x] Streaming: single-range; rate limits and concurrency caps.  
 - [x] Mesh search: offline, no external lookups.  
-- [ ] Share token: constant-time validation where applicable (do in impl).  
-- [ ] ContentId → path only via `IContentLocator` and `IsAdvertisable` (and MCP) check.
+- [x] Share token: constant-time validation where applicable (done in impl; JWT signature validation plus constant-time collection/share binding comparisons).  
+- [x] ContentId → path only via `IContentLocator` and `IsAdvertisable` (and MCP) check.
+
+Completed 2026-05-01: `ShareTokenService` uses constant-time collection-audience binding after signed JWT validation, manifest share-id checks use the shared constant-time helper, and `ContentLocator` now treats a non-advertisable repository hit as terminal so allowed-root fallback only runs when the repository has no content item.
 
 ---
 

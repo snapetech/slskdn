@@ -1,6 +1,7 @@
 import {
   addPlaylistIntake,
   applyPlaylistIntakeRefresh,
+  approvePlaylistTagOrganizationPlan,
   buildPlaylistCollectionItems,
   buildPlaylistDiscoverySeed,
   buildPlaylistDiscoverySeeds,
@@ -8,10 +9,15 @@ import {
   buildPlaylistIntakeSummary,
   buildPlaylistProviderRefreshContent,
   buildPlaylistRefreshDiff,
+  buildPlaylistTagOrganizationPlan,
   buildSlskdPlaylistPreview,
+  clearPlaylistTagOrganizationApproval,
+  formatPlaylistTagOrganizationReport,
   getDuePlaylistRefreshes,
   getPlaylistIntakes,
+  previewPlaylistTagOrganizationPlan,
   previewPlaylistIntakeRefresh,
+  scorePlaylistTrackCandidate,
   updatePlaylistIntakeTrackState,
   updatePlaylistRefreshAutomation,
 } from './playlistIntake';
@@ -265,8 +271,10 @@ describe('playlistIntake', () => {
     expect(
       buildPlaylistCollectionItems({
         id: 'playlist-3',
+        title: 'Radio Picks',
         tracks: [
           {
+            artist: 'Stereolab',
             id: 'track-1',
             lineNumber: 1,
             state: 'Matched',
@@ -282,9 +290,170 @@ describe('playlistIntake', () => {
       }),
     ).toEqual([
       {
+        album: 'Radio Picks',
+        artist: 'Stereolab',
         contentId: 'playlist-intake:playlist-3:1:track-1',
+        fileName: 'Stereolab - Radio Picks - French Disko',
         mediaKind: 'PlannedTrack',
+        title: 'French Disko',
       },
     ]);
+  });
+
+  it('reuses the shared metadata matcher for playlist candidate review', () => {
+    const match = scorePlaylistTrackCandidate(
+      {
+        artist: 'Beyonce',
+        title: 'Deja Vu',
+      },
+      {
+        artist: 'Beyoncé',
+        title: 'Déjà Vu',
+      },
+    );
+
+    expect(match).toEqual(
+      expect.objectContaining({
+        band: expect.any(String),
+        titleScore: 1,
+      }),
+    );
+  });
+
+  it('builds tag and organization dry-run plans from matched playlist rows', () => {
+    const plan = buildPlaylistTagOrganizationPlan(
+      {
+        name: 'Review set',
+        tracks: [
+          {
+            artist: 'Stereolab and Broadcast',
+            id: 'track-1',
+            lineNumber: 1,
+            sourceLine: 'Stereolab and Broadcast - French Disko',
+            state: 'Matched',
+            title: 'French Disko',
+          },
+          {
+            artist: '',
+            id: 'track-2',
+            lineNumber: 2,
+            sourceLine: 'Untitled',
+            state: 'Unmatched',
+            title: 'Untitled',
+          },
+          {
+            artist: 'Rejected Artist',
+            id: 'track-3',
+            lineNumber: 3,
+            state: 'Rejected',
+            title: 'Skip Me',
+          },
+        ],
+      },
+      {
+        albumTitle: 'Road Trip',
+        coverArtPolicy: 'embed',
+        multiArtistPolicy: 'split',
+        pathTemplate: '{album}/{trackNumber} - {artist} - {title}',
+        replayGainPolicy: 'album',
+      },
+    );
+
+    expect(plan).toMatchObject({
+      coverArtAction: expect.stringMatching(/embedded/i),
+      replayGainAction: expect.stringMatching(/Album ReplayGain/i),
+      summary: {
+        changedFieldCount: 4,
+        matched: 1,
+        skipped: 1,
+        total: 2,
+      },
+    });
+    expect(plan.networkImpact).toMatch(/no tag write/i);
+    expect(plan.trackPreviews[0]).toEqual(
+      expect.objectContaining({
+        destinationPath: 'Road Trip/01 - Stereolab; Broadcast - French Disko.flac',
+        metadataSnapshot: expect.objectContaining({
+          proposed: expect.objectContaining({
+            album: 'Road Trip',
+          }),
+          source: expect.objectContaining({
+            artist: 'Stereolab and Broadcast',
+          }),
+        }),
+        tagPreview: expect.objectContaining({
+          artist: ['Stereolab', 'Broadcast'],
+          album: 'Road Trip',
+        }),
+      }),
+    );
+  });
+
+  it('persists playlist organization previews without changing track states', () => {
+    addPlaylistIntake({
+      content: 'Stereolab - French Disko\nUntitled',
+      name: 'Organization queue',
+      source: 'local:organization.txt',
+    });
+    const [playlist] = getPlaylistIntakes();
+
+    previewPlaylistTagOrganizationPlan(playlist.id, {
+      albumTitle: 'Organization Album',
+      pathTemplate: '{playlist}/{trackNumber} - {artist} - {title}',
+    });
+
+    const [updated] = getPlaylistIntakes();
+    expect(updated.organizationOptions).toMatchObject({
+      albumTitle: 'Organization Album',
+      pathTemplate: '{playlist}/{trackNumber} - {artist} - {title}',
+    });
+    expect(updated.organizationPlan.summary).toMatchObject({
+      matched: 1,
+      skipped: 1,
+    });
+    expect(updated.tracks.map((track) => track.state)).toEqual([
+      'Matched',
+      'Unmatched',
+    ]);
+  });
+
+  it('formats and approves tag organization snapshots without writing tags', () => {
+    addPlaylistIntake({
+      content: 'Stereolab - French Disko\nUntitled',
+      name: 'Snapshot queue',
+      source: 'local:snapshot.txt',
+    });
+    let [playlist] = getPlaylistIntakes();
+    previewPlaylistTagOrganizationPlan(playlist.id, {
+      albumTitle: 'Snapshot Album',
+    });
+    [playlist] = getPlaylistIntakes();
+
+    const report = formatPlaylistTagOrganizationReport(playlist);
+
+    expect(report).toContain('slskdN tag and organization dry run');
+    expect(report).toContain('Playlist: Snapshot queue');
+    expect(report).toContain('Proposed: Stereolab | French Disko | Snapshot Album | 01');
+    expect(report).toContain('No tag write');
+
+    approvePlaylistTagOrganizationPlan(playlist.id);
+    [playlist] = getPlaylistIntakes();
+    expect(playlist.organizationApproval).toEqual(
+      expect.objectContaining({
+        impact: expect.stringMatching(/Approval snapshot only/i),
+        summary: expect.objectContaining({
+          matched: 1,
+        }),
+      }),
+    );
+    expect(playlist.organizationApproval.trackSnapshots[0]).toEqual(
+      expect.objectContaining({
+        destinationPath: 'Stereolab/Snapshot Album/01 - French Disko.flac',
+      }),
+    );
+
+    clearPlaylistTagOrganizationApproval(playlist.id);
+    [playlist] = getPlaylistIntakes();
+    expect(playlist.organizationApproval).toBeNull();
   });
 });

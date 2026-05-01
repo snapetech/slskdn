@@ -24,6 +24,7 @@ const normalizeItem = (item) => {
   return {
     createdAt: item.createdAt || timestamp,
     fileName: item.fileName || item.name || 'Unknown file',
+    audioVerification: item.audioVerification || null,
     fingerprintVerification: item.fingerprintVerification || null,
     id: item.id || uuidv4(),
     lastModified: item.lastModified || null,
@@ -113,6 +114,7 @@ export const addImportStagingFiles = (
     .map((file) =>
       normalizeItem({
         fileName: file.name,
+        audioVerification: file.audioVerification,
         fingerprintVerification: file.fingerprintVerification,
         lastModified: file.lastModified,
         size: file.size,
@@ -217,6 +219,36 @@ export const updateImportStagingItemMetadataMatch = (
   );
 
   return saveImportStagingItems(updated, setItem);
+};
+
+export const updateImportStagingItemAudioVerification = (
+  id,
+  verification,
+  {
+    fingerprintVerification,
+    getItem = getLocalStorageItem,
+    setItem = setLocalStorageItem,
+  } = {},
+) => {
+  const updated = getImportStagingItems(getItem).map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          audioVerification: verification,
+          fingerprintVerification: fingerprintVerification || item.fingerprintVerification,
+          updatedAt: now(),
+        }
+      : item,
+  );
+
+  return saveImportStagingItems(updated, setItem);
+};
+
+export const applyAudioVerificationPolicy = (item) => {
+  if (!item.audioVerification) return item.state;
+  if (item.audioVerification.action === 'Quarantine') return 'Failed';
+  if (item.audioVerification.action === 'Allow') return 'Ready';
+  return 'Staged';
 };
 
 export const overrideImportStagingItemMetadataMatch = (

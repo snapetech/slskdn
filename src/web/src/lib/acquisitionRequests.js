@@ -152,3 +152,56 @@ export const buildWishlistRequestSummary = ({
       (counts.byState.Snoozed || 0),
   };
 };
+
+export const buildWishlistRequestReviewPacket = ({
+  inboxItems = getDiscoveryInboxItems(),
+  items = [],
+  quota = 25,
+} = {}) => {
+  const summary = buildWishlistRequestSummary({ inboxItems, items, quota });
+  const rows = items.map((item) => {
+    const state = getWishlistRequestState(item, inboxItems);
+
+    return {
+      autoDownload: Boolean(item.autoDownload),
+      enabled: Boolean(item.enabled),
+      id: item.id,
+      searchText: item.searchText,
+      state: state.label,
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    rows,
+    summary,
+  };
+};
+
+export const formatWishlistRequestReviewPacket = (packet) => {
+  const lines = [
+    'slskdN Wishlist request review',
+    `Generated: ${packet.generatedAt}`,
+    `Requests: ${packet.summary.total}`,
+    `Enabled: ${packet.summary.enabled}`,
+    `Automatic: ${packet.summary.automatic}`,
+    `Needs review: ${packet.summary.reviewCount}`,
+    `Quota: ${packet.summary.quotaStatus} (${packet.summary.quotaRemaining} remaining)`,
+    '',
+    'Requests:',
+  ];
+
+  packet.rows.forEach((row) => {
+    lines.push(
+      `- [${row.state}] ${row.searchText} (${row.enabled ? 'enabled' : 'disabled'}, ${row.autoDownload ? 'automatic' : 'manual'})`,
+    );
+  });
+
+  return lines.join('\n');
+};
+
+export const getRunnableWishlistRequests = (items = [], { limit = 3 } = {}) =>
+  items
+    .filter((item) => item.enabled)
+    .filter((item) => item.id)
+    .slice(0, limit);

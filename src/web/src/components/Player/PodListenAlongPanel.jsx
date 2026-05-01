@@ -32,7 +32,7 @@ const applyPartyState = (state, player) => {
   }
 };
 
-const PodListenAlongPanel = ({ channelId, podId, user }) => {
+const PodListenAlongPanel = ({ channelId, compact = false, podId, user }) => {
   const player = usePlayer();
   const [connected, setConnected] = useState(false);
   const [directory, setDirectory] = useState([]);
@@ -141,6 +141,119 @@ const PodListenAlongPanel = ({ channelId, podId, user }) => {
       },
     );
   };
+
+  if (compact) {
+    return (
+      <Segment className="pod-listen-along pod-listen-along-compact">
+        <div className="pod-listen-along-compact-status">
+          <Popup
+            content={
+              partyState
+                ? `${partyState.hostPeerId} ${partyState.action}: ${partyState.title || partyState.contentId}`
+                : 'No active room broadcast'
+            }
+            trigger={
+              <span
+                aria-label={connected ? 'Listen Along live' : 'Listen Along offline'}
+                className={`pod-listen-along-orb ${connected ? 'pod-listen-along-orb-live' : ''}`}
+                role="status"
+                title={connected ? 'Listen Along live' : 'Listen Along offline'}
+              />
+            }
+          />
+          <span className="pod-listen-along-compact-copy">
+            {partyState ? partyState.title || partyState.contentId : 'Room broadcast'}
+          </span>
+        </div>
+        <div className="pod-listen-along-compact-actions">
+          <Popup
+            content="Follow this room's broadcast using your own stream access."
+            trigger={
+              <Button
+                active={following}
+                aria-label="Follow room broadcast"
+                icon
+                onClick={() => {
+                  const next = !following;
+                  setFollowing(next);
+                  if (next && partyState) {
+                    player.followParty(partyState);
+                    applyPartyState(partyState, player);
+                  } else {
+                    player.followParty(null);
+                  }
+                }}
+                size="mini"
+                title="Follow room broadcast"
+              >
+                <Icon name={following ? 'volume up' : 'volume off'} />
+              </Button>
+            }
+          />
+          <Popup
+            content="Broadcast your current local player track to this room."
+            trigger={
+              <Button
+                aria-label="Broadcast current track to room"
+                disabled={!player.current}
+                icon
+                onClick={() => publish('play')}
+                size="mini"
+                title="Broadcast current track to room"
+              >
+                <Icon name="bullhorn" />
+              </Button>
+            }
+          />
+          <Popup
+            content="List this room broadcast in the mesh radio directory."
+            trigger={
+              <Button
+                active={globalRadio}
+                aria-label="List room broadcast in mesh directory"
+                icon
+                onClick={() => setGlobalRadio((value) => !value)}
+                size="mini"
+                title="List room broadcast in mesh directory"
+              >
+                <Icon name="broadcast tower" />
+              </Button>
+            }
+          />
+          <Popup
+            content="Allow directory listeners to stream the current track from this node."
+            trigger={
+              <Button
+                active={meshStreaming}
+                aria-label="Allow mesh streaming for broadcast"
+                disabled={!globalRadio}
+                icon
+                onClick={() => setMeshStreaming((value) => !value)}
+                size="mini"
+                title="Allow mesh streaming for broadcast"
+              >
+                <Icon name="wifi" />
+              </Button>
+            }
+          />
+          <Popup
+            content="Stop broadcasting listen-along metadata for this room."
+            trigger={
+              <Button
+                aria-label="Stop room broadcast"
+                icon
+                onClick={() => publish('stop')}
+                size="mini"
+                title="Stop room broadcast"
+              >
+                <Icon name="stop" />
+              </Button>
+            }
+          />
+        </div>
+      </Segment>
+    );
+  }
 
   return (
     <Segment className="pod-listen-along">

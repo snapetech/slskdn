@@ -11,6 +11,46 @@
 
 *No high priority tasks currently active
 
+- [x] **feature**: Surface remaining admin and experience policies in Web UI.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Added System -> Policies as a guided YAML surface for webhooks/scripts, transfer slots/speed/retry/schedules/auto-replace, security/auth/API keys/HTTPS/rate limits, search/network/DHT/Scene-Pod/rescue controls, and retention/share-cache/media-probe settings. Added System -> Experience as a browser-local surface for Search, Discovery Inbox, Player, and Messages preferences. Both surfaces are passive and do not test hooks, run scripts, contact peers, restart the daemon, mutate transfers, perform file actions, or change page behavior until follow-up code consumes the settings.
+
+- [x] **security**: Close sharegroups streaming token/content-location checklist.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Share token collection/share binding comparisons now use the shared constant-time helper where application code compares validated claims. `ContentLocator` now treats explicit non-advertisable repository hits as terminal and only uses allowed-root fallback when the repository has no content item. Added focused regressions for tampered token signatures and non-advertisable fallback bypass.
+
+- [x] **feature**: Unify Messages pod room panels with room/DM workspace behavior.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Messages now hides pod direct channels instead of duplicating Soulseek DMs, keeps pod room channels in the unified workspace, gives pod rooms a room-style transcript/composer/member rail, keeps Listen Along as a compact room-only affordance, and pins panel controls to the top-right of each message window. Deployed the rebuilt Web UI bundle to `kspls0`.
+
+- [x] **feature**: Expand setup health into a diagnostic wizard.
+ - Status: completed (2026-05-01)
+ - Priority: P3
+ - Notes: System Info setup health now scores readiness, groups checks by Access/Network/Storage/Operations, filters visible checks by group, and surfaces top next steps. The local evaluator now also checks API access, provider credential gaps, queue pressure, failed jobs, and automation visibility from already-loaded state/options without contacting peers, validating credentials, retrying work, or mutating configuration.
+
+- [x] **feature**: Add setup health summary to diagnostic bundles.
+ - Status: completed (2026-05-01)
+ - Priority: P3
+ - Notes: The redacted diagnostic bundle now embeds setup-health readiness, score, totals, next steps, and sanitized check summaries. Sensitive options/state are still redacted before display, and bundle generation remains browser-local without a server call.
+
+- [x] **feature**: Add mesh evidence review sandbox.
+ - Status: completed (2026-05-01)
+ - Priority: P3
+ - Notes: System -> Mesh Evidence Policy now includes a browser-local review sandbox for pasted signed evidence JSON. It evaluates provenance, trust tier, confidence, witness/k-anonymity threshold, and privacy blockers such as raw paths, exact holdings, and raw listening history, then produces accepted/rejected results and a copyable report. The sandbox does not query peers, publish evidence, mutate ranking state, or submit anything to the backend.
+
+- [x] **feature**: Add Discovery Inbox mobile review workflow.
+ - Status: completed (2026-05-01)
+ - Priority: P3
+ - Notes: Discovery Inbox now has a one-at-a-time mobile review tray with previous/next navigation plus approve, snooze, and reject actions. Candidate cards can load an item into the tray, and every action remains local review state only; no peer search, provider lookup, queue mutation, download, or file action starts.
+
+- [x] **feature**: Add local community quality overrides and notes.
+ - Status: completed (2026-05-01)
+ - Priority: P3
+ - Notes: Browser-local community quality evidence now supports per-peer reviewer overrides for trust, caution, or ignore plus a local note. Overrides adjust candidate ranking and action-preview warnings while preserving the original local evidence so signals can be re-enabled later.
+
 - [x] **maintenance**: Rename remaining app-facing slskd branding to slskdN.
  - Status: completed (2026-04-30)
  - Priority: P2
@@ -51,10 +91,15 @@
  - Priority: P3
  - Notes: Listening Stats now accepts pasted or locally chosen CSV/JSON play-history exports from Plex, Jellyfin, Navidrome, or generic media tools, normalizes artist/album/title/genre/played-at metadata, deduplicates by track and timestamp, and can copy local history back out as JSON or CSV. The import runs entirely in the browser and does not connect to media servers, scan libraries, search peers, queue tracks, download files, scrobble, or mutate shared/downloaded audio.
 
-- [ ] **feature**: Add live media-server and acquisition handoffs for listening intelligence.
- - Status: follow-up
+- [x] **feature**: Add review-first acquisition handoffs for listening intelligence.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: Add live Plex/Jellyfin/Navidrome import, explicit peer search handoffs, queue population, download handoff, scrobbling, and confirmed file actions after backend credentials, per-user mapping, rate limits, dedupe policy, and confirmation contracts are in place.
+ - Notes: Listening Stats now converts browser-local forgotten favorites, top artists, and top genres into Discovery Inbox seeds with a visible mesh-preferred acquisition profile and explicit network-impact warning. The handoff stores review candidates only; it does not search Soulseek, browse peers, queue downloads, scrobble, call media servers, or mutate files.
+
+- [x] **feature**: Add live media-server execution contracts for listening intelligence.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: System Integrations now exposes a live media-server execution contract for Plex, Jellyfin/Emby, and Navidrome planning with visible per-automation enablement for play-history import, scrobble/rating export, acquisition queue handoff, completed-file scan, and confirmed file actions. The contract shows adapter readiness, user mapping, confirmation gates, rate limits, dedupe windows, blockers, and a copyable report; backend execution remains unavailable until an adapter consumes the contract.
 
 - [x] **feature**: Add bounded player similar-track auto-queue.
  - Status: completed (2026-04-30)
@@ -191,10 +236,10 @@
  - Priority: P2
  - Notes: Search results now have a visible Fold Duplicates toggle that folds duplicate media candidates after filtering, ranking, and sorting. The best-ranked candidate remains visible with folded-source metadata and provider/peer context, and users can disable the fold to inspect every source separately. This is browser-local and does not start searches, peer browses, or downloads.
 
-- [x] **feature**: Add browser-local Discovery Inbox review surface.
+- [x] **feature**: Add browser-local Acquisition Review surface.
  - Status: completed (2026-04-30)
  - Priority: P2
- - Notes: Added a persistent Web UI Discovery Inbox with Suggested/Approved/Snoozed/Rejected review states, bulk approve/reject, per-item review actions, acquisition-profile context, and explicit network-impact text. Search can now save the current phrase into the inbox without starting peer network activity.
+ - Notes: Added a persistent Web UI Acquisition Review queue with Suggested/Approved/Snoozed/Rejected review states, bulk approve/reject, per-item review actions, acquisition-profile context, and explicit network-impact text. This queue is for passive, imported, and generated candidates; manual Search remains direct and must not require approval here before results or downloads.
 
 - [x] **feature**: Add Discovery Inbox impact review summary.
  - Status: completed (2026-04-30)
@@ -261,10 +306,20 @@
  - Priority: P2
  - Notes: Added a browser-side filename metadata matcher that parses artist, album, title, track number, file type evidence, confidence, and warnings. Import Staging rows can be matched individually or in bulk without contacting metadata services, fingerprinting audio, or mutating files.
 
+- [x] **feature**: Complete shared Metadata Matching engine surface.
+ - Status: completed (2026-05-01)
+ - Priority: P1
+ - Notes: Expanded the local metadata matcher into a reusable matching engine with Unicode/accent/punctuation/case normalization, weighted title/artist/album/duration scoring, short-title protection, version-tag awareness, identifier evidence, confidence bands, strongest/weakest explanation evidence, Import Staging manual overrides, and Playlist Intake candidate scoring reuse. This stays local/deterministic and does not call metadata providers, search Soulseek, browse peers, download, tag, move, or mutate files.
+
 - [x] **feature**: Add opt-in import fingerprint verification.
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Import Staging now has an explicit Fingerprint on add toggle. When enabled, newly selected files are read locally in the browser and hashed with SHA-256, storing only verification metadata in the staging queue without uploading, importing, tagging, or moving files.
+
+- [x] **feature**: Complete Audio Verification profiles, cache, and policy review.
+ - Status: completed (2026-05-01)
+ - Priority: P1
+ - Notes: Added browser-local audio verification decisions for Import Staging with visible lossless-exact, balanced, and permissive profiles, fail-open/fail-closed action mapping, SHA-256 cache controls, per-row verification, and explicit policy application. The feature reads only browser-selected file bytes when the operator enables fingerprint-on-add; it does not upload, import, tag, move, search Soulseek, browse peers, or download files.
 
 - [x] **feature**: Add failed-import denylist to Import Staging.
  - Status: completed (2026-04-30)
@@ -311,16 +366,21 @@
  - Priority: P3
  - Notes: Added cooldown, max-runtime, and approval-gate metadata to visible automation recipes. Dry-run checkpoints now persist a preview report with network/file impact and explicit `executed: false`, preserving the current shell-only behavior.
 
-- [ ] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
- - Status: planned
+- [x] **feature**: Wire approved Discovery Inbox candidates into acquisition jobs.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: Follow up the local review surface by connecting Approved candidates to backend-backed acquisition planning/downloading with explicit opt-in automation, rate limits, and visible network impact before any peer contact.
+ - Notes: Approved Discovery Inbox candidates can now create acquisition plans and explicitly execute bounded backend search jobs through the selected acquisition profile. Execution is operator-triggered, capped per batch, records queued search IDs and failures, and still requires normal search-result review before any peer browse or download starts.
 
 - [x] **T-939**: Source feed imports.
  - Status: completed (2026-04-30)
  - Priority: P2
  - Design: `docs/design/music-discovery-federation-plan.md`
 - Notes: Added backend source-feed preview for CSV, pasted text, M3U/PLS, RSS/OPML, and provider URLs. Spotify supports public playlist/album/track/artist/user playlist imports through configured app credentials or a connected account, plus liked/saved tracks, saved albums, followed artists, and current-user playlists through either a connected Spotify account or a per-import bearer token with the required scopes. Non-Spotify URL support now includes Apple Music/iTunes lookup, ListenBrainz public-listens import, optional YouTube Data API playlist expansion, optional Last.fm loved/recent/top track imports, and metadata-page fallback for YouTube, Bandcamp, Last.fm, and Apple URLs. The Wishlist UI now has an Import Feed flow that previews results, connects/disconnects Spotify, and adds selected provenance-rich suggestions to Discovery Inbox review without starting Soulseek searches, peer browses, or downloads. System Integrations now exposes source-feed provider settings for Spotify, YouTube, and Last.fm with on/off toggles, masked credential entry, validation warnings, and tooltip-backed runtime apply/reset controls.
+
+- [x] **feature**: Add source-feed import history and audit API.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Source-feed previews now persist bounded app-dir history entries with provider/source metadata, source fingerprints, safe source previews, request options, result counts, network request counts, skipped-row samples, and suggestion samples. Authenticated list/detail endpoints expose the audit trail, provider bearer tokens are not stored, and previews remain review-first without starting Soulseek searches, browsing peers, or downloading.
 
 - [ ] **T-938**: Browser-native MilkDrop3-compatible visualizer engine.
  - Status: active design
@@ -391,6 +451,16 @@
  - Progress (2026-04-30): Added native preset parameter randomization, pointer-driven mouse variable input, and a compact native debug snapshot overlay for title, format, primitive counts, and shader section visibility.
  - Progress (2026-04-30): Added active native preset playlist rename support to round out the first browser-local playlist editing controls.
  - Progress (2026-04-30): Added first Phase 4 polish with browser-local native FPS caps and debug frame-time readout.
+ - Progress (2026-04-30): Added native quality presets, WebGPU capability reporting in debug details, and WebGL context loss/restore coverage to the native browser smoke.
+ - Progress (2026-04-30): Added native MilkDrop performance measurement for curated fixtures or local preset files/folders, plus a bounded translated-shader cache for repeated shader bodies.
+ - Progress (2026-05-01): Added a first opt-in native MilkDrop WebGPU renderer foothold with adapter probing, debug adapter details, ping-pong feedback textures, a preset-colored fullscreen WebGPU display pass, and first waveform/shape-outline/motion-vector/screen-border/filled-shape/fallback-sprite primitive draws while keeping WebGL2 as the active parity path.
+ - Progress (2026-05-01): Added WebGPU texture upload and textured primitive sampling for native MilkDrop shapes/sprites, reusing imported texture alias matching with procedural fallback and padded texture rows for browser WebGPU validation.
+ - Progress (2026-05-01): Added first safe-subset WGSL translation and execution for WebGPU native MilkDrop warp/comp passes, including color/time/audio/q-register uniforms while keeping named shader texture samplers and shader audio-bin helpers on the WebGL2 parity path for now.
+ - Progress (2026-05-01): Added WebGPU shader-side `get_fft`, `get_fft_hz`, and `get_waveform` helpers for safe-subset translated WGSL shaders, backed by 64-bin FFT and waveform uniforms populated from the native render frame.
+ - Progress (2026-05-01): Added WebGPU named shader texture sampler bindings for safe-subset translated warp/comp shaders, resolving imported texture assets through the shared native alias rules with procedural fallback.
+ - Progress (2026-05-01): Added WebGPU-specific readiness reporting to the native compatibility matrix so curated fixtures and real-pack scans can distinguish WebGL2 support from WebGPU-promotable shader support.
+ - Progress (2026-05-01): Wired the player visualizer engine cycle through Butterchurn, native MilkDrop3 WebGL2, and native MilkDrop3 WebGPU, with backward-compatible storage migration from the previous native value and shared native controls across both native backends.
+ - Progress (2026-05-01): Fixed the player display tile so it cycles concrete display variants including Butterchurn, native MilkDrop3 WebGL2, native MilkDrop3 WebGPU, spectrum bars, and signal scope instead of relying on the legacy umbrella `milkdrop` tile token.
 
 - [x] **T-930**: Discography Concierge coverage map.
  - Status: completed (2026-04-30)
@@ -426,10 +496,10 @@
  - Priority: P2
  - Notes: Followed up T-932 with explicit selected-peer PodCore route attempts for artist-radar notifications, safe opaque route metadata validation, signed local route envelopes, persisted route history, and API endpoints to dispatch/review attempts. Routing stays user-initiated and does not publish automatically, search Soulseek, browse peers, download, or mutate files.
 
-- [ ] **feature**: Add Web UI controls for artist release radar.
- - Status: planned
+- [x] **feature**: Add Web UI controls for artist release radar.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: Follow up T-932 with artist watch/mute controls, unread notification review, and explicit actions to promote radar hits to Wishlist or Discovery Graph.
+ - Notes: Added a Search-page Artist Release Radar panel with watch/mute controls, enabled/unread toggles, subscription and notification review, Discovery Inbox handoff for radar hits, and explicit selected-peer routing. Actions are tooltip-backed and do not auto-search, browse peers, download, or mutate files.
 
 - [x] **T-933**: Federated taste recommendations.
  - Status: completed (2026-04-30)
@@ -442,10 +512,10 @@
  - Priority: P2
  - Notes: Expanded T-933 with optional Discovery Graph evidence/scoring, review-only Wishlist promotion, artist release radar subscription handoff, and Discovery Graph preview API endpoints. Handoffs validate safe music WorkRefs, keep k-anonymity in the recommendation service, and do not start Soulseek searches, browse peers, download, publish, or mutate files.
 
-- [ ] **feature**: Add a Web UI surface for federated taste recommendations.
- - Status: planned
+- [x] **feature**: Add a Web UI surface for federated taste recommendations.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: Follow up T-933 by showing privacy-filtered recommendation cards with evidence reasons and actions to explore in Discovery Graph or promote to Wishlist. Keep peer names hidden unless policy explicitly allows reveal.
+ - Notes: Added a Search-page Federated Taste panel with privacy-filtered recommendation loading, minimum trusted-source controls, opt-in source actor reveal, evidence reason labels, Discovery Inbox handoff, Wishlist promotion, Release Radar subscription, and Discovery Graph preview actions.
 
 - [x] **T-934**: Realm-curated subject indexes.
  - Status: completed (2026-04-30)
@@ -458,10 +528,25 @@
  - Priority: P2
  - Notes: Followed up T-934 with a subject-index proposal/review flow backed by realm governance documents. Proposed revisions remain pending and do not resolve until an explicitly trusted governance reviewer accepts them; rejected proposals retain review provenance without publishing the index.
 
-- [ ] **feature**: Add UI conflict display for realm subject indexes.
- - Status: planned
+- [x] **feature**: Add backend conflict reports for realm subject indexes.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: Show when subscribed realm indexes disagree with MusicBrainz or another realm, preserving provenance and allowing users to disable individual realm authorities.
+ - Notes: Added deterministic conflict reports for accepted realm subject indexes, covering external-id disagreements, one recording mapped to multiple subjects, conflicting WorkRef title/creator values, and aliases mapped to multiple subjects. Added authenticated read-only API endpoints for accepted indexes, recording resolutions, and conflict reports. Reports preserve realm/index/revision provenance and do not publish, search, browse peers, download, or mutate files.
+
+- [x] **feature**: Add backend authority decisions for realm subject indexes.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Added authenticated backend endpoints to list and set local realm subject-index authority decisions. Disabled authorities are excluded from recording resolution and conflict reports, re-enabling restores them, and invalid actors or missing indexes are rejected. Decisions are local review controls and do not mutate governance documents, publish indexes, search, browse peers, download, or mutate files.
+
+- [x] **feature**: Persist realm subject indexes, proposals, and authority decisions.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Added app-dir JSON persistence for accepted realm subject indexes, governance proposal review state, and local authority decisions with deterministic atomic writes and startup reload. The state file preserves accepted resolver data and disabled authority preferences across restarts without publishing, searching, browsing peers, downloading, or mutating music files.
+
+- [x] **feature**: Add UI conflict display for realm subject indexes.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: System -> Mesh now renders realm subject-index conflict reports with conflict type, subject, values, authority keys, and provenance. Users can locally disable/re-enable individual authorities for review and copy the conflict report; the UI does not update backend governance, publish indexes, search, browse peers, download, or mutate files.
 
 - [x] **T-935**: Decentralized MusicBrainz edit overlay.
  - Status: completed (2026-04-30)
@@ -478,6 +563,11 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Added a MusicBrainz overlay export review API that turns stored signed overlay edits into manual upstream submission packages with target, proposed change, and evidence. Added explicit local export approval records with safe approver validation and idempotent approvals. This does not auto-submit edits upstream or mutate cached MusicBrainz data.
+
+- [x] **feature**: Persist MusicBrainz overlay edits, routes, and export approvals.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: MusicBrainz overlay signed edits, selected-peer route attempts, and manual upstream export approvals now persist to an atomic JSON state file under the app directory and reload on service startup. Tests use scoped temporary storage paths to avoid shared app-state contamination. Persistence does not publish, submit upstream edits, search Soulseek, browse peers, download, or mutate cached MusicBrainz payloads.
 
 - [x] **T-936**: Quarantine Jury.
  - Status: completed (2026-04-30)
@@ -504,6 +594,16 @@
  - Status: completed (2026-04-30)
  - Priority: P2
  - Notes: Added a System -> Quarantine Jury workspace that lists requests, loads review details, shows request evidence, juror verdicts, dissent, route attempts, acceptance status, explicit route dispatch controls, and modal-gated release-candidate acceptance. Local quarantine remains authoritative until the user explicitly accepts a release-candidate recommendation, and the UI does not move files or broadcast release state.
+
+- [x] **feature**: Add Quarantine Jury audit report API.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Added a read-only audit report for Quarantine Jury requests that summarizes accepted release candidates, pending release-candidate acceptances, manual-review requests, uphold-quarantine recommendations, stale requests, route attempts, failed routes, quorum state, and dissenting jurors. The audit endpoint is observational only and does not mutate quarantine state, move files, route messages, publish decisions, search, browse peers, or download.
+
+- [x] **feature**: Add Quarantine Jury release evidence package API.
+ - Status: completed (2026-05-01)
+ - Priority: P2
+ - Notes: Added a read-only release package endpoint for locally accepted release-candidate jury decisions. Packages include request evidence, selected jurors, signed verdicts, route attempts, the manual acceptance snapshot, current aggregate state, and drift warnings when later verdicts change the aggregate. The package does not mutate quarantine state, move files, publish decisions, route messages, search, browse peers, or download.
 
 - [x] **bug**: Keep mesh-overlay sources out of Soulseek sequential failover.
  - Status: completed (2026-04-30)
@@ -770,20 +870,20 @@
  - Priority: P3
  - Notes: The tracked `src/web` toolchain is aligned on Vite 8.0.10, Vitest 4.1.5, `@vitejs/plugin-react` 6.0.1, and `@vitest/coverage-v8` 4.1.5, with `npm ls` clean for the Vite/Vitest peer set. The older security-only follow-up is closed without changing unrelated root-level package manifests.
 
-- [ ] **bug**: Trace the still-hanging full `dotnet test -v minimal` tail after the main suites report passing.
- - Status: pending
+- [x] **bug**: Trace the still-hanging full `dotnet test -v minimal` tail after the main suites report passing.
+ - Status: completed (2026-05-01)
  - Priority: P2
- - Notes: The April 14 dependency/release chore pass restored green release-gate validation, but a broad `dotnet test -v minimal` run in this environment still stops returning output after the unit suite reports passing counts. The release gate and focused smoke slices pass, so this remains a separate harness/cleanup problem to isolate before relying on the broad solution-level test command as a hard release signal.
+ - Notes: Re-ran the exact broad command under a 600-second timeout on 2026-05-01. `dotnet test -v minimal` returned cleanly with `slskd.Tests`, `slskd.Tests.Unit`, and `slskd.Tests.Integration` all passing, so the stale hang task is closed for this environment.
 
 - [x] **bug**: Retry failed DHT overlay candidates after backoff instead of only on first discovery.
  - Status: completed (2026-04-18)
  - Priority: P1
  - Notes: `DhtRendezvousService` no longer uses `_discoveredPeers.TryAdd(...)` as the once-ever trigger for outbound overlay connect attempts. Discovery cache, in-flight tracking, and retry timing are now separate, with a 5-minute backoff before re-attempting unverified peers. Validated with focused unit tests and on `local test host`, where the same discovered-peer set advanced from `26` to `31` total connection attempts after a post-backoff forced discovery instead of remaining stuck at the first-attempt count.
 
-- [ ] **bug**: Filter or deprioritize non-overlay DHT candidates before repeated overlay retries.
- - Status: pending
+- [x] **bug**: Filter or deprioritize non-overlay DHT candidates before repeated overlay retries.
+ - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: Live `local test host` validation on 2026-04-18 now exposes classified outbound overlay failures. The current post-fix state is mostly `connectTimeout` plus occasional `noRoute`, and the discovered candidate set is still heavy on likely-bad `:50306` endpoints. Follow up by deciding whether to suppress obviously non-overlay candidates, add longer-lived backoff, or enrich DHT metadata so the connector does not keep retrying junk endpoints.
+ - Notes: Live `local test host` validation on 2026-04-18 exposed classified outbound overlay failures dominated by timeout/no-route candidate churn. Added service-level progressive reconnect backoff for repeatedly failing DHT candidates before scheduling overlay connector work, while preserving normal first retry timing and clearing failure streaks after successful overlay connection.
 
 - [x] **security**: Add focused unit coverage for username lockout and share-token audience binding.
  - Status: completed (2026-04-18)
@@ -820,20 +920,20 @@
  - Priority: P1
  - Notes: Realigned stable metadata and packaging to the published `linux-glibc-*` assets on `0.24.5-slskdn.135`, fixed the COPR RPM spec/source filename mismatch, repaired the stable metadata updater so it no longer corrupts Flatpak/Chocolatey/Debian files, and updated `Dockerfile` to real `.NET 10 noble` base images so local Docker, Nix smoke, and packaging validation now match the tagged release workflow.
 
-- [ ] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
+- [x] **chore**: Add a heavier share-scan regression harness for tester issue `#193`.
  - Status: completed (2026-04-08)
  - Priority: P2
  - Notes: Added `ShareScannerHarnessTests` plus `scripts/run-share-scan-harness.sh`. The automated harness scans a large synthetic temp tree and asserts completion/index counts without hash computation. The manual harness accepts `SLSKDN_SHARE_SCAN_ROOT` so local runs can target real storage such as the tester-like NFS path.
 
-- [ ] **bug**: Reduce or defer media-attribute probing during share scans on slow/remote storage.
- - Status: pending
+- [x] **bug**: Reduce or defer media-attribute probing during share scans on slow/remote storage.
+ - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: The new manual share-scan harness reproduces `#193` on the NFS-backed `/mnt/datapool_lvm_media/download/music` tree with `workers=1`: the scan times out after 60s having indexed only 8 files. The same harness passes when `SLSKDN_SHARE_SCAN_SKIP_MEDIA_ATTRIBUTES=1`, which strongly implicates `SoulseekFileFactory` / `TagLib.File.Create(...)` media-attribute extraction as the remaining stall source.
+ - Notes: Added `shares.probe_media_attributes` / `--shares-probe-media-attributes` / `SLSKD_SHARES_PROBE_MEDIA_ATTRIBUTES` so operators can skip TagLib audio metadata extraction during share scans on slow or remote storage. Files still share normally; browse metadata may omit bitrate, length, sample rate, and bit depth while probing is disabled.
 
-- [ ] **bug**: Trace and contain `#201` transfer-path `Connection refused` unobserved task exceptions.
- - Status: pending
+- [x] **bug**: Trace and contain `#201` transfer-path `Connection refused` unobserved task exceptions.
+ - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: The startup listener race is fixed, the blanket benign-refusal suppression is removed, startup patching now configures `incomingConnectionOptions`, and `DownloadService.EnqueueAsync(...)` no longer aborts on an unnecessary `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer preflight. The release smoke script now includes focused startup/transfer unit regressions in addition to the versioned integration slice. Remaining work is to trace any still-live upload-side or lower-level Soulseek `Connection.ConnectAsync(...)` refusals if testers can reproduce them after those fixes, and add focused coverage around the actual producer instead of the global unobserved-task handler.
+ - Notes: The startup listener race is fixed, the blanket benign-refusal suppression is removed, startup patching now configures `incomingConnectionOptions`, and `DownloadService.EnqueueAsync(...)` no longer aborts on an unnecessary `GetUserEndPointAsync(...)` / `ConnectToUserAsync(...)` peer preflight. Closed the remaining upload-side producer gap by adding focused coverage for a Soulseek upload `Connection refused` failure and fixing `UploadService.UploadAsync(...)` so failure catches do not overwrite `TryFail(...)` terminal state with a stale queued transfer snapshot.
 
 - [x] **bug**: Stop empty permission defaults from hard-failing Linux downloads.
  - Status: completed (2026-04-18)
@@ -845,8 +945,8 @@
  - Priority: P1
  - Notes: Transfers bulk retry/remove/cancel now enqueue work into a background queue that drains one request at a time, dedupes identical queued or in-flight operations, preserves the dedicated `clearCompleted` path for top-level remove-all-completed, and aggregates failures once per batch instead of once per file. Focused web tests cover sequential draining, duplicate bulk-submission suppression, single-toast failure reporting, and deduped clear-completed behavior.
 
-- [ ] **T-919**: Discovery Graph / Constellation substrate
- - Status: in progress
+- [x] **T-919**: Discovery Graph / Constellation substrate
+ - Status: completed (2026-05-01)
  - Priority: P1
  - Branch: `dev/40-fixes`
  - Notes: Build a first-class graph substrate for navigable similarity topology, not just related-artist lists. Product name: `Discovery Graph` (`Constellation` as the stylistic alias). Start with a native backend graph service over normal storage/models, typed/weighted/explainable edges, and a UI graph summon point near SongID / MusicBrainz. Initial node families: artist, album, track, genre/tag, playlist, user/peer/pod, fingerprint/unknown cluster, canonical identity. Initial edge families: metadata similarity, co-occurrence, taste overlap, acoustic similarity, identity linkage, social/network linkage, and confidence/ambiguity edges. Phase toward semantic zoom (`mini-map`, `drawer graph`, `atlas view`) and make graph actions first-class (`recenter`, `expand`, `pin`, `compare`, `filter edge types`, `show why`, `queue nearby`, `save branch`). The first implementation slice should start in SongID and Search because those already carry rich candidate/evidence context.
@@ -855,17 +955,20 @@
  - Progress (2026-03-16): Added broader Search summon points plus the first atlas-style semantic zoom layer: search list rows, search detail headers, MusicBrainz, SongID, and search-response cards can all launch graph neighborhoods; graph modals now support semantic filtering (`maxDepth`, `minNodeWeight`), queue-nearby actions from those broader surfaces, and proper saved-branch restore.
  - Progress (2026-03-16): Added a persistent in-page `DiscoveryGraphAtlasPanel` on the Search page so graph exploration is no longer modal-only; it supports manual seeds, saved-branch restore, semantic zoom controls, and nearby-search queueing.
  - Progress (2026-03-16): Added a dedicated `/discovery-graph` route and modal handoff into that atlas workspace, so graph neighborhoods are now addressable and restorable outside the Search page flow.
+ - Progress (2026-05-01): Added reusable browser-local branch planning helpers for Discovery Graph visible nodes/edges, route suggestions, nearby search seeds, and copyable branch review reports. The Search atlas now supports in-page edge-family filtering, suggested branch routes, pinned comparison context, and report export without contacting peers or mutating files beyond explicit user-triggered nearby searches.
  - Progress (2026-03-16): Added inline atlas explainability so the dedicated graph workspace now shows visible edge-family counts, “why these nodes are near” evidence rows, score-component breakdowns, provenance, and recenter actions without falling back to the modal.
- - Remaining: deepen graph evidence toward decomposed similarity lanes and provenance explanations, enrich the dedicated atlas experience beyond the current panel-style implementation, and extend graph seeds beyond the current SongID / MusicBrainz / search metadata contexts.
+ - Progress (2026-05-01): Added backend Discovery Graph evidence lanes on every edge plus graph-level evidence summaries, and extended the browser branch report to include those backend evidence lanes. This deepens the "show why" surface with structured identity/action/provenance/evidence lanes while preserving API compatibility for existing graph callers.
+ - Progress (2026-05-01): Closed the current Discovery Graph substrate pass with additive backend evidence lanes, graph-level evidence summaries, an addressable atlas route, branch planning/export helpers, edge filtering, route suggestions, pinned comparison context, and Search/SongID/MusicBrainz summon points. Future seed families beyond current SongID/MusicBrainz/Search contexts can be tracked as new graph epics.
 
-- [ ] **T-917**: Implement SongID native intake and identification pipeline
- - Status: in progress
+- [x] **T-917**: Implement SongID native intake and identification pipeline
+ - Status: completed (2026-05-01)
  - Priority: P1
  - Branch: `dev/40-fixes`
  - Notes: Build the `SongID` feature described in `docs/dev/SONGID_INTEGRATION_MAP.md`. Current slice now includes native SQLite-backed run persistence, Search-page UI placement near MusicBrainz lookup, text/YouTube/Spotify/local-file intake, MetadataFacade + MusicBrainz candidate generation, ranked download options, direct `Download Album` MB-release jobs, a deeper native `chop`-style evidence pipeline, persistent per-run artifact directories, full-source fingerprint capture, Demucs stem extraction, Panako source-store/query, Audfprint run-local DB matching, focused clip scheduling from comment timestamps, clip-level AcoustID + SongRec + AI-artifact heuristics, YouTube comment/timestamp harvesting, Whisper transcript excerpts, OCR frame scans, provenance signal detection, scorecard, assessment, queued background execution, SignalR live updates, corpus-based reranking, stage/percentage progress payloads, canonical-quality boosts from slskdn's native audio/canonical stats, and initial SongID backend tests covering the SQLite run store and scoring helper. The parity target is now `../ytdlpchopid`, not the older `../ytdlpchop`, and remaining work is explicitly mapped in `docs/dev/SONGID_INTEGRATION_MAP.md#remaining-todo`.
+ - Progress (2026-05-01): Added backend queue summary and run evidence-package APIs. Queue summaries expose active queued/running run state and configured concurrency; evidence packages gather capped candidates, plans, acquisition options, forensic matrix, scorecard, segments, mix groups, evidence strings, and artifact references for review/export without starting searches, browsing peers, downloading, or mutating files.
 
-- [ ] **T-918**: SongID parity pass for `../ytdlpchopid`
- - Status: in progress
+- [x] **T-918**: SongID parity pass for `../ytdlpchopid`
+ - Status: completed (2026-05-01)
  - Priority: P1
  - Branch: `dev/40-fixes`
  - Notes: Implement the newly added `ytdlpchopid` parity surface inside native SongID: split `identity_assessment` vs `synthetic_assessment`; forensic-matrix fields (`top_evidence_for`, `top_evidence_against`, `quality_class`, `perturbation_stability`, `confidence_score`, `known_family_score`, `family_label`, lane scores/confidences, family hints, confidence penalty notes); chapter-aware clueing; C2PA/content-credentials detection; scorecard deltas (`songrec_distinct_match_count`, `raw_acoustid_hit_count`, `playlist_request_count`, `ai_comment_mentions`); mix decomposition into multiple track plans; candidate-fanout actions; expandable detailed forensic lanes (`confidence_lane`, `spectral_artifact_lane`, `lyrics_speech_lane`, `structural_lane`); unobtrusive synthetic/AI display that never overrides strong identity-based download planning. Add explicit tests for single-lane confidence caps and strong-identity suppression of synthetic overclaiming. Use the `Remaining TODO` section in `docs/dev/SONGID_INTEGRATION_MAP.md` as the source checklist.
@@ -874,13 +977,14 @@
  - Progress (2026-03-16): Added explicit segment decomposition payloads to SongID runs, with grouped segment candidates, segment-specific plans and acquisition options, segment batch-search fan-out, and new queue/service tests covering requeue-on-restart and queue-position ordering. Also fixed a recovery-state bug so restart provenance is preserved in run evidence instead of being overwritten by queue-summary refresh.
  - Progress (2026-03-16): Added SongID controller tests covering queued run creation, bad-request validation, list responses, and run retrieval, so API behavior now has direct unit coverage in addition to the service/store/scoring layers.
  - Progress (2026-03-16): Propagated identity-first ranking into segment-derived acquisition options as well, persisted/reused corpus family hints in scoring, and added service/scoring tests so segment fan-out no longer uses the older quality/byzantine-heavy ordering path.
- - Remaining: deeper multi-track / mix decomposition beyond chapter/comment segment inference, broader SongID UI coverage, and stronger backend/frontend coverage around live queue updates, configurable worker behavior, and perturbation-backed forensic outputs.
+ - Progress (2026-05-01): Closed the current native SongID/ytdlpchopid parity pass by adding explicit forensic-matrix export/debug access, API/progress/persistence coverage, browser API coverage for the export endpoint, durable forensic payload round trips, and documentation checklist closure. Future MIR-depth work remains separately tracked as future parity rather than blocking this pass.
+ - Progress (2026-05-01): Added review/export evidence packages and queue-summary APIs with focused service/controller coverage, extending the operational parity surface without changing identity scoring or automatic acquisition behavior.
 
-- [ ] **T-915**: Fix web lint errors + re-enable eslint on build
- - Status: pending
+- [x] **T-915**: Fix web lint errors + re-enable eslint on build
+ - Status: completed (2026-05-01)
  - Priority: P0
  - Branch: `dev/40-fixes`
- - Notes: Lint errors are widespread in `src/web/src/components/` (App, Chat, Contacts, Pods, Rooms, ShareGroups, SharedWithMe, System/*), plus `src/web/src/lib/*` and several tests. Build temporarily uses `DISABLE_ESLINT_PLUGIN=true` to unblock E2E; remove it and fix lint issues across these files.
+ - Notes: Current `npm --prefix src/web run lint` passes cleanly after the front/middle/tail feature-expansion batches and the Playlist Intake control-regex blocker were resolved. If build-time ESLint enforcement is reintroduced, treat that as a separate tooling change with CI validation.
 
 - [x] **T-916**: Investigate E2E node exits during multi-peer tests
  - Status: done
@@ -1270,10 +1374,10 @@
 **Reference**: `memory-bank/tasks-audit-gaps.md`
 
 #### Phase 1 Gap Tasks
-- [ ] **T-1400**: Unified BrainzClient
-  - **Status**: ⏸️ Deferred (low priority)
+- [x] **T-1400**: Unified BrainzClient
+  - **Status**: completed (2026-05-01)
   - **Priority**: P2
-  - **Notes**: Current implementation uses separate clients (IMusicBrainzClient, IAcoustIdClient) which works well. Unified client would be nice-to-have but not critical. Verified 2026-01-27: Not needed - current approach is sufficient.
+  - **Notes**: Replaced the placeholder `IBrainzClient` with a DI-registered unified facade over `IMusicBrainzClient` and `IAcoustIdClient`. The client now exposes release, recording, Discogs release, recording search, and fingerprint lookup paths; normalizes identifiers and search results; deduplicates recording search hits; caches successful MusicBrainz release/recording lookups; and resolves AcoustID fingerprints into MusicBrainz-enriched recording summaries with AcoustID metadata fallback.
 
 #### Phase 2 Gap Tasks
 **Status**: ✅ **MOSTLY COMPLETE** (2026-01-27)
@@ -1939,9 +2043,9 @@
   - Status: completed (2026-04-30)
   - Notes: Added previous/next, rewind, fast-forward, collapse/expand, persistent local mute, and player empty-state launchers for Collections plus shared/downloaded audio. Browser geometry checks verified the expanded and collapsed player sit above the fixed footer without overlap on desktop and a 390px mobile viewport.
 
-- [ ] Improve collection item display metadata
-  - Status: follow-up
-  - Notes: Collection items currently persist only content id/media kind/hash, so playlist rows and the player can show raw `sha256:` ids for local test items. Add filename/title metadata resolution for better user-facing playlist/player labels.
+- [x] Improve collection item display metadata
+  - Status: completed (2026-05-01)
+  - Notes: Collection items now persist safe display metadata (`fileName`, `title`, `artist`, `album`) alongside content id/media kind/hash, best-effort SQLite upgrades add those columns for existing installs, share manifests include the labels, and playlist-intake generated collection items carry title/artist/album/file-name values so playlist rows and the player avoid raw content ids when labels are known.
 
 - [x] Add Winamp-style Web UI player enhancements
   - Status: completed (2026-04-30)
@@ -1979,10 +2083,10 @@
   - Status: completed (2026-04-30)
   - Notes: System Integrations now exposes FTP completed-download upload settings with enablement, address, port, username/password replacement, remote path, encryption mode, certificate handling, overwrite policy, timeout, retry attempts, runtime apply, YAML save, reset, validation warnings, and tooltip-backed actions. Runtime overlays were extended for FTP integration options.
 
-- [ ] Add guided admin settings for remaining YAML-only integrations and policies
-  - Status: planned
+- [x] Add guided admin settings for remaining YAML-only integrations and policies
+  - Status: completed (2026-05-01)
   - Priority: P2
-  - Notes: `docs/dev/webui-surface-audit-2026-04-30.md` identifies the next gaps: webhooks/scripts, identity/auth/HTTPS, transfer policy, search/network policy, metadata providers, and retention/storage settings.
+  - Notes: Added a System Integrations YAML settings panel for Chromaprint, AcoustID, MusicBrainz, and Lidarr. The panel masks existing credentials, supports secret replacement, validates required fields and path-map pairs, saves snake_case YAML through the existing options API, and does not test credentials, contact providers, search peers, browse, download, or mutate files beyond the explicit YAML update. Webhooks/scripts, identity/auth/HTTPS, transfer policy, search/network policy, and retention/storage settings remain future admin-surface candidates.
 
 - [x] Fix dark-mode inner surfaces and surface VPN/Lidarr admin status
   - Status: completed (2026-04-30)
@@ -2031,3 +2135,71 @@
 - [x] Add slskdN-native config compatibility for upstream-style layout
   - Status: completed (2026-04-30)
   - Notes: Rebuilt the useful config-map behavior within slskdN's existing YAML provider instead of porting upstream code past the license boundary. `transfers.upload.limits` and `transfers.groups` now bind correctly, older shapes remain accepted, docs/examples prefer the new layout, and startup warnings guide migration.
+
+- [x] Add local System Network health scoring and reports
+  - Status: completed (2026-05-01)
+  - Notes: Added a browser-local Network Health panel in System -> Network with DHT, mesh, discovered-peer, HashDb, backfill, and mesh security-signal scoring plus copyable operations reports. The check only evaluates already-loaded local state and does not contact peers, publish evidence, start discovery, search, browse, download, or mutate files.
+
+- [x] Add media-server sync review plans
+  - Status: completed (2026-05-01)
+  - Notes: Expanded the System Integrations media-server panel with explicit Plex, Jellyfin/Emby, and Navidrome review actions, base URL/token/path-map readiness checks, and a copyable sync review report. The planner remains browser-local and does not call media servers, trigger scans, sync playlists, import play history, write ratings, search, browse peers, download, or mutate files.
+
+- [x] Add Servarr, Wishlist request, and Automation review reports
+  - Status: completed (2026-05-01)
+  - Notes: Added browser-local Servarr compatibility reports for wanted-pull/completed-import readiness, Wishlist request review packets for quota/state/manual/automatic review, and Automation Center history reports for enabled recipes and dry-run checkpoints. The batch does not call Lidarr, create download clients, pull wanted items, trigger imports, execute automations, search, browse peers, download, or mutate files.
+
+- [x] Add explicit live run actions for Servarr and Wishlist requests
+  - Status: completed (2026-05-01)
+  - Notes: Added a Run Ready action in Servarr compatibility review that calls the configured Lidarr wanted-sync endpoint when wanted pull is ready, and a bounded Run Enabled action in Wishlist that runs up to three enabled backend Wishlist searches. Both are user-triggered and do not auto-select results, browse peers directly, download files, or bypass normal acquisition/download policy.
+
+- [x] Add explicit Automation Center run actions for real backend recipes
+  - Status: completed (2026-05-01)
+  - Notes: Added executable Automation Center actions for Wishlist Retry and Library Health Scan. Wishlist Retry runs up to three enabled backend Wishlist searches; Library Health Scan requires an operator-entered path and starts the real read-only scan. Unsupported recipes stay visible but disabled for execution instead of pretending to run.
+
+- [x] Add live Library Health and Discovery Shelf handoffs
+  - Status: completed (2026-05-01)
+  - Notes: Selected Library Health issues can now start up to three real replacement searches, queue remediation only for selected auto-fixable issue IDs, and send risky quarantine review candidates to Discovery Inbox. Discovery Shelf promote previews can now be sent to Discovery Inbox individually or in a bounded batch. These handoffs do not auto-download, browse peers directly, move/quarantine files, or bypass review policy.
+
+- [x] Add live Listening Stats acquisition and scrobble handoffs
+  - Status: completed (2026-05-01)
+  - Notes: Listening Stats recommendation seeds now include top tracks, can start up to three live Search API searches, can add up to five enabled manual Wishlist requests with auto-download off, and can submit up to ten recent browser-local plays to ListenBrainz using the saved browser token.
+
+- [x] Add live Smart Radio and similar-queue handoffs
+  - Status: completed (2026-05-01)
+  - Notes: Smart Radio plans can now start up to three live Search API searches, add up to four enabled manual Wishlist requests with auto-download off, and send review seeds to Discovery Inbox. Playback Queue similar-track candidates can start up to three live searches or add up to five manual Wishlist requests without changing the local queue.
+
+- [x] Add Discovery Inbox acquisition-plan Wishlist handoff
+  - Status: completed (2026-05-01)
+  - Notes: Ready acquisition plans can now create bounded manual Wishlist requests with auto-download off, persist the created request id on the plan, and skip plans that already have a Wishlist request. Backend search execution remains a separate explicit action.
+
+- [x] Add Playlist Intake tag and organization dry run
+  - Status: completed (2026-05-01)
+  - Notes: Matched playlist rows can now preview tag fields, organization destination paths, multi-artist behavior, cover-art policy, and ReplayGain policy. The plan is persisted as review metadata only and does not write tags, move files, run ReplayGain, contact providers, search, browse, or download.
+
+- [x] Correct slskdN port migration banner copy
+  - Status: completed (2026-05-01)
+  - Notes: Replaced the raw endpoint/VPN wording with an ingress-port reduction reminder that lists each current mapping by service purpose, protocol/public endpoint, local destination, and config option. Deployed the rebuilt web bundle to `kspls0`. Open/closed reachability remains a follow-up until a backend probe exposes a reliable result.
+
+- [x] Fix Pods channel chat visibility
+  - Status: completed (2026-05-01)
+  - Notes: Wired pod channel tab selection to the active channel ID, route state, and message refresh, and added an explicit visible channel chat panel with history, message count, and composer. Deployed the rebuilt web bundle to `kspls0`.
+
+- [x] Unify pod channel messaging into Messages
+  - Status: completed (2026-05-01)
+  - Notes: Added Pod Channels to the Messages workspace, including pod-channel panels with Listen Along, history, composer, and send action. Removed the top-level Pods nav item; `/pods` now opens Messages in pod-channel mode and old deep pod routes redirect to `/messages`.
+
+- [x] Fix unified Messages duplicate pod DMs and embedded composers
+  - Status: completed (2026-05-01)
+  - Notes: Folded pod direct channels into matching saved DMs instead of listing duplicate `peer / DM` rows, cleaned stale restored bridged pod-DM panels, made embedded chat/room/pod composers visibly usable, and preserved the room member list inside workspace panels. Deployed the rebuilt web bundle to `kspls0`.
+
+- [x] Scope Listen Along to room broadcasts
+  - Status: completed (2026-05-01)
+  - Notes: Removed Listen Along from direct-message channels, including pod DMs, and replaced the full room panel with a compact broadcast control strip for pod room channels. Deployed the rebuilt web bundle to `kspls0`.
+
+- [x] Add permanent message, room, and pod exit actions to Messages
+  - Status: completed (2026-05-01)
+  - Notes: Added confirmed destructive controls for deleting saved DM threads, leaving joined rooms, and leaving pods from the unified Messages sidebar and panel headers. Message rows now render plain sender names while user badges live in stable headers/member lists. Deployed the rebuilt web bundle to `kspls0`.
+
+- [x] Prevent deleted Soulseek DMs from becoming pod DMs
+  - Status: completed (2026-05-01)
+  - Notes: Hid pod direct channels from the Messages pod-channel list unconditionally and close stale pod-DM workspace panels, so deleting a Soulseek DM no longer reveals a duplicate mesh DM. Deployed the rebuilt web bundle to `kspls0`.

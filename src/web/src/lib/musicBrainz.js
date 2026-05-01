@@ -40,3 +40,43 @@ export const promoteDiscographyCoverageToWishlist = ({
     },
   );
 };
+
+export const subscribeArtistReleaseRadar = ({
+  artistId,
+  artistName,
+  enabled = true,
+  mutedReleaseGroupIds = [],
+  scope = 'trusted',
+}) =>
+  api.post('/musicbrainz/release-radar/subscriptions', {
+    artistId,
+    artistName,
+    enabled,
+    mutedReleaseGroupIds,
+    scope,
+  });
+
+export const fetchArtistReleaseRadarSubscriptions = () =>
+  api.get('/musicbrainz/release-radar/subscriptions');
+
+export const fetchArtistReleaseRadarNotifications = ({ unreadOnly = false } = {}) =>
+  api.get('/musicbrainz/release-radar/notifications', {
+    params: { unreadOnly },
+  });
+
+export const routeArtistReleaseRadarNotification = ({
+  channelId,
+  notificationId,
+  podId,
+  senderPeerId,
+  targetPeerIds = [],
+}) =>
+  api.post(
+    `/musicbrainz/release-radar/notifications/${encodeURIComponent(notificationId)}/routes`,
+    {
+      channelId,
+      podId,
+      senderPeerId,
+      targetPeerIds,
+    },
+  );

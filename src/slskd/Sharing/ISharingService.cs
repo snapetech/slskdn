@@ -69,6 +69,10 @@ public sealed class ShareManifestItemDto
 {
     public string ContentId { get; set; } = string.Empty;
     public string? MediaKind { get; set; }
+    public string? FileName { get; set; }
+    public string? Title { get; set; }
+    public string? Artist { get; set; }
+    public string? Album { get; set; }
     public string? StreamUrl { get; set; }
 }
 

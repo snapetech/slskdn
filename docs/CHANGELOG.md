@@ -22,6 +22,55 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed sharegroups streaming content resolution so non-advertisable share
+  repository entries cannot fall through to allowed-root `path:` fallback
+  resolution, and hardened share-token claim binding comparisons with the
+  shared constant-time helper.
+- Added persisted collection item display metadata for file name, title,
+  artist, and album, including share-manifest output and Playlist Intake
+  collection-item labels so player and playlist rows can avoid raw content ids
+  when metadata is known.
+- Added a browser-local System -> Network health score with local DHT, mesh,
+  HashDb, backfill, and security-signal findings plus a copyable report for
+  operations review.
+- Added a browser-local media-server sync review plan for Plex,
+  Jellyfin/Emby, and Navidrome readiness, including base URL, token, path-map
+  checks, explicit adapter review actions, and a copyable report without live
+  media-server calls.
+- Added browser-local Servarr compatibility review reports for wanted-pull and
+  completed-import readiness without calling Lidarr or triggering imports.
+- Added copyable Wishlist request review packets with quota, state, manual, and
+  automatic-request summaries without starting acquisition work.
+- Added Automation Center review history reports for enabled recipes and dry-run
+  checkpoints without executing any automation.
+- Added explicit live run actions for ready Servarr wanted sync and bounded
+  enabled Wishlist searches; both are user-triggered and keep downloads behind
+  normal result selection and policy.
+- Added a first opt-in native MilkDrop WebGPU renderer foothold with adapter
+  probing, debug adapter details, ping-pong feedback textures, and a
+  preset-colored fullscreen display pass plus first waveform, shape-outline,
+  motion-vector, screen-border, filled-shape, and fallback sprite-quad
+  primitive draws, now including textured shape/sprite asset sampling through
+  the shared native texture-alias rules and first safe-subset translated
+  warp/comp WGSL execution with FFT/waveform helper uniforms and named shader
+  texture samplers, plus WebGPU readiness reporting in the native
+  compatibility matrix, and exposed the player overlay cycle control for
+  Butterchurn, native MilkDrop3 WebGL2, and native MilkDrop3 WebGPU while
+  keeping Butterchurn as the default and WebGL2 as the native baseline.
+- Expanded System Info setup health into a grouped diagnostic wizard with
+  readiness scoring, next steps, API/provider/queue/job checks, and group
+  filters for local troubleshooting.
+- Added setup-health readiness into the redacted diagnostic bundle so support
+  exports include actionable local checks without exposing secrets.
+- Added a browser-local mesh evidence review sandbox in System -> Mesh so
+  operators can preview provenance, trust-tier, k-anonymity, confidence, and
+  privacy gates before applying or publishing any mesh evidence.
+- Added a one-at-a-time Discovery Inbox mobile review tray for approving,
+  snoozing, rejecting, and navigating candidates without starting network or
+  download work.
+- Added browser-local community quality reviewer overrides and notes so local
+  trust/caution/ignore decisions influence candidate ranking and action
+  previews without deleting the underlying evidence.
 - Added a mobile-friendly System Info setup-health check with local pass/warn/fail
   readiness cards and a copyable report for connection, identity, shares,
   downloads, restart, URL base, and remote-configuration state.
@@ -93,6 +142,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
   SongID-confirmed federated WorkRef observations into local notifications
   without polling MusicBrainz, browsing peers, searching Soulseek, or starting
   downloads.
+- Added SongID queue-summary and evidence-package APIs so operators can review
+  queued/running run state and export capped candidates, forensic evidence,
+  plans, acquisition options, scorecards, segments, mix groups, and artifact
+  references without starting searches or downloads.
 - Added restart-safe persistence for artist release radar subscriptions,
   muted release groups, notifications, and duplicate observation suppression.
 - Added explicit selected-peer route attempts for artist release radar
@@ -101,6 +154,21 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added graph-aware federated taste recommendations plus explicit review-only
   handoffs to Wishlist, artist release radar subscriptions, and Discovery Graph
   previews.
+- Added realm subject-index conflict reports and read-only API endpoints for
+  accepted indexes, recording resolutions, and provenance-preserving conflict
+  inspection.
+- Added backend realm subject-index authority decisions so accepted index
+  authorities can be locally disabled or re-enabled; disabled authorities are
+  excluded from recording resolution and conflict reports without mutating
+  governance documents or publishing changes.
+- Added restart-safe MusicBrainz overlay persistence for signed edits, route
+  attempts, and manual upstream export approvals.
+- Added Quarantine Jury audit reports for accepted, pending, stale, routed, and
+  failed-route review states without changing quarantine enforcement.
+- Added Quarantine Jury release evidence packages for locally accepted
+  release-candidate recommendations, including request evidence, signed juror
+  verdicts, route attempts, acceptance snapshots, and drift warnings without
+  changing quarantine enforcement.
 - Added a local source-feed import preview parser that turns artist/title rows
   into deduped suggestions with skipped-row reporting.
 - Expanded source-feed imports with Spotify provider fetching for public
@@ -119,6 +187,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Added System Integrations controls for source-feed provider settings,
   including Spotify, YouTube, and Last.fm on/off toggles, masked credential
   inputs, validation warnings, and tooltip-backed apply/reset actions.
+- Added source-feed import history/audit endpoints. Preview runs now persist
+  bounded app-dir history entries with provider/source metadata, source
+  fingerprints, request/result counts, network-request counts, skipped-row
+  samples, and suggestion samples without storing provider bearer tokens.
 - Added System Integrations controls for Pushbullet, Ntfy, and Pushover
   notification settings, including on/off toggles, private-message and
   room-mention triggers, masked secret replacement, validation warnings,
@@ -209,6 +281,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
   playlists.
 - Added browser-local native MilkDrop FPS caps with debug frame-time readout
   for visible GPU-load tuning.
+- Added native MilkDrop quality presets, WebGPU capability reporting in debug
+  details, and WebGL context loss/restore coverage in the native smoke test.
+- Added native MilkDrop performance measurement for curated fixtures or local
+  preset files/folders, plus a bounded translated-shader cache for repeated
+  shader bodies.
 - Added app-wide interaction affordances for hover, focus-visible, disabled,
   and clickable row states.
 - Added acquisition-profile request plumbing, documentation audit notes, and
@@ -844,6 +921,8 @@ Relevant non-documentation commits preserved in this rollback line:
 
 - Fixed the newest issue `#209` mesh follow-up where DHT bootstrap/discovery succeeded but `Circuit maintenance` still stayed at `0 circuits, 0 total peers`. Live overlay neighbors are now mirrored into the circuit peer inventory through `MeshNeighborPeerSyncService`, and unit coverage reproduces the old empty-peer state without the sync service and the corrected populated-peer state with it.
 
+- Realm-curated subject indexes now survive restarts: accepted indexes, governance proposal review state, and local authority enable/disable decisions persist to an atomic app-dir JSON state file and reload on startup, preserving resolver behavior without publishing indexes or contacting peers.
+
 - Followed up on the newer issue `#209` feedback after DHT bootstrap started succeeding: versioned `GET /api/v0/users/notes` now resolves correctly again, and the mesh overlay connector no longer runs a guaranteed-to-fail UDP hole-punch preflight against DHT-discovered TCP overlay endpoints. Hole-punch completion logs now also label their local port as an ephemeral UDP socket so operators do not mistake it for a randomized listener port.
 
 - Followed up on the post-bootstrap runtime fallout behind issue `#209`: `Connection reset by peer` is now treated as expected Soulseek network churn instead of `[FATAL]`, stale antiforgery cookies are cleared and reissued after reinstall/key-ring changes, and obvious non-overlay TLS garbage on the public mesh port is downgraded to debug noise instead of warning stack traces.
@@ -867,6 +946,18 @@ Relevant non-documentation commits preserved in this rollback line:
 - Fixed the real root causes behind the persistent tester reports on `#200` and `#201`: the web service worker was cache-first on navigations and pre-cached the app shell, serving a stale `index.html` that pointed at asset bundle hashes no longer on disk after every rebuild (blank new tabs, 404s on `/assets/*`); it is now network-first for HTML, never caches `/assets/*`, and the shell cache name is bumped so old versions are purged on activate.
 - Removed `listenIPAddress` from the startup `SoulseekClientOptionsPatch`. It is already applied via `CreateInitialSoulseekClientOptions`; re-applying it through `ReconfigureOptionsAsync` at startup tore down the `TcpListener` mid-accept and raced `Listener.ListenContinuouslyAsync`, producing the `Not listening. You must call the Start() method before calling this method.` exception and leaving the listener stopped so every inbound peer connection was refused and all transfers failed.
 - Wired the existing `GET api/jobs` / `GET api/v{version}/jobs` endpoint to a real production data source. `slskd.API.Native.JobsController` depended on `IJobServiceWithList`, which had no production registration — only a test-harness one — so in production the endpoint always returned zero jobs, which is what the `System/Jobs` Web UI renders as "doesn't load." Added `HashDbJobServiceListAdapter` backed by new `ListDiscographyJobsAsync` / `ListLabelCrateJobsAsync` methods on `IHashDbService`, and registered it in DI.
+
+- Expanded Automation Center execution beyond reports: `Wishlist Retry` can now run a bounded batch of enabled backend Wishlist searches, and `Library Health Scan` can start the real read-only scan after an operator enters an explicit library path. Both executions are recorded in automation history and keep downloads/file mutation behind the existing review flows.
+
+- Turned more tail-side review surfaces into explicit handoffs: selected Library Health issues can now start bounded replacement searches through the real Search API, queue remediation jobs only for selected auto-fixable issue IDs, and send risky quarantine candidates to Discovery Inbox. Discovery Shelf promote previews can also be sent to Discovery Inbox individually or in a bounded batch.
+
+- Expanded Listening Stats into live, explicit acquisition/scrobble handoffs: recommendation seeds now include top tracks, can start bounded live Search API batches, can be saved as enabled manual Wishlist requests with auto-download off, and can submit recent local plays to ListenBrainz using the saved browser token.
+
+- Expanded the E15 player acquisition handoffs: Smart Radio plans can now start bounded live search batches, save manual Wishlist requests with auto-download disabled, and send radio seeds to Discovery Inbox. The playback queue's similar-track candidates can also start bounded searches or save manual Wishlist requests without changing the current queue.
+
+- Expanded Discovery Inbox acquisition plans with a manual `Wishlist Ready` handoff: ready plans can create bounded Wishlist requests with auto-download disabled, record the created request on the plan, and skip duplicate Wishlist creation while keeping backend search execution as a separate explicit action.
+
+- Added an E11 tag/organization dry run to Playlist Intake: matched rows can preview tag fields, organization templates, multi-artist behavior, cover-art policy, and ReplayGain policy with changed-field and destination-path summaries, without writing tags, moving files, running ReplayGain, contacting providers, searching, browsing peers, or downloading.
 
 - Fixed mesh self-descriptor publication so unsupported-QUIC hosts no longer advertise fake `DirectQuic` transports or legacy Soulseek-style `2234/2235` endpoints. Auto-detected mesh endpoints now use explicit `udp://...:<overlay-port>` legacy addresses derived from the real overlay listen port, and direct QUIC transport advertisement is suppressed when the running host cannot actually accept QUIC.
 

@@ -141,6 +141,10 @@ public sealed class SharingService : ISharingService
         {
             ContentId = i.ContentId,
             MediaKind = i.MediaKind,
+            FileName = i.FileName,
+            Title = i.Title,
+            Artist = i.Artist,
+            Album = i.Album,
             StreamUrl = allowStream
                 ? (effectiveToken != null
                     ? (ownerEndpoint != null

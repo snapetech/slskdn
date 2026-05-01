@@ -198,7 +198,11 @@ public class CollectionsController : ControllerBase
             CollectionId = id,
             ContentId = req.ContentId.Trim(),
             MediaKind = string.IsNullOrWhiteSpace(req.MediaKind) ? null : req.MediaKind.Trim(),
-            ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim()
+            FileName = string.IsNullOrWhiteSpace(req.FileName) ? null : req.FileName.Trim(),
+            Title = string.IsNullOrWhiteSpace(req.Title) ? null : req.Title.Trim(),
+            Artist = string.IsNullOrWhiteSpace(req.Artist) ? null : req.Artist.Trim(),
+            Album = string.IsNullOrWhiteSpace(req.Album) ? null : req.Album.Trim(),
+            ContentHash = NormalizeContentHash(req.ContentHash, req.Sha256)
         };
         var created = await _sharing.AddCollectionItemAsync(item, ct);
         return CreatedAtAction(nameof(GetItems), new { id }, created);
@@ -232,6 +236,31 @@ public class CollectionsController : ControllerBase
         if (req.ContentHash != null)
         {
             it.ContentHash = string.IsNullOrWhiteSpace(req.ContentHash) ? null : req.ContentHash.Trim();
+        }
+
+        if (req.Sha256 != null)
+        {
+            it.ContentHash = string.IsNullOrWhiteSpace(req.Sha256) ? null : req.Sha256.Trim();
+        }
+
+        if (req.FileName != null)
+        {
+            it.FileName = string.IsNullOrWhiteSpace(req.FileName) ? null : req.FileName.Trim();
+        }
+
+        if (req.Title != null)
+        {
+            it.Title = string.IsNullOrWhiteSpace(req.Title) ? null : req.Title.Trim();
+        }
+
+        if (req.Artist != null)
+        {
+            it.Artist = string.IsNullOrWhiteSpace(req.Artist) ? null : req.Artist.Trim();
+        }
+
+        if (req.Album != null)
+        {
+            it.Album = string.IsNullOrWhiteSpace(req.Album) ? null : req.Album.Trim();
         }
 
         await _sharing.UpdateCollectionItemAsync(it, ct);
@@ -272,6 +301,12 @@ public class CollectionsController : ControllerBase
         await _sharing.ReorderCollectionItemsAsync(id, req.ItemIds, ct);
         return NoContent();
     }
+
+    private static string? NormalizeContentHash(string? contentHash, string? sha256)
+    {
+        var raw = !string.IsNullOrWhiteSpace(contentHash) ? contentHash : sha256;
+        return string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
+    }
 }
 
 public class CreateCollectionRequest
@@ -301,6 +336,16 @@ public class AddCollectionItemRequest
     public string? MediaKind { get; set; }
 
     public string? ContentHash { get; set; }
+
+    public string? Sha256 { get; set; }
+
+    public string? FileName { get; set; }
+
+    public string? Title { get; set; }
+
+    public string? Artist { get; set; }
+
+    public string? Album { get; set; }
 }
 
 public class UpdateCollectionItemRequest
@@ -310,6 +355,16 @@ public class UpdateCollectionItemRequest
     public string? MediaKind { get; set; }
 
     public string? ContentHash { get; set; }
+
+    public string? Sha256 { get; set; }
+
+    public string? FileName { get; set; }
+
+    public string? Title { get; set; }
+
+    public string? Artist { get; set; }
+
+    public string? Album { get; set; }
 }
 
 public class ReorderRequest

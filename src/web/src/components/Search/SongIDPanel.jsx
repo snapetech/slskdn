@@ -414,6 +414,26 @@ const SongIDPanel = ({ disabled }) => {
     }
   };
 
+  const copyForensicMatrix = async () => {
+    if (!run?.id || !run?.forensicMatrix) {
+      toast.error('No forensic matrix is available for this SongID run');
+      return;
+    }
+
+    try {
+      const matrix = await songId.getForensicMatrix(run.id);
+      await navigator.clipboard.writeText(JSON.stringify(matrix, null, 2));
+      toast.success('SongID forensic matrix copied');
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error?.response?.data ??
+          error?.message ??
+          'Failed to copy SongID forensic matrix',
+      );
+    }
+  };
+
   const openDiscoveryGraph = async (request) => {
     setGraphLoading(true);
     setGraphOpen(true);
@@ -1527,6 +1547,20 @@ const SongIDPanel = ({ disabled }) => {
           {run.forensicMatrix ? (
             <details style={detailStyle}>
               <summary style={detailSummaryStyle}>Forensic Matrix</summary>
+              <div style={{ marginBottom: '1em' }}>
+                <Popup
+                  content="Copy the complete forensic matrix JSON for this SongID run without changing ranking, downloads, or local files."
+                  position="top left"
+                  trigger={
+                    <Button
+                      aria-label="Copy SongID forensic matrix JSON"
+                      icon="copy"
+                      onClick={copyForensicMatrix}
+                      size="mini"
+                    />
+                  }
+                />
+              </div>
               <div style={{ marginBottom: '1em' }}>
                 <Label size="tiny">Identity {run.forensicMatrix.identityScore || 0}</Label>
                 <Label size="tiny">

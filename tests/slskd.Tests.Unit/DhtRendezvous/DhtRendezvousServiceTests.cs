@@ -232,6 +232,49 @@ public class DhtRendezvousServiceTests
     }
 
     [Fact]
+    public async Task OnPeersFound_WhenPeerFailsRepeatedly_UsesProgressiveReconnectBackoff()
+    {
+        var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
+        var connector = new Mock<IMeshOverlayConnector>();
+        connector
+            .SetupSequence(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()))
+            .ReturnsAsync(0)
+            .ReturnsAsync(0)
+            .ReturnsAsync(1);
+
+        var service = new DhtRendezvousService(
+            NullLogger<DhtRendezvousService>.Instance,
+            Mock.Of<IMeshOverlayServer>(),
+            connector.Object,
+            new MeshNeighborRegistry(NullLogger<MeshNeighborRegistry>.Instance),
+            peerManager,
+            new DhtRendezvousOptions { Enabled = true });
+
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.17:50305"));
+        await Task.Delay(100);
+
+        SetLastAttempt(service, "203.0.113.17:50305", DateTimeOffset.UtcNow.AddMinutes(-6));
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.17:50305"));
+        await Task.Delay(100);
+
+        SetLastAttempt(service, "203.0.113.17:50305", DateTimeOffset.UtcNow.AddMinutes(-6));
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.17:50305"));
+        await Task.Delay(100);
+
+        connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Exactly(2));
+        Assert.Equal(1, service.GetStats().TotalCandidatesSkippedReconnectBackoff);
+
+        SetLastAttempt(service, "203.0.113.17:50305", DateTimeOffset.UtcNow.AddMinutes(-16));
+        InvokeOnPeersFound(service, CreatePeersFoundEventArgs("ipv4://203.0.113.17:50305"));
+        await Task.Delay(100);
+
+        connector.Verify(x => x.ConnectToCandidatesAsync(It.IsAny<IEnumerable<IPEndPoint>>()), Times.Exactly(3));
+        var peer = peerManager.GetPeer("203.0.113.17:50305");
+        Assert.NotNull(peer);
+        Assert.True(peer!.SupportsOnionRouting);
+    }
+
+    [Fact]
     public async Task OnPeersFound_WhenConnectorCapacityIsFull_DefersExtraCandidatesWithoutCountingAttempts()
     {
         var peerManager = new MeshPeerManager(NullLogger<MeshPeerManager>.Instance);
@@ -332,6 +375,22 @@ public class DhtRendezvousServiceTests
             reconnectInterval: TimeSpan.FromMinutes(5));
 
         Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData(0, 5)]
+    [InlineData(1, 5)]
+    [InlineData(2, 15)]
+    [InlineData(3, 30)]
+    [InlineData(4, 60)]
+    [InlineData(9, 60)]
+    public void GetPeerReconnectInterval_ProgressivelyDeprioritizesRepeatedFailures(
+        int consecutiveFailures,
+        int expectedMinutes)
+    {
+        Assert.Equal(
+            TimeSpan.FromMinutes(expectedMinutes),
+            DhtRendezvousService.GetPeerReconnectInterval(consecutiveFailures));
     }
 
     private static void SetLastAttempt(DhtRendezvousService service, string peerId, DateTimeOffset lastAttempt)

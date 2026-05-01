@@ -7,15 +7,22 @@ namespace slskd.SourceFeeds;
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 public sealed class SourceFeedImportService : ISourceFeedImportService
 {
+    private const int MaxHistoryEntries = 100;
+    private const int MaxHistorySuggestions = 25;
+    private const int MaxHistorySkippedRows = 25;
+    private const int MaxSourcePreviewLength = 160;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -37,14 +44,41 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         @"last\.fm/user/(?<user>[^/?#]+)(?<path>/[^?#]*)?",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private readonly object _storageSync = new();
+    private readonly string _storagePath;
+    private readonly List<SourceFeedImportHistoryEntry> _history = [];
+
     public SourceFeedImportService(
         IHttpClientFactory httpClientFactory,
         IOptionsMonitor<global::slskd.Options> optionsMonitor,
-        ISpotifyConnectionService spotifyConnectionService)
+        ISpotifyConnectionService spotifyConnectionService,
+        ILogger<SourceFeedImportService> logger)
+        : this(
+            httpClientFactory,
+            optionsMonitor,
+            spotifyConnectionService,
+            logger,
+            Path.Combine(
+                string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory)
+                    ? global::slskd.Program.DefaultAppDirectory
+                    : global::slskd.Program.AppDirectory,
+                "source-feed-import-history.json"))
+    {
+    }
+
+    public SourceFeedImportService(
+        IHttpClientFactory httpClientFactory,
+        IOptionsMonitor<global::slskd.Options> optionsMonitor,
+        ISpotifyConnectionService spotifyConnectionService,
+        ILogger<SourceFeedImportService> logger,
+        string storagePath)
     {
         HttpClientFactory = httpClientFactory;
         OptionsMonitor = optionsMonitor;
         SpotifyConnectionService = spotifyConnectionService;
+        Logger = logger;
+        _storagePath = storagePath;
+        LoadHistory();
     }
 
     private IHttpClientFactory HttpClientFactory { get; }
@@ -53,6 +87,8 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
 
     private ISpotifyConnectionService SpotifyConnectionService { get; }
 
+    private ILogger<SourceFeedImportService> Logger { get; }
+
     public async Task<SourceFeedImportResult> PreviewAsync(
         SourceFeedImportRequest request,
         CancellationToken cancellationToken = default)
@@ -60,23 +96,58 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
         var sourceText = request.SourceText.Trim();
         if (string.IsNullOrWhiteSpace(sourceText))
         {
-            return new SourceFeedImportResult();
+            var emptyResult = new SourceFeedImportResult();
+            RecordHistory(request, emptyResult);
+            return emptyResult;
         }
 
         var safeLimit = Math.Clamp(request.Limit, 1, OptionsMonitor.CurrentValue.Integration.Spotify.MaxItemsPerImport);
         var sourceKind = request.SourceKind.Trim().ToLowerInvariant();
+        SourceFeedImportResult result;
 
         if (request.FetchProviderUrls && LooksLikeSpotify(sourceText, sourceKind))
         {
-            return await PreviewSpotifyAsync(request, safeLimit, cancellationToken).ConfigureAwait(false);
+            result = await PreviewSpotifyAsync(request, safeLimit, cancellationToken).ConfigureAwait(false);
+            RecordHistory(request, result);
+            return result;
         }
 
         if (request.FetchProviderUrls && LooksLikeProviderUrl(sourceText, sourceKind))
         {
-            return await PreviewProviderUrlAsync(sourceText, sourceKind, safeLimit, cancellationToken).ConfigureAwait(false);
+            result = await PreviewProviderUrlAsync(sourceText, sourceKind, safeLimit, cancellationToken).ConfigureAwait(false);
+            RecordHistory(request, result);
+            return result;
         }
 
-        return PreviewLocalText(sourceText, sourceKind, request.IncludeAlbum, safeLimit);
+        result = PreviewLocalText(sourceText, sourceKind, request.IncludeAlbum, safeLimit);
+        RecordHistory(request, result);
+        return result;
+    }
+
+    public Task<IReadOnlyList<SourceFeedImportHistoryEntry>> GetHistoryAsync(
+        int limit = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var safeLimit = Math.Clamp(limit, 1, MaxHistoryEntries);
+        lock (_storageSync)
+        {
+            return Task.FromResult<IReadOnlyList<SourceFeedImportHistoryEntry>>(_history
+                .OrderByDescending(entry => entry.ImportedAt)
+                .Take(safeLimit)
+                .ToList());
+        }
+    }
+
+    public Task<SourceFeedImportHistoryEntry?> GetHistoryEntryAsync(
+        string importId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedImportId = importId.Trim();
+        lock (_storageSync)
+        {
+            return Task.FromResult(_history.FirstOrDefault(entry =>
+                string.Equals(entry.ImportId, normalizedImportId, StringComparison.OrdinalIgnoreCase)));
+        }
     }
 
     private static bool LooksLikeSpotify(string sourceText, string sourceKind)
@@ -860,6 +931,122 @@ public sealed class SourceFeedImportService : ISourceFeedImportService
 
         result.SuggestionCount = result.Suggestions.Count;
         return result;
+    }
+
+    private void RecordHistory(SourceFeedImportRequest request, SourceFeedImportResult result)
+    {
+        var entry = new SourceFeedImportHistoryEntry
+        {
+            ImportId = BuildImportId(request, result),
+            ImportedAt = DateTimeOffset.UtcNow,
+            Provider = result.Provider,
+            SourceKind = result.SourceKind,
+            SourceId = result.SourceId,
+            SourceFingerprint = BuildSourceFingerprint(request.SourceText),
+            SourcePreview = BuildSourcePreview(request.SourceText),
+            Limit = request.Limit,
+            IncludeAlbum = request.IncludeAlbum,
+            FetchProviderUrls = request.FetchProviderUrls,
+            TotalRows = result.TotalRows,
+            SuggestionCount = result.SuggestionCount,
+            DuplicateCount = result.DuplicateCount,
+            SkippedCount = result.SkippedCount,
+            NetworkRequestCount = result.NetworkRequestCount,
+            RequiresAccessToken = result.RequiresAccessToken,
+            RequiredScopeHint = result.RequiredScopeHint,
+            Suggestions = result.Suggestions.Take(MaxHistorySuggestions).ToList(),
+            SkippedRows = result.SkippedRows.Take(MaxHistorySkippedRows).ToList(),
+        };
+
+        lock (_storageSync)
+        {
+            _history.RemoveAll(existing => string.Equals(existing.ImportId, entry.ImportId, StringComparison.OrdinalIgnoreCase));
+            _history.Insert(0, entry);
+            if (_history.Count > MaxHistoryEntries)
+            {
+                _history.RemoveRange(MaxHistoryEntries, _history.Count - MaxHistoryEntries);
+            }
+
+            PersistHistory();
+        }
+    }
+
+    private void LoadHistory()
+    {
+        lock (_storageSync)
+        {
+            if (!File.Exists(_storagePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_storagePath);
+                var state = JsonSerializer.Deserialize<SourceFeedImportHistoryState>(json, JsonOptions);
+                if (state == null)
+                {
+                    return;
+                }
+
+                _history.Clear();
+                _history.AddRange(state.History
+                    .OrderByDescending(entry => entry.ImportedAt)
+                    .Take(MaxHistoryEntries));
+            }
+            catch (IOException)
+            {
+                Logger.LogWarning("[SourceFeedImport] Failed to load import history from {Path}", _storagePath);
+            }
+            catch (JsonException)
+            {
+                Logger.LogWarning("[SourceFeedImport] Failed to parse import history from {Path}", _storagePath);
+            }
+        }
+    }
+
+    private void PersistHistory()
+    {
+        var directory = Path.GetDirectoryName(_storagePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var state = new SourceFeedImportHistoryState
+        {
+            History = _history
+                .OrderByDescending(entry => entry.ImportedAt)
+                .Take(MaxHistoryEntries)
+                .ToList(),
+        };
+        var tempPath = $"{_storagePath}.tmp";
+        File.WriteAllText(tempPath, JsonSerializer.Serialize(state, JsonOptions));
+        File.Move(tempPath, _storagePath, overwrite: true);
+    }
+
+    private static string BuildImportId(SourceFeedImportRequest request, SourceFeedImportResult result)
+    {
+        var input = $"{Guid.NewGuid():N}|{result.Provider}|{result.SourceKind}|{result.SourceId}|{BuildSourceFingerprint(request.SourceText)}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(hash)[..16].ToLowerInvariant();
+    }
+
+    private static string BuildSourceFingerprint(string sourceText)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sourceText.Trim()));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static string BuildSourcePreview(string sourceText)
+    {
+        var preview = Regex.Replace(sourceText.Trim(), @"\s+", " ");
+        return preview.Length <= MaxSourcePreviewLength ? preview : preview[..MaxSourcePreviewLength];
+    }
+
+    private sealed class SourceFeedImportHistoryState
+    {
+        public List<SourceFeedImportHistoryEntry> History { get; init; } = [];
     }
 
     private static string DetectLocalKind(string sourceText)

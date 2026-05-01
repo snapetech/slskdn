@@ -183,12 +183,12 @@ public class DirectQuicDialer : ITransportDialer
     /// <returns>True if QUIC is supported on this platform.</returns>
     public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
-        var isAvailable = QuicConnection.IsSupported;
+        var isAvailable = QuicRuntime.IsAvailable();
         _statistics.IsAvailable = isAvailable;
 
         if (!isAvailable)
         {
-            _statistics.LastError = "QUIC not supported on this platform";
+            _statistics.LastError = "QUIC runtime support is unavailable";
         }
 
         return Task.FromResult(isAvailable);

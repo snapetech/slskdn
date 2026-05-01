@@ -76,7 +76,18 @@ public class SharingServiceTests
         var collectionId = Guid.NewGuid();
         var grant = new ShareGrant { Id = grantId, CollectionId = collectionId, AllowStream = true };
         var collection = new Collection { Id = collectionId, Title = "Test", Type = CollectionType.ShareList };
-        var items = new List<CollectionItem> { new() { ContentId = "c1", MediaKind = "Music" } };
+        var items = new List<CollectionItem>
+        {
+            new()
+            {
+                ContentId = "c1",
+                MediaKind = "Music",
+                FileName = "Artist/Album/01 Track.flac",
+                Title = "Track",
+                Artist = "Artist",
+                Album = "Album",
+            },
+        };
 
         _grantsMock.Setup(x => x.GetByIdAsync(grantId, It.IsAny<CancellationToken>())).ReturnsAsync(grant);
         _collectionsMock.Setup(x => x.GetByIdAsync(collectionId, It.IsAny<CancellationToken>())).ReturnsAsync(collection);
@@ -89,6 +100,10 @@ public class SharingServiceTests
         Assert.Equal("Test", m.Title);
         Assert.Single(m.Items);
         Assert.Equal("c1", m.Items[0].ContentId);
+        Assert.Equal("Artist/Album/01 Track.flac", m.Items[0].FileName);
+        Assert.Equal("Track", m.Items[0].Title);
+        Assert.Equal("Artist", m.Items[0].Artist);
+        Assert.Equal("Album", m.Items[0].Album);
         Assert.NotNull(m.Items[0].StreamUrl);
         Assert.Contains("token=token123", m.Items[0].StreamUrl);
     }

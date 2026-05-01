@@ -24,7 +24,9 @@ vi.mock('../../lib/searches', () => ({
   stop: vi.fn(),
 }));
 vi.mock('./AlbumCompletionPanel', () => ({ default: () => null }));
+vi.mock('./ArtistReleaseRadarPanel', () => ({ default: () => null }));
 vi.mock('./DiscoveryGraphAtlasPanel', () => ({ default: () => null }));
+vi.mock('./FederatedTasteRecommendationsPanel', () => ({ default: () => null }));
 vi.mock('./MusicBrainzLookup', () => ({ default: () => null }));
 vi.mock('./SongIDPanel', () => ({
   default: () => <div data-testid="songid-panel">SongID panel</div>,
@@ -157,28 +159,11 @@ describe('Searches', () => {
     expect(screen.queryByTestId('search-input')).not.toBeInTheDocument();
   });
 
-  it('adds the current search phrase to the Discovery Inbox', async () => {
-    const input = await renderSearches();
+  it('keeps manual search out of acquisition review', async () => {
+    await renderSearches();
 
-    fireEvent.change(input, { target: { value: 'unreleased demo' } });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Add search phrase to Discovery Inbox' }),
-    );
-
-    const persisted = JSON.parse(
-      localStorage.getItem('slskdn.discoveryInbox.items'),
-    );
-
-    expect(persisted).toHaveLength(1);
-    expect(persisted[0]).toEqual(
-      expect.objectContaining({
-        acquisitionProfile: 'lossless-exact',
-        evidenceKey: 'manual-search:unreleased demo:lossless-exact',
-        searchText: 'unreleased demo',
-        source: 'Search',
-        state: 'Suggested',
-        title: 'unreleased demo',
-      }),
-    );
+    expect(
+      screen.queryByRole('button', { name: 'Add search phrase to Discovery Inbox' }),
+    ).not.toBeInTheDocument();
   });
 });

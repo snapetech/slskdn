@@ -7,7 +7,13 @@ describe('buildSearchActionPreview', () => {
   it('summarizes selected download action details and warnings', () => {
     const preview = buildSearchActionPreview({
       candidateRank: { score: 38 },
-      communityQualitySummary: { score: -6 },
+      communityQualitySummary: {
+        override: {
+          mode: 'ignore',
+          note: 'Known private peer.',
+        },
+        score: -6,
+      },
       files: [
         { filename: 'Artist/Album/01 Track.flac', size: 20 },
         { filename: 'Artist/Album/02 Track.flac', locked: true, size: 30 },
@@ -34,6 +40,8 @@ describe('buildSearchActionPreview', () => {
         'No free upload slot is currently advertised',
         'Queue depth is 7',
         'Local caution signals exist for this peer',
+        'Local quality note: Known private peer.',
+        'Local quality signals are ignored by reviewer override',
         'Candidate score is 38/100',
       ]),
     );

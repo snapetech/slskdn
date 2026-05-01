@@ -1,3 +1,4 @@
+import { buildSetupHealthChecks } from './setupHealthCheck';
 import YAML from 'yaml';
 
 const sensitiveKeyPattern =
@@ -39,6 +40,10 @@ export const buildDiagnosticBundle = ({
   options = {},
   state = {},
 } = {}) => {
+  const setupHealth = buildSetupHealthChecks({
+    options,
+    state,
+  });
   const bundle = {
     browser: {
       language: browser?.language,
@@ -53,6 +58,19 @@ export const buildDiagnosticBundle = ({
       protocol: location?.protocol,
     },
     options: redactDiagnosticValue(options),
+    setupHealth: {
+      checks: setupHealth.checks.map((item) => ({
+        action: item.action,
+        area: item.area,
+        group: item.group,
+        status: item.status,
+        summary: item.summary,
+      })),
+      nextSteps: setupHealth.nextSteps,
+      readiness: setupHealth.readiness,
+      score: setupHealth.score,
+      totals: setupHealth.totals,
+    },
     state: redactDiagnosticValue(state),
   };
 

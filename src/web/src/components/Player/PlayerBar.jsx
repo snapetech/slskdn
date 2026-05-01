@@ -1,11 +1,13 @@
 import './Player.css';
 import * as collectionsAPI from '../../lib/collections';
+import { addDiscoveryInboxItem } from '../../lib/discoveryInbox';
 import {
   clearDiscoveryShelf,
   exportDiscoveryShelfPolicyReport,
   getDiscoveryShelf,
   getDiscoveryShelfActionLabel,
   getDiscoveryShelfPolicyPreview,
+  getDiscoveryShelfPromoteItems,
   getDiscoveryShelfSummary,
   removeDiscoveryShelfItem,
   upsertDiscoveryShelfItem,
@@ -13,9 +15,11 @@ import {
 import * as externalVisualizer from '../../lib/externalVisualizer';
 import * as listenBrainz from '../../lib/listenBrainz';
 import {
+  buildListeningDiscoverySeeds,
   clearListeningHistory,
   exportListeningHistoryCsv,
   exportListeningHistoryJson,
+  getListeningRecommendationQueries,
   getListeningRecommendationSeeds,
   getListeningStats,
   importListeningHistory,
@@ -27,14 +31,21 @@ import {
   setPlayerRating,
 } from '../../lib/playerRatings';
 import {
+  buildPlayerRadioDiscoveryItems,
   buildPlayerRadioPlan,
   buildPlayerRadioSearchPath,
+  getPlayerRadioQueries,
   getPlayerRadioCopyText,
 } from '../../lib/playerRadio';
-import { buildSimilarQueueCandidates } from '../../lib/playerAutoQueue';
+import {
+  buildSimilarQueueCandidates,
+  getSimilarQueueSearchQueries,
+} from '../../lib/playerAutoQueue';
 import { getPlayerShortcutAction } from '../../lib/playerShortcuts';
 import { getLocalStorageItem, setLocalStorageItem } from '../../lib/storage';
+import * as searches from '../../lib/searches';
 import * as streaming from '../../lib/streaming';
+import * as wishlistAPI from '../../lib/wishlist';
 import Equalizer from './Equalizer';
 import LyricsPane from './LyricsPane';
 import SpectrumAnalyzer, { getFrequencyBars } from './SpectrumAnalyzer';
@@ -61,6 +72,7 @@ import {
 const localMuteStorageKey = 'slskdn.player.localMuted';
 const collapsedStorageKey = 'slskdn.player.collapsed';
 const visualizerStorageKey = 'slskdn.player.visualizerEnabled';
+const visualizerEngineStorageKey = 'slskdn.player.visualizerEngine';
 const eqPanelStorageKey = 'slskdn.player.eqPanelOpen';
 const lyricsStorageKey = 'slskdn.player.lyricsOpen';
 const karaokeStorageKey = 'slskdn.player.karaokeEnabled';
@@ -73,9 +85,23 @@ const readStoredBoolean = (key) => {
   return getLocalStorageItem(key) === 'true';
 };
 
+const readStoredVisualizerEngineTileMode = () => {
+  const engine = getLocalStorageItem(visualizerEngineStorageKey);
+  if (engine === 'native') return 'native-webgl2';
+  return ['butterchurn', 'native-webgl2', 'native-webgpu'].includes(engine)
+    ? engine
+    : 'butterchurn';
+};
+
 const readStoredTileMode = () => {
   const mode = getLocalStorageItem(visualTileStorageKey);
-  return mode === 'milkdrop' ? 'milkdrop' : 'art';
+  if (['art', 'spectrum', 'scope', 'butterchurn', 'native-webgl2', 'native-webgpu'].includes(mode)) {
+    return mode;
+  }
+  if (mode === 'milkdrop') {
+    return readStoredVisualizerEngineTileMode();
+  }
+  return 'art';
 };
 
 const readStoredAnalyzerMode = () => {
@@ -248,11 +274,72 @@ const PlayerRatingControls = ({ current, onChange, rating }) => {
 const PlayerRadioModal = ({ current, onClose, onOpenSearch, open }) => {
   const plan = buildPlayerRadioPlan(current);
   const copyText = getPlayerRadioCopyText(plan);
+  const [runningSearches, setRunningSearches] = useState(false);
+  const [savingWishlist, setSavingWishlist] = useState(false);
+  const [status, setStatus] = useState('');
 
   const copyPlan = () => {
     if (navigator.clipboard && copyText) {
       navigator.clipboard.writeText(copyText).catch(() => {});
     }
+  };
+
+  const startRadioSearches = async () => {
+    const queries = getPlayerRadioQueries(plan, { limit: 3 });
+    if (queries.length === 0) {
+      setStatus('No smart-radio queries are ready.');
+      return;
+    }
+
+    try {
+      setRunningSearches(true);
+      const count = await searches.createBatch({ queries });
+      setStatus(`Started ${count} smart-radio search${count === 1 ? '' : 'es'}.`);
+    } catch {
+      setStatus('Unable to start smart-radio searches.');
+    } finally {
+      setRunningSearches(false);
+    }
+  };
+
+  const addRadioWishlist = async () => {
+    const queries = getPlayerRadioQueries(plan, { limit: 4 });
+    if (queries.length === 0) {
+      setStatus('No smart-radio queries are ready for Wishlist.');
+      return;
+    }
+
+    try {
+      setSavingWishlist(true);
+      await queries.reduce(
+        (chain, searchText) =>
+          chain.then(() =>
+            wishlistAPI.create({
+              autoDownload: false,
+              enabled: true,
+              filter: '',
+              maxResults: 50,
+              searchText,
+            }),
+          ),
+        Promise.resolve(),
+      );
+      setStatus(`Added ${queries.length} smart-radio seed${queries.length === 1 ? '' : 's'} to Wishlist.`);
+    } catch {
+      setStatus('Unable to add smart-radio seeds to Wishlist.');
+    } finally {
+      setSavingWishlist(false);
+    }
+  };
+
+  const sendRadioToInbox = () => {
+    const items = buildPlayerRadioDiscoveryItems(plan, { limit: 4 });
+    items.forEach((item) => addDiscoveryInboxItem(item));
+    setStatus(
+      items.length > 0
+        ? `Sent ${items.length} smart-radio seed${items.length === 1 ? '' : 's'} to Discovery Inbox.`
+        : 'No smart-radio seeds are ready for Discovery Inbox.',
+    );
   };
 
   return (
@@ -303,8 +390,57 @@ const PlayerRadioModal = ({ current, onClose, onOpenSearch, open }) => {
             </div>
           ))}
         </div>
+        {status ? (
+          <Message compact size="mini">
+            {status}
+          </Message>
+        ) : null}
       </Modal.Content>
       <Modal.Actions>
+        <Popup
+          content="Start up to three live searches from this smart-radio plan. This does not browse peers, queue downloads, or mutate files."
+          trigger={
+            <Button
+              data-testid="player-radio-start-searches"
+              disabled={!plan.ready}
+              loading={runningSearches}
+              onClick={startRadioSearches}
+              type="button"
+            >
+              <Icon name="search" />
+              Start Searches
+            </Button>
+          }
+        />
+        <Popup
+          content="Add smart-radio seeds to Wishlist as enabled manual requests with auto-download off."
+          trigger={
+            <Button
+              data-testid="player-radio-add-wishlist"
+              disabled={!plan.ready}
+              loading={savingWishlist}
+              onClick={addRadioWishlist}
+              type="button"
+            >
+              <Icon name="heart" />
+              Add Wishlist
+            </Button>
+          }
+        />
+        <Popup
+          content="Send smart-radio seeds to Discovery Inbox for review and approval before acquisition."
+          trigger={
+            <Button
+              data-testid="player-radio-send-inbox"
+              disabled={!plan.ready}
+              onClick={sendRadioToInbox}
+              type="button"
+            >
+              <Icon name="inbox" />
+              Send Inbox
+            </Button>
+          }
+        />
         <Popup
           content="Copy the generated radio search plan as plain text."
           trigger={
@@ -354,11 +490,62 @@ const PlayerQueueModal = ({
   queue,
 }) => {
   const upcoming = queue.slice(1);
+  const [handoffStatus, setHandoffStatus] = useState('');
+  const [searchingSimilar, setSearchingSimilar] = useState(false);
+  const [savingSimilarWishlist, setSavingSimilarWishlist] = useState(false);
   const similarCandidates = buildSimilarQueueCandidates({
     current,
     history,
     queue,
   });
+
+  const startSimilarSearches = async () => {
+    const queries = getSimilarQueueSearchQueries(similarCandidates, { limit: 3 });
+    if (queries.length === 0) {
+      setHandoffStatus('No similar queue candidates are ready to search.');
+      return;
+    }
+
+    try {
+      setSearchingSimilar(true);
+      const count = await searches.createBatch({ queries });
+      setHandoffStatus(`Started ${count} similar-track search${count === 1 ? '' : 'es'}.`);
+    } catch {
+      setHandoffStatus('Unable to start similar-track searches.');
+    } finally {
+      setSearchingSimilar(false);
+    }
+  };
+
+  const addSimilarWishlist = async () => {
+    const queries = getSimilarQueueSearchQueries(similarCandidates, { limit: 5 });
+    if (queries.length === 0) {
+      setHandoffStatus('No similar queue candidates are ready for Wishlist.');
+      return;
+    }
+
+    try {
+      setSavingSimilarWishlist(true);
+      await queries.reduce(
+        (chain, searchText) =>
+          chain.then(() =>
+            wishlistAPI.create({
+              autoDownload: false,
+              enabled: true,
+              filter: '',
+              maxResults: 50,
+              searchText,
+            }),
+          ),
+        Promise.resolve(),
+      );
+      setHandoffStatus(`Added ${queries.length} similar-track seed${queries.length === 1 ? '' : 's'} to Wishlist.`);
+    } catch {
+      setHandoffStatus('Unable to add similar-track seeds to Wishlist.');
+    } finally {
+      setSavingSimilarWishlist(false);
+    }
+  };
 
   return (
     <Modal
@@ -400,6 +587,38 @@ const PlayerQueueModal = ({
                     >
                       <Icon name="magic" />
                       Auto-fill Similar
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Start up to three searches from similar recent session tracks. This starts search jobs only."
+                  trigger={
+                    <Button
+                      data-testid="player-search-similar-candidates"
+                      disabled={similarCandidates.length === 0}
+                      loading={searchingSimilar}
+                      onClick={startSimilarSearches}
+                      size="mini"
+                      type="button"
+                    >
+                      <Icon name="search" />
+                      Search Similar
+                    </Button>
+                  }
+                />
+                <Popup
+                  content="Add similar recent session tracks to Wishlist as manual requests with auto-download off."
+                  trigger={
+                    <Button
+                      data-testid="player-wishlist-similar-candidates"
+                      disabled={similarCandidates.length === 0}
+                      loading={savingSimilarWishlist}
+                      onClick={addSimilarWishlist}
+                      size="mini"
+                      type="button"
+                    >
+                      <Icon name="heart" />
+                      Wishlist Similar
                     </Button>
                   }
                 />
@@ -457,6 +676,11 @@ const PlayerQueueModal = ({
               </div>
             )}
           </section>
+          {handoffStatus ? (
+            <Message compact size="mini">
+              {handoffStatus}
+            </Message>
+          ) : null}
           <section>
             <div className="player-panel-title">Recent</div>
             {history.length > 0 ? (
@@ -584,6 +808,27 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
     setMessage(`Policy report prepared for ${items.length} shelf items.`);
   };
 
+  const sendPromoteItemsToInbox = () => {
+    const promoteItems = getDiscoveryShelfPromoteItems(items, { limit: 10 });
+    promoteItems.forEach((item) => addDiscoveryInboxItem(item));
+    setMessage(
+      promoteItems.length > 0
+        ? `Sent ${promoteItems.length} promote candidate${promoteItems.length === 1 ? '' : 's'} to Discovery Inbox.`
+        : 'No promote candidates are ready for Discovery Inbox.',
+    );
+  };
+
+  const sendItemToInbox = (item) => {
+    const [inboxItem] = getDiscoveryShelfPromoteItems([item], { limit: 1 });
+    if (!inboxItem) {
+      setMessage(`${getDiscoveryShelfActionLabel(item.action)} is not a promote candidate.`);
+      return;
+    }
+
+    addDiscoveryInboxItem(inboxItem);
+    setMessage(`Sent ${item.title} to Discovery Inbox for approval.`);
+  };
+
   return (
     <Modal
       className="player-browser-modal player-discovery-shelf-modal"
@@ -665,6 +910,21 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
               </Button>
             }
           />
+          <Popup
+            content="Send up to ten promote-preview shelf items to Discovery Inbox for approval. This does not start search, download, sync ratings, or mutate files."
+            trigger={
+              <Button
+                data-testid="player-shelf-send-promotes"
+                disabled={items.length === 0 || policyPreview.promote === 0}
+                onClick={sendPromoteItemsToInbox}
+                size="mini"
+                type="button"
+              >
+                <Icon name="inbox" />
+                Send Promotes
+              </Button>
+            }
+          />
         </section>
         <div className="player-shelf-list">
           {items.length > 0 ? items.map((item) => (
@@ -694,6 +954,21 @@ const PlayerDiscoveryShelfModal = ({ onClose, open }) => {
                     type="button"
                   >
                     <Icon name="eye" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Send this promote-preview item to Discovery Inbox for approval. This creates a review candidate only."
+                trigger={
+                  <Button
+                    data-testid={`player-shelf-send-${item.key}`}
+                    disabled={item.action !== 'promote-preview'}
+                    icon
+                    onClick={() => sendItemToInbox(item)}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="inbox" />
                   </Button>
                 }
               />
@@ -758,10 +1033,16 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
   const [rangeDays, setRangeDays] = useState(30);
   const [importText, setImportText] = useState('');
   const [importStatus, setImportStatus] = useState(null);
+  const [runningSeedSearches, setRunningSeedSearches] = useState(false);
+  const [scrobblingRecent, setScrobblingRecent] = useState(false);
+  const [savingSeedWishlist, setSavingSeedWishlist] = useState(false);
   const [stats, setStats] = useState(() =>
     getListeningStats({ rangeDays: 30 }),
   );
   const recommendationSeeds = getListeningRecommendationSeeds(stats);
+  const discoverySeeds = buildListeningDiscoverySeeds(stats, {
+    acquisitionProfile: 'mesh-preferred',
+  });
 
   const refreshStats = useCallback((nextRangeDays = rangeDays) => {
     setStats(getListeningStats({ rangeDays: nextRangeDays }));
@@ -801,6 +1082,81 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
     }
 
     setImportStatus(`Prepared ${format.toUpperCase()} export for ${stats.history.length} plays.`);
+  };
+
+  const sendSeedsToDiscoveryInbox = () => {
+    discoverySeeds.forEach((seed) => addDiscoveryInboxItem(seed));
+    setImportStatus(
+      `Sent ${discoverySeeds.length} listening seed${
+        discoverySeeds.length === 1 ? '' : 's'
+      } to Discovery Inbox for approval.`,
+    );
+  };
+
+  const startSeedSearches = async () => {
+    const queries = getListeningRecommendationQueries(stats, { limit: 3 });
+    if (queries.length === 0) {
+      setImportStatus('No listening seeds are ready to search.');
+      return;
+    }
+
+    try {
+      setRunningSeedSearches(true);
+      const count = await searches.createBatch({ queries });
+      setImportStatus(`Started ${count} bounded listening seed search${count === 1 ? '' : 'es'}.`);
+    } catch {
+      setImportStatus('Unable to start listening seed searches.');
+    } finally {
+      setRunningSeedSearches(false);
+    }
+  };
+
+  const addSeedsToWishlist = async () => {
+    const queries = getListeningRecommendationQueries(stats, { limit: 5 });
+    if (queries.length === 0) {
+      setImportStatus('No listening seeds are ready for Wishlist.');
+      return;
+    }
+
+    try {
+      setSavingSeedWishlist(true);
+      await queries.reduce(
+        (chain, searchText) =>
+          chain.then(() =>
+            wishlistAPI.create({
+              autoDownload: false,
+              enabled: true,
+              filter: '',
+              maxResults: 50,
+              searchText,
+            }),
+          ),
+        Promise.resolve(),
+      );
+      setImportStatus(`Added ${queries.length} listening seed${queries.length === 1 ? '' : 's'} to Wishlist for manual acquisition.`);
+    } catch {
+      setImportStatus('Unable to add listening seeds to Wishlist.');
+    } finally {
+      setSavingSeedWishlist(false);
+    }
+  };
+
+  const scrobbleRecentHistory = async () => {
+    try {
+      setScrobblingRecent(true);
+      const result = await listenBrainz.submitListeningHistory(stats.history, {
+        limit: 10,
+      });
+      setImportStatus(
+        result.submitted > 0
+          ? `Submitted ${result.submitted} recent listen${result.submitted === 1 ? '' : 's'} to ListenBrainz.`
+          : 'No ListenBrainz token or eligible recent listens are available.',
+      );
+    } catch {
+      setImportStatus('Unable to submit recent listens to ListenBrainz.');
+    } finally {
+      setScrobblingRecent(false);
+    }
   };
 
   const readImportFile = (event) => {
@@ -898,31 +1254,77 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
         <section className="player-stats-recommendations">
           <div className="player-panel-title">Recommendation Seeds</div>
           {recommendationSeeds.length > 0 ? (
-            <div className="player-stats-seed-list">
-              {recommendationSeeds.map((seed) => (
-                <div className="player-stats-seed-row" key={`${seed.type}-${seed.query}`}>
-                  <div>
-                    <strong>{seed.label}</strong>
-                    <span>{seed.type} - {seed.basis}</span>
+            <>
+              <div className="player-stats-seed-list">
+                {recommendationSeeds.map((seed) => (
+                  <div className="player-stats-seed-row" key={`${seed.type}-${seed.query}`}>
+                    <div>
+                      <strong>{seed.label}</strong>
+                      <span>{seed.type} - {seed.basis}</span>
+                    </div>
+                    <Popup
+                      content="Open this local listening seed as a normal Search page query. Network search starts only after you choose to search."
+                      trigger={
+                        <Button
+                          aria-label={`Search ${seed.label}`}
+                          data-testid={`player-stats-search-seed-${seed.query}`}
+                          icon
+                          onClick={() => onOpenSearch(seed.query)}
+                          size="mini"
+                          type="button"
+                        >
+                          <Icon name="search" />
+                        </Button>
+                      }
+                    />
                   </div>
-                  <Popup
-                    content="Open this local listening seed as a normal Search page query. Network search starts only after you choose to search."
-                    trigger={
-                      <Button
-                        aria-label={`Search ${seed.label}`}
-                        data-testid={`player-stats-search-seed-${seed.query}`}
-                        icon
-                        onClick={() => onOpenSearch(seed.query)}
-                        size="mini"
-                        type="button"
-                      >
-                        <Icon name="search" />
-                      </Button>
-                    }
-                  />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <Popup
+                content="Send these listening-derived seeds to Discovery Inbox for approval and acquisition planning. This does not search, browse peers, or download."
+                trigger={
+                  <Button
+                    data-testid="player-stats-send-seeds-to-discovery-inbox"
+                    onClick={sendSeedsToDiscoveryInbox}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="inbox" />
+                    Send to Discovery Inbox
+                  </Button>
+                }
+              />
+              <Popup
+                content="Start up to three live searches from the strongest listening seeds. This only starts searches; it does not browse peers, queue downloads, or mutate files."
+                trigger={
+                  <Button
+                    data-testid="player-stats-start-seed-searches"
+                    loading={runningSeedSearches}
+                    onClick={startSeedSearches}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="search" />
+                    Start Searches
+                  </Button>
+                }
+              />
+              <Popup
+                content="Add up to five listening seeds to Wishlist as enabled manual-acquisition requests. Auto-download stays off."
+                trigger={
+                  <Button
+                    data-testid="player-stats-add-seeds-to-wishlist"
+                    loading={savingSeedWishlist}
+                    onClick={addSeedsToWishlist}
+                    size="mini"
+                    type="button"
+                  >
+                    <Icon name="heart" />
+                    Add Wishlist
+                  </Button>
+                }
+              />
+            </>
           ) : (
             <div className="player-queue-manager-empty">
               Play more tracks locally to build recommendation seeds.
@@ -1010,6 +1412,22 @@ const PlayerStatsModal = ({ onClose, onOpenSearch, open }) => {
                 >
                   <Icon name="table" />
                   CSV
+                </Button>
+              }
+            />
+            <Popup
+              content="Submit up to ten recent browser-local plays to ListenBrainz using the saved token. This does not search, browse peers, download, or mutate files."
+              trigger={
+                <Button
+                  data-testid="player-listening-history-scrobble-recent"
+                  disabled={stats.history.length === 0}
+                  loading={scrobblingRecent}
+                  onClick={scrobbleRecentHistory}
+                  size="mini"
+                  type="button"
+                >
+                  <Icon name="send" />
+                  Scrobble Recent
                 </Button>
               }
             />
@@ -1542,6 +1960,16 @@ const PlayerVisualTile = ({
   onTileModeChange,
   tileMode,
 }) => {
+  const tileModes = ['art', 'butterchurn', 'native-webgl2', 'native-webgpu', 'spectrum', 'scope'];
+  const visualizerTileModes = ['butterchurn', 'native-webgl2', 'native-webgpu'];
+  const tileModeLabels = {
+    art: 'album art',
+    butterchurn: 'Butterchurn',
+    'native-webgl2': 'MilkDrop3 WebGL2',
+    'native-webgpu': 'MilkDrop3 WebGPU',
+    scope: 'signal scope',
+    spectrum: 'spectrum bars',
+  };
   const title = current?.title || current?.fileName || 'slskdN';
   const artist = current?.artist || '';
   const initials = (artist || title)
@@ -1552,31 +1980,49 @@ const PlayerVisualTile = ({
     .join('')
     .toUpperCase() || 'N';
   const artworkUrl = current?.artworkUrl;
-  const showingMilkdrop = tileMode === 'milkdrop' && mode !== 'off';
-  const toggleTileMode = () => {
-    if (showingMilkdrop) {
-      onTileModeChange('art');
-      return;
+  const normalizedTileMode = tileModes.includes(tileMode) ? tileMode : 'art';
+  const showingVisualizer = visualizerTileModes.includes(normalizedTileMode);
+  const showingAnalyzer = ['spectrum', 'scope'].includes(normalizedTileMode);
+  const nextTileMode = tileModes[
+    (tileModes.indexOf(normalizedTileMode) + 1) % tileModes.length
+  ];
+  const visualizerDisplayMode = mode === 'off' ? 'inline' : mode;
+  const setTileMode = (nextMode) => {
+    onTileModeChange(nextMode);
+    if (visualizerTileModes.includes(nextMode) && mode === 'off') {
+      onModeChange('inline');
     }
-
-    onTileModeChange('milkdrop');
-    if (mode === 'off') onModeChange('inline');
   };
+  const switchTileMode = (event) => {
+    event.stopPropagation();
+    setTileMode(nextTileMode);
+  };
+  const showVisualizerWindow = (event) => {
+    event.stopPropagation();
+    if (!showingVisualizer) {
+      onTileModeChange(readStoredVisualizerEngineTileMode());
+    }
+    onModeChange('fullwindow');
+  };
+  const showVisualizerFullscreen = (event) => {
+    event.stopPropagation();
+    if (!showingVisualizer) {
+      onTileModeChange(readStoredVisualizerEngineTileMode());
+    }
+    onModeChange('fullscreen');
+  };
+  const handleTileActivate = () => setTileMode(nextTileMode);
 
   return (
     <div className="player-visual-tile">
       <Popup
         content={
-          showingMilkdrop
-            ? 'Show album art in this square.'
-            : 'Show MilkDrop in this square.'
+          `Show ${tileModeLabels[nextTileMode]} in this square.`
         }
         trigger={
           <div
             aria-label={
-              showingMilkdrop
-                ? 'Show album art in player visual tile'
-                : 'Show MilkDrop in player visual tile'
+              `Show ${tileModeLabels[nextTileMode]} in player visual tile`
             }
             role="button"
             className="player-visual-stage"
@@ -1584,17 +2030,26 @@ const PlayerVisualTile = ({
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                toggleTileMode();
+                handleTileActivate();
               }
             }}
-            onClick={toggleTileMode}
+            onClick={handleTileActivate}
             tabIndex={0}
           >
-            {showingMilkdrop ? (
+            {showingVisualizer ? (
               <Visualizer
                 audioElement={audioElement}
-                mode={mode}
+                compactControls
+                engineOverride={normalizedTileMode}
+                mode={visualizerDisplayMode}
+                onEngineChange={onTileModeChange}
                 onModeChange={onModeChange}
+              />
+            ) : showingAnalyzer ? (
+              <SpectrumAnalyzer
+                audioElement={audioElement}
+                className="player-visualizer-fallback"
+                mode={normalizedTileMode}
               />
             ) : (
               <span className="player-album-art" data-testid="player-album-art">
@@ -1609,8 +2064,52 @@ const PlayerVisualTile = ({
               </span>
             )}
             <span className="player-visual-affordance">
-              <Icon name={showingMilkdrop ? 'image outline' : 'magic'} />
+              <Icon name={showingVisualizer ? 'magic' : (showingAnalyzer ? 'chart bar' : 'image outline')} />
             </span>
+            <div className="player-visual-tile-controls">
+              <Popup
+                content={`Switch tile to ${tileModeLabels[nextTileMode]}.`}
+                trigger={
+                  <Button
+                    aria-label={`Switch tile to ${tileModeLabels[nextTileMode]}`}
+                    data-testid="player-visual-tile-cycle"
+                    icon
+                    onClick={switchTileMode}
+                    size="mini"
+                  >
+                    <Icon name={showingAnalyzer ? 'magic' : 'exchange'} />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Maximize the visualizer to the browser window."
+                trigger={
+                  <Button
+                    aria-label="Maximize visualizer to browser window"
+                    data-testid="player-visual-tile-fullwindow"
+                    icon
+                    onClick={showVisualizerWindow}
+                    size="mini"
+                  >
+                    <Icon name="expand arrows alternate" />
+                  </Button>
+                }
+              />
+              <Popup
+                content="Maximize the visualizer to fullscreen."
+                trigger={
+                  <Button
+                    aria-label="Maximize visualizer to fullscreen"
+                    data-testid="player-visual-tile-fullscreen"
+                    icon
+                    onClick={showVisualizerFullscreen}
+                    size="mini"
+                  >
+                    <Icon name="expand" />
+                  </Button>
+                }
+              />
+            </div>
           </div>
         }
       />
@@ -1852,8 +2351,13 @@ const PlayerBar = () => {
   }, [crossfadeEnabled]);
 
   const toggleVisualizer = () => {
-    setVisualTileMode('milkdrop');
-    setVisualizerMode((mode) => (mode === 'off' ? 'inline' : 'off'));
+    setVisualizerMode((mode) => {
+      if (mode === 'off') {
+        setVisualTileMode(readStoredVisualizerEngineTileMode());
+        return 'inline';
+      }
+      return 'off';
+    });
   };
 
   useEffect(() => {

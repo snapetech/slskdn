@@ -50,7 +50,7 @@ public class DumpTests
     }
 
     [Fact]
-    public async Task AllowMemoryDump_true_admin_loopback_attempts_dump_returns_200_or_500()
+    public async Task AllowMemoryDump_true_admin_loopback_attempts_dump_returns_200_500_or_501()
     {
         using var factory = new DumpTestHostFactory(allowMemoryDump: true, allowRemoteDump: false, role: Role.Administrator);
         using var client = factory.CreateClient();
@@ -59,9 +59,11 @@ public class DumpTests
 
         using var response = await client.SendAsync(req);
 
-        // 200 if dump succeeds; 500 if e.g. DiagnosticsClient fails in test env (permissions, etc.)
+        // 200 if dump succeeds; 500/501 if DiagnosticsClient cannot create a dump in the test environment.
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.InternalServerError,
-            $"GET /api/v0/application/dump returned {(int)response.StatusCode}, expected 200 or 500.");
+            response.StatusCode == HttpStatusCode.OK ||
+            response.StatusCode == HttpStatusCode.InternalServerError ||
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"GET /api/v0/application/dump returned {(int)response.StatusCode}, expected 200, 500, or 501.");
     }
 }

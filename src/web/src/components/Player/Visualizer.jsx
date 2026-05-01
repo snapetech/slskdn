@@ -85,14 +85,37 @@ const nativeEditableParameters = [
 ];
 
 const readStoredEngine = () => {
-  return getLocalStorageItem(visualizerEngineStorageKey) === 'native'
-    ? 'native'
+  const stored = getLocalStorageItem(visualizerEngineStorageKey);
+  if (stored === 'native') return 'native-webgl2';
+  return ['butterchurn', 'native-webgl2', 'native-webgpu'].includes(stored)
+    ? stored
     : 'butterchurn';
 };
 
-const getNextEngine = (engine) => (engine === 'native' ? 'butterchurn' : 'native');
+const visualizerEngineModes = ['butterchurn', 'native-webgl2', 'native-webgpu'];
 
-const getEngineLabel = (engine) => (engine === 'native' ? 'slskdN native' : 'Butterchurn');
+const isNativeEngine = (engine) => engine === 'native-webgl2' || engine === 'native-webgpu';
+
+const getNativeRendererBackend = (engine) => (engine === 'native-webgpu' ? 'webgpu' : 'webgl2');
+
+const getNextEngine = (engine) => {
+  const index = visualizerEngineModes.indexOf(engine);
+  return visualizerEngineModes[(index + 1) % visualizerEngineModes.length];
+};
+
+const getEngineLabel = (engine) => {
+  if (engine === 'native-webgl2') return 'MilkDrop3 WebGL2';
+  if (engine === 'native-webgpu') return 'MilkDrop3 WebGPU';
+  return 'Butterchurn';
+};
+
+const getEngineIcon = (engine) => {
+  if (engine === 'native-webgpu') return 'bolt';
+  if (engine === 'native-webgl2') return 'microchip';
+  return 'magic';
+};
+
+const isPromiseLike = (value) => value && typeof value.then === 'function';
 
 const getNextNativeAutomationMode = (mode) => {
   if (mode === 'off') return 'beat';
@@ -181,12 +204,21 @@ const readStoredNativeQuality = () => {
     : 'balanced';
 };
 
-const supportsNativeWebGpu = () =>
-  typeof navigator !== 'undefined' && Boolean(navigator.gpu);
+const getNativeWebGpuDebugLabel = (status = {}) => {
+  if (!status.available) {
+    return status.reason ? `WebGL2 baseline (${status.reason})` : 'WebGL2 baseline';
+  }
+  const adapterLabel = [
+    status.adapterInfo?.vendor,
+    status.adapterInfo?.architecture,
+    status.adapterInfo?.device,
+  ].filter(Boolean).join(' ');
+  return adapterLabel ? `WebGPU ${adapterLabel}` : 'WebGPU adapter ready';
+};
 
 const getVisualizerErrorMessage = (engineType, error) => {
   const detail = error?.message ? ` ${error.message}` : '';
-  return engineType === 'native'
+  return isNativeEngine(engineType)
     ? `Native MilkDrop render failed.${detail}`
     : 'MilkDrop failed. Showing analyzer fallback.';
 };
@@ -490,7 +522,14 @@ const supportsWebGl2 = () => {
   }
 };
 
-const Visualizer = ({ audioElement, mode, onModeChange }) => {
+const Visualizer = ({
+  audioElement,
+  compactControls = false,
+  engineOverride,
+  mode,
+  onEngineChange,
+  onModeChange,
+}) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const directoryInputRef = useRef(null);
@@ -543,6 +582,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   );
   const [presetName, setPresetName] = useState('');
   const [error, setError] = useState(null);
+  const activeEngineType = engineOverride || engineType;
 
   const activeNativePlaylist = nativePresetPlaylists.find(
     (playlist) => playlist.id === activeNativePlaylistId,
@@ -571,7 +611,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     ? activeNativePresetId
     : '';
   const hasNativePresetSearch = nativePresetSearch.trim().length > 0;
-  const nativeBankNavigationDisabled = engineType === 'native'
+  const nativeBankNavigationDisabled = isNativeEngine(activeEngineType)
     && nativePresetLibrary.length > 0
     && visibleNativePresetLibrary.length === 0;
   const canSaveNativePlaylist = visibleNativePresetLibrary.length > 0;
@@ -603,7 +643,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   const renderLoop = useCallback((timestamp = performance.now()) => {
     if (!engineRef.current) return;
     try {
-      const fpsCapMs = engineType === 'native' ? getNativeFpsCapMs(nativeFpsCap) : 0;
+      const fpsCapMs = isNativeEngine(activeEngineType) ? getNativeFpsCapMs(nativeFpsCap) : 0;
       if (
         fpsCapMs > 0
         && lastNativeRenderAtRef.current
@@ -614,7 +654,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       }
       const startedAt = performance.now();
       const renderResult = engineRef.current.render();
-      if (engineType === 'native') {
+      if (isNativeEngine(activeEngineType)) {
         lastNativeRenderAtRef.current = timestamp;
         if (showNativeDebug) {
           setNativeFrameMs(Number((performance.now() - startedAt).toFixed(1)));
@@ -626,14 +666,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     } catch (renderError) {
       // eslint-disable-next-line no-console
       console.error('Failed to render MilkDrop visualizer', renderError);
-      if (engineType === 'native') {
+      if (isNativeEngine(activeEngineType)) {
         removeLocalStorageItem(nativePresetStorageKey);
       }
-      setError(getVisualizerErrorMessage(engineType, renderError));
+      setError(getVisualizerErrorMessage(activeEngineType, renderError));
       return;
     }
     rafRef.current = window.requestAnimationFrame(renderLoop);
-  }, [engineType, nativeFpsCap, showNativeDebug]);
+  }, [activeEngineType, nativeFpsCap, showNativeDebug]);
 
   const cycleNativeAutomationMode = useCallback(() => {
     setNativeAutomationSettings((current) =>
@@ -712,17 +752,20 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     engine.resize(width, height);
   }, []);
 
-  const loadNativePresetEntry = useCallback((preset, options = {}) => {
+  const loadNativePresetEntry = useCallback(async (preset, options = {}) => {
     if (!preset || !engineRef.current?.loadPresetText) return false;
     const { pushHistory = true } = options;
 
     try {
       setError(null);
-      const loadedPresetName = engineRef.current.loadPresetText(
+      let loadedPresetName = engineRef.current.loadPresetText(
         preset.source,
         preset.fileName,
         { textureAssets: preset.textureAssets },
       );
+      if (isPromiseLike(loadedPresetName)) {
+        loadedPresetName = await loadedPresetName;
+      }
       setLocalStorageItem(nativePresetStorageKey, JSON.stringify(preset));
       if (pushHistory && activeNativePresetId && activeNativePresetId !== preset.id) {
         setNativePresetHistory((history) => [
@@ -754,27 +797,39 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     return loadNativePresetEntry(visibleNativePresetLibrary[nextIndex]);
   }, [loadNativePresetEntry, visibleNativePresetIndex, visibleNativePresetLibrary]);
 
-  const cyclePreset = useCallback(() => {
-    if (engineType === 'native' && nativePresetLibrary.length > 0) {
-      loadNativePresetByOffset(1);
+  const cyclePreset = useCallback(async () => {
+    if (isNativeEngine(activeEngineType) && nativePresetLibrary.length > 0) {
+      await loadNativePresetByOffset(1);
       return;
     }
     if (!engineRef.current) return;
-    const nextPresetName = engineRef.current.nextPreset();
+    let nextPresetName = engineRef.current.nextPreset();
+    if (isPromiseLike(nextPresetName)) {
+      nextPresetName = await nextPresetName;
+    }
     if (nextPresetName) {
       setPresetName(nextPresetName);
     }
-  }, [engineType, loadNativePresetByOffset, nativePresetLibrary.length]);
+  }, [activeEngineType, loadNativePresetByOffset, nativePresetLibrary.length]);
 
-  const previousNativeLibraryPreset = useCallback(() => {
+  const cycleEngineType = useCallback(() => {
+    const nextEngine = getNextEngine(activeEngineType);
+    if (onEngineChange) {
+      onEngineChange(nextEngine);
+      return;
+    }
+    setEngineType(nextEngine);
+  }, [activeEngineType, onEngineChange]);
+
+  const previousNativeLibraryPreset = useCallback(async () => {
     if (nativePresetHistory.length > 0) {
       const [previousId, ...remainingHistory] = nativePresetHistory;
       const previousPreset = nativePresetLibrary.find((preset) => preset.id === previousId);
       setNativePresetHistory(remainingHistory);
-      loadNativePresetEntry(previousPreset, { pushHistory: false });
+      await loadNativePresetEntry(previousPreset, { pushHistory: false });
       return;
     }
-    loadNativePresetByOffset(-1);
+    await loadNativePresetByOffset(-1);
   }, [
     loadNativePresetByOffset,
     loadNativePresetEntry,
@@ -782,14 +837,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     nativePresetLibrary,
   ]);
 
-  const randomNativeLibraryPreset = useCallback(() => {
+  const randomNativeLibraryPreset = useCallback(async () => {
     if (visibleNativePresetLibrary.length === 0) return;
     const candidates = visibleNativePresetLibrary.filter(
       (preset) => preset.id !== activeNativePresetId,
     );
     const pool = candidates.length > 0 ? candidates : visibleNativePresetLibrary;
     const randomIndex = Math.floor(Math.random() * pool.length);
-    loadNativePresetEntry(pool[randomIndex]);
+    await loadNativePresetEntry(pool[randomIndex]);
   }, [activeNativePresetId, loadNativePresetEntry, visibleNativePresetLibrary]);
 
   const toggleNativePresetFavorite = useCallback(() => {
@@ -912,13 +967,13 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           return;
         }
 
-        if (!supportsWebGl2()) {
-          setError('MilkDrop needs WebGL2. Showing analyzer fallback.');
+        if (activeEngineType === 'native-webgl2' && !supportsWebGl2()) {
+          setError('Native MilkDrop WebGL2 needs WebGL2. Showing analyzer fallback.');
           setFallbackMode(true);
           return;
         }
 
-        const createEngine = engineType === 'native'
+        const createEngine = isNativeEngine(activeEngineType)
           ? createNativeMilkdropEngine
           : createButterchurnEngine;
         const engine = await createEngine({
@@ -926,6 +981,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           audioNode: graph.visualizerInput,
           canvas: canvasRef.current,
           pixelRatio: window.devicePixelRatio || 1,
+          rendererBackend: getNativeRendererBackend(activeEngineType),
         });
         if (cancelled) {
           engine.dispose();
@@ -936,19 +992,22 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
         engineAudioNodeRef.current = graph.visualizerInput;
         setEngineName(engine.name);
         setPresetName(engine.presetName);
-        if (engineType === 'native' && engine.setPresetAutomation) {
+        if (isNativeEngine(activeEngineType) && engine.setPresetAutomation) {
           engine.setPresetAutomation(nativeAutomationSettingsRef.current);
         }
-        if (engineType === 'native') {
+        if (isNativeEngine(activeEngineType)) {
           refreshNativeFragmentSummary();
         }
-        const storedNativePreset = engineType === 'native' ? readStoredNativePreset() : null;
+        const storedNativePreset = isNativeEngine(activeEngineType) ? readStoredNativePreset() : null;
         if (storedNativePreset?.source && engine.loadPresetText) {
-          const importedPresetName = engine.loadPresetText(
+          let importedPresetName = engine.loadPresetText(
             storedNativePreset.source,
             storedNativePreset.fileName,
             { textureAssets: storedNativePreset.textureAssets },
           );
+          if (isPromiseLike(importedPresetName)) {
+            importedPresetName = await importedPresetName;
+          }
           setActiveNativePresetId(storedNativePreset.id || '');
           setPresetName(importedPresetName);
           refreshNativeFragmentSummary();
@@ -964,7 +1023,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       } catch (importError) {
         // eslint-disable-next-line no-console
         console.error('Failed to load Milkdrop visualizer', importError);
-        setError(getVisualizerErrorMessage(engineType, importError));
+        setError(getVisualizerErrorMessage(activeEngineType, importError));
         setFallbackMode(true);
       }
     })();
@@ -989,19 +1048,20 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       engineAudioNodeRef.current = null;
       setEngineName('');
     };
-  }, [mode, audioElement, engineType, refreshNativeFragmentSummary, renderLoop, sizeCanvas]);
+  }, [mode, audioElement, activeEngineType, refreshNativeFragmentSummary, renderLoop, sizeCanvas]);
 
   useEffect(() => {
+    if (engineOverride) return;
     setLocalStorageItem(visualizerEngineStorageKey, engineType);
-  }, [engineType]);
+  }, [engineOverride, engineType]);
 
   useEffect(() => {
     nativeAutomationSettingsRef.current = nativeAutomationSettings;
     writeStoredNativeAutomationSettings(nativeAutomationSettings);
-    if (engineType === 'native' && engineRef.current?.setPresetAutomation) {
+    if (isNativeEngine(activeEngineType) && engineRef.current?.setPresetAutomation) {
       engineRef.current.setPresetAutomation(nativeAutomationSettings);
     }
-  }, [engineType, nativeAutomationSettings]);
+  }, [activeEngineType, nativeAutomationSettings]);
 
   useEffect(() => {
     setNativeFavoritePresetIds((favoriteIds) => {
@@ -1120,11 +1180,14 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
     if (imported.length > 0) {
       const activePreset = imported[imported.length - 1];
-      const activePresetName = engineRef.current.loadPresetText(
+      let activePresetName = engineRef.current.loadPresetText(
         activePreset.source,
         activePreset.fileName,
         { textureAssets: activePreset.textureAssets },
       );
+      if (isPromiseLike(activePresetName)) {
+        activePresetName = await activePresetName;
+      }
       activePreset.title = activePresetName;
       activePresetEntry = activePreset;
       setLocalStorageItem(nativePresetStorageKey, JSON.stringify(activePreset));
@@ -1157,9 +1220,12 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           ...(activePresetEntry?.textureAssets || {}),
           ...fragmentTextureAssets,
         };
-        const result = engineRef.current.loadPresetFragmentText(source, file.name, {
+        let result = engineRef.current.loadPresetFragmentText(source, file.name, {
           textureAssets: mergedTextureAssets,
         });
+        if (isPromiseLike(result)) {
+          result = await result;
+        }
         const existingPreset = activePresetEntry || readStoredNativePreset();
         const mergedPreset = {
           fileName: existingPreset?.fileName || file.name,
@@ -1238,14 +1304,17 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     }
   }, []);
 
-  const removeNativeFragment = useCallback((type) => {
+  const removeNativeFragment = useCallback(async (type) => {
     if (!engineRef.current?.removePresetFragment) return;
     const selectedIndex = type === 'wave' ? selectedNativeWaveIndex : selectedNativeShapeIndex;
     try {
       const storedPreset = readStoredNativePreset();
-      const result = engineRef.current.removePresetFragment(type, selectedIndex, {
+      let result = engineRef.current.removePresetFragment(type, selectedIndex, {
         textureAssets: storedPreset?.textureAssets,
       });
+      if (isPromiseLike(result)) {
+        result = await result;
+      }
       if (!result) {
         setError(`No ${type} fragment is available in the active native preset.`);
         return;
@@ -1280,17 +1349,20 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     sizeCanvas,
   ]);
 
-  const applyNativeParameterEdit = useCallback(() => {
+  const applyNativeParameterEdit = useCallback(async () => {
     if (!engineRef.current?.updatePresetBaseValue) return;
     try {
       const storedPreset = readStoredNativePreset();
-      const result = engineRef.current.updatePresetBaseValue(
+      let result = engineRef.current.updatePresetBaseValue(
         selectedNativeParameter,
         nativeParameterValue,
         {
           textureAssets: storedPreset?.textureAssets,
         },
       );
+      if (isPromiseLike(result)) {
+        result = await result;
+      }
       if (!result) {
         setError('Native parameter editing is not available for this value.');
         return;
@@ -1321,13 +1393,16 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
     }
   }, [nativeParameterValue, selectedNativeParameter, sizeCanvas]);
 
-  const randomizeNativePresetParameters = useCallback(() => {
+  const randomizeNativePresetParameters = useCallback(async () => {
     if (!engineRef.current?.randomizePresetParameters) return;
     try {
       const storedPreset = readStoredNativePreset();
-      const result = engineRef.current.randomizePresetParameters({
+      let result = engineRef.current.randomizePresetParameters({
         textureAssets: storedPreset?.textureAssets,
       });
+      if (isPromiseLike(result)) {
+        result = await result;
+      }
       if (!result) {
         setError('Native parameter randomization is not available for this preset.');
         return;
@@ -1361,7 +1436,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
 
   const loadNativeLibraryPreset = useCallback((event) => {
     const preset = nativePresetLibrary.find((entry) => entry.id === event.target.value);
-    loadNativePresetEntry(preset);
+    void loadNativePresetEntry(preset);
   }, [loadNativePresetEntry, nativePresetLibrary]);
 
   const clearNativePresetLibrary = useCallback(() => {
@@ -1411,7 +1486,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
   }, [activeNativePresetId, nativeFavoritePresetIds]);
 
   const updateNativeMouseState = useCallback((event) => {
-    if (engineType !== 'native' || !engineRef.current?.setMouseState) return;
+    if (!isNativeEngine(activeEngineType) || !engineRef.current?.setMouseState) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect?.width || !rect?.height) return;
     const mouseX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
@@ -1425,20 +1500,27 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
       mouse_x: mouseX,
       mouse_y: mouseY,
     });
-  }, [engineType]);
+  }, [activeEngineType]);
 
   const clearNativeMouseState = useCallback(() => {
-    if (engineType !== 'native' || !engineRef.current?.setMouseState) return;
+    if (!isNativeEngine(activeEngineType) || !engineRef.current?.setMouseState) return;
     engineRef.current.setMouseState({
       mouse_down: 0,
       mouse_dx: 0,
       mouse_dy: 0,
     });
-  }, [engineType]);
+  }, [activeEngineType]);
 
   if (mode === 'off') return null;
 
-  const className = `player-visualizer player-visualizer-${mode}`;
+  const className = [
+    'player-visualizer',
+    `player-visualizer-${mode}`,
+    compactControls ? 'player-visualizer-compact' : '',
+  ].filter(Boolean).join(' ');
+  const displayedError = compactControls && error
+    ? error.split('.')[0]
+    : error;
 
   return (
     <div
@@ -1462,7 +1544,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
           mode="spectrum"
         />
       ) : null}
-      {error ? <div className="player-visualizer-error">{error}</div> : null}
+      {displayedError ? <div className="player-visualizer-error">{displayedError}</div> : null}
       <div className="player-visualizer-overlay">
         {mode !== 'inline' && (engineName || presetName) ? (
           <div className="player-visualizer-preset" title={presetName}>
@@ -1503,7 +1585,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                 ? 'custom quality'
                 : `${nativeQualityPresets[nativeQualityPreset]?.label || 'Balanced'} quality`}
               {' · '}
-              {supportsNativeWebGpu() ? 'WebGPU available' : 'WebGL2 baseline'}
+              {getNativeWebGpuDebugLabel(nativeDebugSnapshot.webGpu)}
             </div>
           </div>
         ) : null}
@@ -1530,20 +1612,20 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
             webkitdirectory=""
           />
           <Popup
-            content={`Switch visualizer engine to ${getEngineLabel(getNextEngine(engineType))}.`}
+            content={`Cycle visualizer engine to ${getEngineLabel(getNextEngine(activeEngineType))}.`}
             trigger={
               <Button
-                aria-label={`Switch visualizer engine to ${getEngineLabel(getNextEngine(engineType))}`}
+                aria-label={`Cycle visualizer engine to ${getEngineLabel(getNextEngine(activeEngineType))}`}
                 data-testid="visualizer-switch-engine"
                 icon
-                onClick={() => setEngineType((current) => getNextEngine(current))}
+                onClick={cycleEngineType}
                 size="mini"
               >
-                <Icon name={engineType === 'native' ? 'microchip' : 'magic'} />
+                <Icon name={getEngineIcon(activeEngineType)} />
               </Button>
             }
           />
-          {engineType === 'native' ? (
+          {isNativeEngine(activeEngineType) && !compactControls ? (
             <>
               {nativePresetLibrary.length > 0 ? (
                 <Popup
@@ -1814,7 +1896,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                 />
               ) : null}
               <Popup
-                content="Import a local .milk or .milk2 preset into the native WebGL renderer."
+                content="Import a local .milk or .milk2 preset into the native MilkDrop renderer."
                 trigger={
                   <Button
                     aria-label="Import native MilkDrop preset"
@@ -2140,7 +2222,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
               </Button>
             }
           />
-          {mode === 'inline' ? (
+          {mode === 'inline' && !compactControls ? (
             <>
               <Popup
                 content="Expand visualizer to fill the browser window."
@@ -2171,7 +2253,7 @@ const Visualizer = ({ audioElement, mode, onModeChange }) => {
                 }
               />
             </>
-          ) : (
+          ) : mode === 'inline' ? null : (
             <>
               {mode === 'fullwindow' ? (
                 <Popup

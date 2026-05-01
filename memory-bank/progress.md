@@ -1,3 +1,241 @@
+## 2026-05-01 02:20:56Z
+
+- Added System -> Policies as the broad remaining admin Web UI surface for YAML-backed operator settings.
+- Surfaced guided controls for webhooks/scripts, transfer slots/speed/retry/schedules/auto-replace, security/auth/API keys/JWT/HTTPS/rate limiting, search filters/blacklist/DHT/Scene Pod Bridge/rescue mode, and retention/share-cache/media probing.
+- Added System -> Experience as a browser-local surface for Search, Discovery Inbox, Player, and Messages preferences, including ranking/duplicate-folding, discovery filters/evidence detail, queue/radio/rating/history/scrobble/visualizer/keyboard posture, and dense/pinned/unread/user-filter/search message preferences.
+- Kept the surface configuration-only: no webhook test send, script execution, peer contact, daemon restart, transfer mutation, file mutation, or provider credential validation.
+- Corrected the guided transfer YAML writer to use the documented `transfers` section instead of the runtime `Global` property name, documented that gotcha in ADR-0001, and committed it as `8cdb31d9e`.
+- Validation: focused AdminPolicies and ExperienceSettings tests passed, focused AdminPolicies/ExperienceSettings/System ESLint passed, full Web UI lint passed, frontend production build passed, `bash ./bin/lint` passed, and touched-file whitespace checks passed. Full repo `git diff --check` is still blocked by pre-existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
+
+## 2026-05-01 02:22:16Z
+
+- Completed the collection item display metadata follow-up.
+- Collection item API requests now accept and trim `fileName`, `title`, `artist`, `album`, and `sha256`, with `sha256` feeding the existing content hash field when no explicit content hash is supplied.
+- Collection items persist those display labels, best-effort startup schema upgrades add the columns for existing `collections.db` files, and share manifests include the labels.
+- Playlist Intake now writes matched playlist collection items with title, artist, album, and file-name labels instead of only synthetic content ids.
+- Validation: focused CollectionsController/SharingService unit tests passed, and the focused playlist-intake Web test passed.
+
+## 2026-05-01 02:18:47Z
+
+- Closed the sharegroups/collections streaming security checklist.
+- Added constant-time application-level comparisons for signed share token collection/share binding checks.
+- Fixed `ContentLocator` so a matching non-advertisable repository item is a terminal denial and cannot fall through to allowed-root `path:` fallback resolution.
+- Added focused regressions for tampered share-token signatures and non-advertisable fallback bypass.
+- Documented the fallback bypass gotcha in ADR-0001 and committed it as `c411d2ca9`.
+- Validation: focused ShareToken, ContentLocator, StreamsController, and SharesController unit tests passed.
+
+## 2026-05-01 02:22:30Z
+
+- Corrected the acquisition-review boundary: manual Search is direct again and no longer exposes a Discovery Inbox/Acquisition Review handoff.
+- Renamed the visible Discovery Inbox nav/page heading to Acquisition Review and clarified the subheader as passive/imported/generated candidate review only.
+- Updated product docs to state that active manual Search must not require approval before showing actionable results.
+- Documented the gotcha in ADR-0001 and committed it separately as `4d8eb9e7e`.
+- Rebuilt and deployed the Web UI bundle to `kspls0` (`Searches-DrggPWna.js`, `DiscoveryInbox-Dn-uOORp.js`, `index-CIcPDqTn.js`).
+- Validation: focused Search/Acquisition Review/App tests passed, frontend lint passed, production build passed, `bash ./bin/lint` passed, and `kspls0` reports `slskd` active.
+
+## 2026-05-01 02:12:30Z
+
+- Unified the Messages workspace so pod room channels use the same panel anatomy as Soulseek rooms: shared transcript styling, bottom composer, and a right-side member rail.
+- Kept pod direct channels hidden so deleting a Soulseek DM no longer reveals an unmanaged `peer / dm` pod channel.
+- Kept Listen Along compact and room-only, and pinned message-window controls to the top-right of each panel header.
+- Rebuilt and deployed the Web UI bundle to `kspls0` (`Messaging-BATI-J-x.js`, `Messaging-Bh-1851M.css`, `index-C4Nk5a3b.js`).
+- Validation: focused Messaging/App tests passed, frontend lint passed, production build passed, `bash ./bin/lint` passed, and `kspls0` reports `slskd` active.
+
+## 2026-05-01 02:17:50Z
+
+- Closed the remaining `#201` transfer-path refusal task by adding upload-side producer coverage instead of relying on the global unobserved-task handler tests.
+- Fixed `UploadService.UploadAsync(...)` failure handling so `TryFail(...)` terminal state is not overwritten by the stale pre-failure transfer snapshot after Soulseek upload connection failures.
+- Added a regression for `Connection refused` during Soulseek upload execution that proves the upload record ends as `Completed | Errored` with the refusal recorded.
+- Documented the stale transfer snapshot gotcha in ADR-0001 and committed the ADR entry as `da3632af1`.
+- Validation: focused upload lifecycle and network-exception tests passed, touched-file whitespace checks passed, `bash ./bin/lint` passed, and the broader non-live .NET suite passed with `46` slskd.Tests, `3794` unit tests, and `275` integration tests. Repo-wide `git diff --check` is currently blocked by unrelated trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
+
+## 2026-05-01 02:09:06Z
+
+- Closed T-1400 by replacing the placeholder unified Brainz client with a real DI-registered facade over the existing MusicBrainz and AcoustID clients.
+- The unified client now supports release lookup, recording lookup, Discogs release lookup, recording search, and AcoustID fingerprint-to-recording resolution with MusicBrainz enrichment and AcoustID metadata fallback.
+- Added normalization, recording-search dedupe, capped search limits, successful MusicBrainz release/recording cache entries, and cache eviction when provider calls fail.
+- Added focused unit coverage for trimmed recording cache reuse, search normalization/dedupe, fingerprint MusicBrainz enrichment, and AcoustID fallback.
+- Validation: focused `BrainzClientTests` passed, touched-file whitespace checks passed, `bash ./bin/lint` passed, and the broader non-live .NET suite passed with `46` slskd.Tests, `3794` unit tests, and `275` integration tests.
+
+## 2026-05-01 02:29:18Z
+
+- Tightened the compact player visualizer tile after screenshot review.
+- The tile no longer auto-hides its visualizer controls and now keeps only the core compact controls visible: switch engine, next preset, and expand to full-window.
+- Native import/editor/debug/preset-bank controls are hidden in the tiny tile and remain available in expanded visualizer modes where they fit.
+- Compact fallback errors are shortened and moved to the bottom of the tile so analyzer bars/scope remain visible.
+- Validation: focused PlayerBar/Visualizer tests, frontend lint, native browser smoke, frontend production build, and touched-file whitespace checks passed.
+
+## 2026-05-01 02:18:48Z
+
+- Fixed the player display visualizer surface after the engine split by making the square tile cycle concrete modes: album art, Butterchurn, MilkDrop3 WebGL2, MilkDrop3 WebGPU, spectrum bars, and signal scope.
+- The visualizer eye/keyboard toggle now resolves to the saved concrete backend instead of writing the legacy `milkdrop` tile token.
+- Butterchurn no longer gets blocked by the native WebGL2 preflight; only the native WebGL2 backend requires that check before engine creation.
+- Documented the backend-token gotcha in ADR-0001.
+- Validation: focused PlayerBar/Visualizer tests, frontend lint, native browser smoke, frontend production build, and touched-file whitespace checks passed. Full `git diff --check` is currently blocked by pre-existing trailing whitespace in `docs/design/sharegroups-collections-streaming-assessment.md`.
+
+## 2026-05-01 02:01:37Z
+
+- Continued T-938 native MilkDrop Phase 4 by promoting the WebGPU renderer from isolated foothold to an explicit selectable player visualizer backend.
+- The overlay engine button now cycles through Butterchurn, MilkDrop3 WebGL2, and MilkDrop3 WebGPU in every visualizer mode, while old `native` storage values migrate to `native-webgl2`.
+- Native controls, local preset libraries, automation, pointer state, imports, edits, and debug details are shared by both native backends; WebGPU preset changes use async renderer creation only when needed.
+- Validation: focused Visualizer/native/WebGPU tests, broader MilkDrop/WebGPU unit slice, frontend lint, native browser smoke, native performance sample, frontend production build, whitespace check, and `bash ./bin/lint` passed.
+
+## 2026-05-01 02:02:28Z
+
+- Continued away from the crowded T-934/T-936 lane by taking a backend SongID T-917/T-918 operational parity slice.
+- Added queue summary models and API so clients can inspect queued/running counts, configured worker concurrency, queue positions, worker slots, stages, and progress without reading raw runs.
+- Added SongID evidence packages that gather capped candidates, plans, acquisition options, scorecard, identity/synthetic assessments, forensic matrix, segments, mix groups, evidence strings, warnings, and artifact references for review/export.
+- Kept both endpoints read-only: no Soulseek search, peer browse, download, publication, or file mutation is triggered.
+- Validation: focused `SongId` unit slice, `git diff --check`, `bash ./bin/lint`, and `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed.
+
+## 2026-05-01 01:25:41Z
+
+- Continued the middle feature-expansion work outside the crowded T-934/T-936 lane by adding a T-939 source-feed import audit/history backend.
+- Source-feed preview runs now record bounded history entries with provider/source metadata, source fingerprint, safe source preview, request options, result counts, network-request counts, skipped-row samples, and suggestion samples.
+- Import history persists to an app-dir JSON file with temp-file plus atomic replace and reloads on service startup.
+- Added authenticated history list/detail API endpoints and unit coverage for restart-safe history, token omission, direct lookup, and controller responses.
+- Validation: focused `SourceFeed` unit slice, `git diff --check`, `bash ./bin/lint`, and `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed.
+
+## 2026-05-01 01:13:23Z
+
+- Continued the center-lane T-934 realm subject-index backend with the persistence follow-up that was left after local authority decisions.
+- Added restart-safe JSON persistence for accepted subject indexes, governance proposals, proposal reviews, and local authority decisions.
+- State now reloads on service startup, so accepted resolver data, disabled authority preferences, and proposal history survive restarts.
+- Persistence uses deterministic ordering and a temp-file plus atomic replace path under the app directory.
+- Added focused coverage for reloading accepted indexes with disabled authorities and accepted proposal review state.
+- Validation: focused `RealmSubjectIndexServiceTests` and `RealmSubjectIndexesControllerTests`, `git diff --check`, `bash ./bin/lint`, and `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed.
+
+## 2026-05-01 01:58:07Z
+
+- Continued the feature-expansion burn-down through the remaining non-visualizer front block.
+- Closed the current T-919 Discovery Graph pass in `tasks.md` after the atlas route, branch planning/reporting, edge filtering, pinned comparison context, backend evidence lanes, and graph-level evidence summaries were implemented.
+- Added a SongID forensic-matrix debug/export endpoint at `GET /api/v0/songid/runs/{id}/forensic-matrix`, a Web UI copy action for the complete forensic matrix JSON, and browser API helper coverage for that endpoint.
+- Strengthened SongID API/store tests for queued progress payload shape, durable forensic-matrix persistence, and forensic export responses; the existing scoring tests already cover strong identity suppressing synthetic overclaiming.
+- Marked the current T-917/T-918 SongID parity pass complete and updated `docs/dev/SONGID_INTEGRATION_MAP.md` P3 checklist items that are now covered. Future Essentia/MIR depth remains future parity, not a blocker for this pass.
+- Full `npm --prefix src/web run lint` now passes; marked T-915 complete for the current lint surface.
+- Validation: focused SongID controller/store/scoring tests passed, focused browser SongID API helper test passed, full Web UI lint passed, frontend production build passed, `bash ./bin/lint` passed, `git diff --check` passed, and the broader non-live .NET suite passed with `46` slskd.Tests, `3782` unit tests, and `275` integration tests.
+
+## 2026-05-01 01:38:13Z
+
+- Continued the T-919 Discovery Graph batch by deepening backend evidence explainability.
+- Added additive edge-level evidence lanes and graph-level evidence summaries to the Discovery Graph API result, derived from score components, provenance, and attached evidence strings.
+- Extended the browser Discovery Graph branch report to include backend evidence lanes when present.
+- Validation: focused `DiscoveryGraphServiceTests` passed, focused `discoveryGraph.test.js` passed, ESLint passed on the touched graph JS/JSX files, `git diff --check` passed, `bash ./bin/lint` passed, `npm --prefix src/web run build` passed, and `dotnet test -v minimal --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed.
+
+## 2026-05-01 01:24:19Z
+
+- Continued the front-of-list feature-expansion burn-down on T-919 Discovery Graph / Constellation.
+- Added reusable browser-local Discovery Graph branch planning helpers for visible node/edge filtering, node-family and edge-family counts, route suggestions, nearby search seeds, and copyable branch review reports.
+- Expanded the Search atlas with edge-family filters, copy report, suggested branch routes, pin-as-comparison context, and recenter actions while keeping graph review local unless the user explicitly queues nearby searches.
+- Validation: focused Discovery Graph helper tests passed, Search graph test slice passed, ESLint passed on the touched graph JS/JSX files, `git diff --check` passed, and `npm --prefix src/web run build` passed. Full web lint is currently blocked by an existing dirty `playlistIntake.js` `no-control-regex` error outside this graph batch.
+
+## 2026-05-01 01:03:32Z
+
+- Continued the front-of-list feature-expansion burn-down into the first remaining backend follow-ups that were safe to take without touching the active visualizer/middle lanes.
+- Added progressive service-level reconnect backoff for repeatedly failing DHT-discovered overlay candidates so likely non-overlay/dead endpoints stop consuming the same five-minute scheduler path forever.
+- Added the `shares.probe_media_attributes` config/CLI/env option and scan-time fast path so slow or remote share roots can skip TagLib audio metadata extraction while still advertising files.
+- Documented both operational gotchas in ADR-0001 and committed the doc-only gotcha entry separately as `1a8ec1cd9`.
+- Validation: focused DHT rendezvous plus Soulseek file factory unit slice passed; `git diff --check` passed; `bash ./bin/lint` passed; `dotnet test -v minimal --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed. A full `dotnet test -v minimal` run failed only in the optional live-account mesh smoke because alpha did not log into Soulseek with the configured live test account.
+
+## 2026-05-01 01:01:48Z
+
+- Continued the center-lane T-934 realm subject-index backend.
+- Added local backend authority decisions for accepted subject indexes, with API endpoints to list decisions and disable or re-enable an index authority.
+- Disabled authorities are filtered out of recording resolution and conflict reports while the accepted index and governance history stay intact.
+- Added focused service/controller coverage for disable, re-enable, invalid actor/index rejection, decision listing, and API responses.
+- Kept the feature local and passive: it does not publish governance changes, contact peers, search, browse, download, or mutate files.
+- Validation: focused `RealmSubjectIndexServiceTests` and `RealmSubjectIndexesControllerTests`, `git diff --check`, `bash ./bin/lint`, and `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed.
+
+## 2026-05-01 01:50:52Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding WebGPU readiness reporting to the compatibility matrix.
+- Matrix entries now report WebGPU support separately from WebGL2 support and identify WebGPU-only shader-section blockers.
+- Added tests covering curated WebGPU support counts, named sampler/audio-helper WGSL readiness, and a WebGPU-only shader gap case.
+- With primitives, textures, safe WGSL shaders, audio helpers, named shader samplers, and readiness reporting in place, remaining WebGPU promotion work is broader real-pack/device measurement and follow-up on measured gaps.
+- Validation: focused compatibility/shader/WebGPU tests, broader MilkDrop/Visualizer tests, and frontend lint passed.
+
+## 2026-05-01 01:46:13Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding named shader texture sampler bindings to the opt-in WebGPU renderer.
+- Extended safe-subset WGSL translation so `tex`/`tex2D` named samplers become WebGPU texture bindings.
+- Built separate WebGPU feedback bind groups for warp and comp passes so each translated shader body resolves its own sampler order.
+- Reused the native texture alias rules and procedural fallback for missing WebGPU shader sampler assets.
+- Validation: focused shader/WebGPU tests, broader MilkDrop/Visualizer tests, and frontend lint passed.
+
+## 2026-05-01 01:40:54Z
+
+- Continued T-938 native MilkDrop Phase 4 by extending the safe-subset WebGPU shader path with audio-bin helpers.
+- Added WGSL `get_fft`, `get_fft_hz`, and `get_waveform` helpers backed by explicit 64-bin FFT and waveform uniform fields.
+- Populated the WebGPU uniform buffer with normalized frequency and waveform bins from each native render frame.
+- Kept named shader texture samplers as the main remaining WebGPU shader parity gap.
+- Validation: focused shader/WebGPU tests, broader MilkDrop/Visualizer tests, and frontend lint passed.
+
+## 2026-05-01 01:37:08Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding first safe-subset translated shader execution for the opt-in WebGPU renderer.
+- Added WGSL shader generation from the existing safe MilkDrop shader parser for previous-frame sampling, color/time/audio variables, viewport helpers, and q1-q64 uniforms.
+- Wired WebGPU warp and comp passes to use translated WGSL when the preset fits the conservative subset, falling back to the existing WebGPU passes otherwise.
+- Kept named shader texture samplers and shader audio-bin helper functions on the WebGL2 parity path for now.
+- Validation: focused shader/WebGPU tests, broader MilkDrop/Visualizer tests, and frontend lint passed.
+
+## 2026-05-01 01:11:58Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding the first textured WebGPU primitive path.
+- WebGPU now uploads procedural and imported texture assets, reuses native texture alias matching, and samples textured custom shapes/sprites with UV/color vertex packing.
+- Padded WebGPU raw texture uploads to validation-safe row strides so small imported images do not trip browser copy-layout rules.
+- Kept WebGL2 as the active parity renderer; WebGPU still needs translated warp/comp shader execution and larger real-pack/device measurement before becoming a candidate renderer.
+- Validation: focused WebGPU renderer tests, broader MilkDrop/Visualizer tests, and frontend lint passed.
+
+## 2026-05-01 00:56:02Z
+
+- Continued T-938 native MilkDrop Phase 4 by expanding the opt-in WebGPU filled primitive path.
+- Added triangle-fan to triangle-list conversion so WebGPU can draw native filled custom shapes with the existing center/edge color data.
+- Added fallback sprite-quad rendering using the existing native sprite geometry and color helpers.
+- Kept WebGL2 as the active compatibility renderer; WebGPU still needs textured sprite/shape sampling, translated shaders, and real-pack measurement before becoming a candidate renderer.
+- Validation: focused WebGPU renderer tests and frontend lint passed.
+
+## 2026-05-01 00:47:46Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding first filled primitive support to the opt-in WebGPU renderer.
+- Added a WebGPU triangle-list primitive pipeline and colored triangle vertex conversion.
+- Added classic outer/inner screen-border rendering from existing `ob_*` and `ib_*` geometry/color helpers into the WebGPU feedback texture.
+- Kept WebGL2 as the active compatibility renderer; WebGPU remains isolated until filled shapes, sprites, translated shaders, and real-pack parity mature.
+- Validation: focused WebGPU renderer tests and frontend lint passed.
+
+## 2026-05-01 00:41:28Z
+
+- Continued T-938 native MilkDrop Phase 4 by adding another opt-in WebGPU primitive slice.
+- Added WebGPU motion-vector rendering using the existing native `mv_*` vertex and color helpers.
+- Added a reusable colored line-list conversion helper so waveform, shape outlines, and motion vectors share the same WebGPU primitive buffer path.
+- Kept WebGL2 as the active compatibility renderer; WebGPU remains isolated until translated shader execution and broader real-pack parity are ready.
+- Validation: focused WebGPU renderer tests and frontend lint passed.
+
+## 2026-05-01 00:34:46Z
+
+- Continued T-938 native MilkDrop Phase 4 by extending the opt-in WebGPU renderer foothold.
+- Added WebGPU waveform primitive rendering into the feedback texture using the shared classic waveform vertex mapping.
+- Added first WebGPU shape-outline primitive rendering for enabled MilkDrop shapes using the existing shape outline and border-color helpers.
+- Kept WebGL2 as the active compatibility renderer; WebGPU still remains isolated until it has fuller primitive, shader, and real-pack parity.
+- Validation: focused WebGPU renderer tests and frontend lint passed.
+
+## 2026-05-01 00:29:26Z
+
+- Continued the beginning-lane feature-expansion burn-down into the approved Discovery Inbox acquisition handoff.
+- Added bounded acquisition-plan execution that queues backend search jobs through the selected acquisition profile and records queued search IDs, failures, and skipped plans.
+- Added a Discovery Inbox Execute Ready control with tooltip-backed search-only network impact, keeping execution explicit and capped.
+- Kept the handoff short of downloads: it creates normal search jobs only, and peer browse/download still requires later search-result review and existing transfer controls.
+- Validation: focused Acquisition Plans and Discovery Inbox tests, frontend lint, frontend production build, and whitespace checks passed.
+
+## 2026-05-01 00:08:57Z - Completed shared Metadata Matching surface
+
+- Continued beginning-lane feature expansion burn-down into Epic E8 Metadata Matching.
+- Expanded the browser-local metadata matcher into reusable scoring primitives for normalized metadata comparison.
+- Added Unicode/accent/punctuation/case normalization, weighted title/artist/album/duration scoring, identifier evidence, short-title protection, version-tag awareness, confidence bands, and strongest/weakest explanation evidence.
+- Added Import Staging manual metadata overrides that record an accepted match without contacting providers or modifying files.
+- Added Playlist Intake reuse for scoring playlist track candidates against returned/provider/local candidates.
+- Kept the slice local and deterministic: no metadata provider call, Soulseek search, peer browse, download, tag write, file move, or library mutation is started.
+- Validation: focused Metadata Matcher, Import Staging, Playlist Intake, and App route tests passed; frontend lint, frontend production build, whitespace checks, `bin/lint`, and full `dotnet test` also passed.
+
 ## 2026-04-30 22:08:39Z - Enabled Playlist Intake refresh and playlist creation
 
 - Continued Epic E7 after removing the earlier deferral around provider refresh, scheduled execution, and playlist mutation.
@@ -40,6 +278,10 @@
 - Added a compact native debug overlay with active title, format, primitive counts, and shader section visibility.
 - Added active native preset playlist rename support.
 - Added browser-local native FPS caps and a debug frame-time readout for visible GPU-load tuning.
+- Added native quality presets and WebGPU capability reporting in the debug overlay.
+- Expanded native browser smoke coverage to verify WebGL context loss and restoration.
+- Added `npm run test:native-milkdrop-performance` for Chromium render timing against curated fixtures or local preset files/folders.
+- Added a bounded translated-shader cache for repeated native warp/comp shader bodies.
 - Documented the DOM factory spy gotcha after fixing recursive `document.createElement` test failures.
 - Validation: focused Visualizer, native MilkDrop engine, and preset parser tests passed.
 
@@ -8627,6 +8869,15 @@ Code quality improvements were completed as part of Option A:
 - Added a persistent YAML save action in the same Web UI panel, so operators can choose immediate runtime application or write the settings to the config file.
 - Validation: focused source-feed/options backend tests, System Integrations and Wishlist frontend tests, frontend lint, backend build, frontend production build, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
 
+## 2026-05-01 00:25:16Z
+
+- Continued the beginning-lane feature-expansion burn-down through E9 Audio Verification.
+- Added browser-local audio verification profiles for lossless-exact, balanced, and permissive review, including confidence thresholds, fail-open/fail-closed actions, evidence, and warnings.
+- Added a browser-local verification cache keyed by file metadata and SHA-256 fingerprint capture when fingerprint-on-add is explicitly enabled.
+- Extended Import Staging with visible audio verification status, profile selection, cache enablement/clear controls, per-row Verify, and explicit Policy application to Ready, Staged, or Failed states.
+- Kept the slice local/operator-controlled: no upload, import, tag write, file movement, Soulseek search, peer browse, or download is started by verification.
+- Validation: focused Audio Verification and Import Staging tests, frontend lint, frontend production build, whitespace checks, `bash ./bin/lint`, and full `dotnet test` passed.
+
 ## 2026-04-30 21:06:41Z
 
 - Audited the Web UI surface against backend/config feature areas and recorded gaps in `docs/dev/webui-surface-audit-2026-04-30.md`.
@@ -8661,6 +8912,14 @@ Code quality improvements were completed as part of Option A:
 - Closed the tracked frontend peer-alignment follow-up after confirming the tracked web toolchain is on the current Vite 8 / Vitest 4 peer set.
 - Validation: `npm run build`, `npm run test:build-output`, `node src/web/scripts/smoke-subpath-build.mjs`, focused `ProgramPathNormalizationTests`, frontend lint, and `git diff --check` passed.
 
+## 2026-05-01 00:24:18Z
+
+- Continued T-938 native MilkDrop Phase 4 with the first WebGPU renderer foothold.
+- Added adapter capability probing and surfaced WebGPU adapter details in the native debug snapshot/overlay.
+- Added an opt-in WebGPU renderer module that configures a `webgpu` canvas context, maintains ping-pong feedback textures, and renders a preset-colored fullscreen display pass from MilkDrop base values and frame audio.
+- Kept WebGL2 as the active compatibility renderer; the WebGPU path is a scaffold for future primitives and shader translation rather than the default playback path.
+- Validation: focused WebGPU renderer, native MilkDrop engine, and Visualizer tests passed.
+
 ## 2026-04-30 22:08:00Z
 
 - Continued the tail-side mobile/diagnostics feature-expansion lane with a System Info setup-health check.
@@ -8676,3 +8935,235 @@ Code quality improvements were completed as part of Option A:
 - Changed notification provider default prefixes from `slskd` / `From slskd:` to `slskdN` / `From slskdN:` in backend options, Web UI defaults, tests, and config documentation.
 - Left compatibility and technical identifiers intentionally unchanged, including `slskd.yml`, `SLSKD_*`, `slskd_*` metrics, localStorage keys, upstream attribution, API compatibility fields, and binary/service paths.
 - Validation pending: focused frontend tests, grep audit, and whitespace check.
+
+## 2026-05-01 00:11:34Z
+
+- Continued the center-lane T-934 realm subject-index work with the conflict-report backend.
+- Added deterministic conflict models and service reporting for external-id disagreements, recording-to-multiple-subject mappings, WorkRef title/creator disagreements, and aliases mapped to multiple subjects.
+- Added an authenticated read-only realm subject-index API for accepted indexes, conflict reports, and recording-resolution provenance.
+- Kept the feature observational: it does not publish indexes, contact peers, search Soulseek, browse, download, or mutate files.
+- Validation: focused `RealmSubjectIndexServiceTests` and `RealmSubjectIndexesControllerTests`, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-05-01 00:22:01Z
+
+- Continued the center-lane T-935 MusicBrainz overlay epic with restart-safe persistence.
+- Added atomic JSON persistence for signed overlay edits, selected-peer route attempts, and manual upstream export approvals.
+- Added service constructors for explicit storage paths so tests and future hosts can isolate overlay state.
+- Added reload coverage for persisted edits, export approvals, and route attempts; fixed the test-storage gotcha by using per-test temporary state files.
+- Kept persistence passive: it does not publish, auto-submit upstream MusicBrainz edits, search Soulseek, browse peers, download, or mutate cached MusicBrainz payloads.
+- Validation: focused `MusicBrainzOverlayServiceTests`, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-05-01 00:47:43Z
+
+- Continued the center-lane T-936 Quarantine Jury backend with release evidence packages.
+- Added a read-only release package contract for locally accepted release-candidate recommendations, including request evidence, selected jurors, signed verdicts, route attempts, acceptance snapshots, current aggregate state, and drift warnings when later verdicts change the accepted aggregate.
+- Added authenticated API exposure and focused service/controller coverage for accepted package generation, pre-acceptance refusal, missing requests, and aggregate drift warnings.
+- Kept the package observational: it does not change quarantine enforcement, move files, route messages, publish decisions, search, browse peers, or download.
+- Validation: focused `QuarantineJuryServiceTests` and `QuarantineJuryControllerTests`, `git diff --check`, `bash ./bin/lint`, and `dotnet test --filter "FullyQualifiedName!~OptionalLiveAccounts_CanSearchAndDownloadHostedProbeOverOverlayMesh"` passed. Full unfiltered `dotnet test` only failed the live optional Soulseek-account overlay mesh test because the beta live account did not log in.
+
+## 2026-05-01 00:35:31Z
+
+- Continued the center-lane T-936 Quarantine Jury backend with a read-only audit report.
+- Added audit report models, service aggregation, and an authenticated API endpoint for accepted release candidates, pending release-candidate acceptances, manual-review requests, uphold-quarantine recommendations, stale requests, route attempts, failed routes, quorum state, and dissenting jurors.
+- Added focused service/controller coverage for audit summary counts, stale detection, failed route attempts, and API exposure.
+- Kept the audit surface observational: it does not change quarantine enforcement, move files, route messages, publish decisions, search, browse peers, or download.
+- Validation: focused `QuarantineJuryServiceTests` and `QuarantineJuryControllerTests`, `git diff --check`, `bash ./bin/lint`, and full `dotnet test` passed.
+
+## 2026-05-01 00:11:29Z
+
+- Continued the tail-side feature-expansion burn-down through E23 mobile workflows and E22 community quality controls.
+- Added a Discovery Inbox mobile review tray with one-at-a-time candidate navigation plus approve, snooze, and reject actions that only update browser-local review state.
+- Added candidate-card handoff buttons so narrow-screen reviewers can load a specific item into the tray without losing the full card context.
+- Added browser-local community quality overrides and notes for trust, caution, and ignore decisions; overrides affect candidate ranking and action-preview warnings while preserving the original evidence.
+- Kept both slices non-mutating: no provider lookup, peer search, queue mutation, download, file action, or evidence publication starts from these controls.
+- Validation: focused Discovery Inbox and community-quality/ranking/action-preview tests, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:15:13Z
+
+- Continued the tail-side feature-expansion burn-down into E21 mesh metadata federation controls.
+- Added mesh evidence review policy thresholds for minimum confidence and witness/k-anonymity counts while keeping provenance required.
+- Added browser-local evidence parsing, evaluation, and copyable report formatting for trusted provenance, confidence, k-anonymity, and privacy blockers.
+- Extended System -> Mesh Evidence Policy with an Evidence Review Sandbox, sample evidence loader, local review action, accepted/rejected results, and report copy action.
+- Kept the sandbox review-only: it does not query peers, publish evidence, mutate ranking state, or submit evidence to the backend.
+- Validation: focused mesh evidence policy tests, the combined tail-side frontend test slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:21:03Z
+
+- Continued the tail-side feature-expansion burn-down into E20 diagnostics and live operations.
+- Expanded setup health into a local diagnostic wizard with readiness score, Access/Network/Storage/Operations grouping, group filters, and top next steps.
+- Added local checks for API access, provider credential gaps, queue pressure, failed jobs, and automation visibility using already-loaded state/options only.
+- Added setup-health readiness, score, totals, next steps, and sanitized check summaries to the redacted diagnostic bundle.
+- Kept the diagnostic pass observational: it does not contact peers, validate credentials, scan folders, retry jobs, mutate configuration, or call the server while generating the bundle.
+- Validation: focused setup-health/diagnostic-bundle tests, the combined tail-side frontend test slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:26:06Z
+
+- Continued the tail-side feature-expansion burn-down with another E20 operations visibility slice.
+- Added a browser-local Network Health evaluator and copyable report formatter for DHT, mesh peer visibility, discovered peers, HashDb coverage, backfill pressure, active swarms, and mesh security signals.
+- Added a System -> Network health panel with score, status, metric labels, findings, action guidance, and tooltip-backed copy report action.
+- Kept the feature observational: it only evaluates already-loaded local stats and peer lists and does not contact peers, publish mesh evidence, start discovery, search, browse, download, or mutate files.
+- Validation: focused Network Health tests, the combined tail-side frontend test slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:32:18Z
+
+- Continued the tail-side feature-expansion burn-down with an E19 media-server planning follow-up.
+- Added a browser-local media-server sync preview for Plex, Jellyfin/Emby, and Navidrome with explicit adapter review actions, base URL readiness, token readiness, path-map readiness, and copyable reports.
+- Extended System Integrations so operators can review scan/sync prerequisites without a live media-server connection.
+- Kept the planner browser-local and non-mutating: it does not contact media servers, trigger scans, sync playlists, import play history, write ratings, search Soulseek, browse peers, download, or move files.
+- Validation: focused media-server integrations tests passed.
+
+## 2026-05-01 00:38:24Z
+
+- Continued the front-of-list feature-expansion burn-down across listening intelligence, artist release radar, and federated taste recommendations.
+- Added Listening Stats -> Discovery Inbox handoffs for recommendation seeds using mesh-preferred acquisition review metadata and explicit no-network-impact copy.
+- Added Search-page Artist Release Radar controls for watch/mute subscription review, unread notification review, radar-hit Discovery Inbox handoff, and selected-peer routing.
+- Added Search-page Federated Taste controls for privacy-filtered recommendation loading, trusted-source thresholds, opt-in source actor reveal, Discovery Inbox handoff, Wishlist promotion, Release Radar subscription, and Discovery Graph preview.
+- Kept the new UI handoffs review-first: no automatic Soulseek search, peer browse, download, media-server call, scrobble, graph mutation, or file mutation starts from these controls.
+- Validation: focused frontend tests, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 00:53:49Z
+
+- Continued the front-of-list feature-expansion burn-down with a larger batch after the listening/radar/taste UI work.
+- Completed the live media-server execution-contract surface in System Integrations with visible enablement for play-history import, scrobble/rating export, acquisition queue handoff, completed-file scan, and confirmed file actions.
+- Added contract gates for adapter readiness, user mapping, confirmation, rate limit, and dedupe windows plus a copyable execution-contract report. The surface still does not call Plex, Jellyfin/Emby, Navidrome, search Soulseek, browse peers, download, scrobble, or mutate files.
+- Added System -> Mesh realm subject-index conflict review with conflict type, subject, values, authority keys, provenance, local authority disable/re-enable review state, and a copyable report.
+- Closed the stale `dotnet test -v minimal` hang task after the exact broad command returned cleanly under a 600-second timeout.
+- Validation: focused media-server and realm-subject-index frontend tests, frontend lint, frontend production build, `bash ./bin/lint`, `dotnet test -v minimal`, and `git diff --check` passed.
+
+## 2026-05-01 00:39:04Z
+
+- Continued the tail-side feature-expansion burn-down with a larger E18/E17/E16 review/reporting batch.
+- Added browser-local Servarr compatibility previews and copyable reports for wanted-pull and completed-import readiness.
+- Added copyable Wishlist request review packets that summarize quota, request state, enabled/manual/automatic posture, and current Discovery Inbox decisions.
+- Added Automation Center review history reports that include enabled recipes and dry-run checkpoints without executing any recipe.
+- Kept the batch non-mutating: it does not call Lidarr, create download clients, pull wanted items, trigger imports, execute automations, search Soulseek, browse peers, download, or move files.
+- Validation: focused E18/E17/E16 tests, the broader tail-side frontend test slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:43:07Z
+
+- Continued the tail-side feature-expansion burn-down by converting two review/report surfaces into explicit live actions where backend APIs already exist.
+- Added a Servarr compatibility Run Ready action that calls the configured Lidarr wanted-sync endpoint when wanted pull is ready.
+- Added a bounded Wishlist Run Enabled action that runs up to three enabled backend Wishlist searches from the request portal summary.
+- Kept both actions user-triggered and bounded: they do not auto-select search results, browse peers directly, download files, trigger completed imports, execute automation recipes, or bypass normal acquisition/download policy.
+- Validation: focused Servarr/Wishlist tests, the broader tail-side frontend test slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:49:40Z
+
+- Reworked the top-level slskdN port migration banner from raw forwarded endpoint text into operator-facing routing rows.
+- The notice now says slskdN ingress ports were reduced, lists current public mappings by service purpose, protocol, public endpoint, local destination, and config option, and bumps the dismissal storage key so users who dismissed the unclear banner see the corrected reminder.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `/usr/lib/slskd/current/wwwroot/assets/index-BA_nTMHe.js` with the updated notice.
+- Validation: focused App test, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 00:55:00Z
+
+- Fixed the Pods channel UI so a channel tab like `dm` drives `activeChannelId`, route state, and message fetching instead of only changing the visible tab index.
+- Added an explicit pod channel chat surface with heading, message count, scrollable history, and composer so the selected channel's chatbox is visible below Listen Along.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving the updated `Pods-BjDmqypI.js` bundle.
+- Validation: frontend lint, focused App test, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:05:17Z
+
+- Unified pod channel messaging into the Messages workspace.
+- Added a Pod Channels sidebar section, pod-channel message panels with Listen Along, history, composer, and send action, and focused test coverage for opening a pod channel in Messages.
+- Removed the top-level Pods navigation item; `/pods` now opens Messages in pod-channel mode and old deep pod URLs redirect to `/messages`.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `Messaging-D74QB40U.js` and `index-DebuUiWo.js` with the unified navigation.
+- Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 00:51:11Z
+
+- Continued the tail-side feature-expansion burn-down by turning Automation Center from dry-run-only history into explicit execution for recipes backed by real APIs.
+- Added Wishlist Retry execution that runs up to three enabled backend Wishlist searches and records the run summary in automation history.
+- Added Library Health Scan execution with an operator-entered path, starting the real read-only scan and recording the returned scan id.
+- Left unsupported automation recipes visible but disabled for execution, with tooltips explaining that no live backend action is wired yet.
+- Validation: focused Automation/Servarr/Wishlist tests, the broader 18-file frontend feature slice, frontend lint, and frontend production build passed.
+
+## 2026-05-01 00:59:01Z
+
+- Continued the tail-side burn-down across E12/E13 by converting more copy-only review artifacts into explicit, bounded handoffs.
+- Added Library Health selected-issue replacement search execution through the existing Search batch API, capped at three deduped queries per click.
+- Tightened Library Health remediation to queue only selected auto-fixable issue IDs and added a Discovery Inbox handoff for risky quarantine review candidates.
+- Added Discovery Shelf promote-preview handoffs into Discovery Inbox, both row-level and bounded batch, while archive/expiry actions remain review-only.
+- Validation: affected Library Health/Discovery Shelf/Player tests, the broader 22-file frontend feature slice, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 01:04:11Z
+
+- Continued the tail-side E14 Listening Intelligence burn-down with live, explicit user-triggered handoffs.
+- Added top-track recommendation seeds alongside forgotten favorites, artist seeds, and genre seeds.
+- Added Listening Stats actions to start up to three live Search API searches and to create up to five enabled manual Wishlist requests with auto-download disabled.
+- Added a ListenBrainz recent-history submit path that sends up to ten browser-local plays with original timestamps when a browser token is saved.
+- Kept all actions explicit and bounded: no peer browse, download, file mutation, media-server connection, or automatic acquisition starts from the stats modal.
+- Validation: focused listening/player tests, broader 23-file frontend feature slice, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 01:09:07Z
+
+- Continued the tail-side E15 Player Enhancements burn-down with live acquisition handoffs for existing player planning surfaces.
+- Smart Radio plans can now start bounded live search batches, create enabled manual Wishlist requests with auto-download disabled, and send generated radio seeds to Discovery Inbox.
+- Playback Queue similar-session candidates can now start bounded live searches or create enabled manual Wishlist requests without mutating the current queue.
+- Added reusable radio and similar-candidate query helpers so the batch actions share the same dedupe/limit behavior as their review surfaces.
+- Validation: focused player auto-queue/radio/player tests, broader 25-file frontend feature slice, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 01:19:43Z
+
+- Continued the tail-side feature-expansion burn-down in the Discovery Inbox acquisition lane, avoiding currently dirty Import Staging files from another lane.
+- Added a `Wishlist Ready` action for ready acquisition plans that creates bounded manual Wishlist requests with auto-download disabled.
+- Acquisition plans now persist the created Wishlist request id, show it in the plan card, and skip duplicate Wishlist creation on later runs.
+- Kept Wishlist creation separate from backend search execution so searches, peer browse, and downloads remain explicit follow-up actions.
+- Validation: focused acquisition/Discovery Inbox tests, broader 26-file frontend feature slice, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 01:24:58Z
+
+- Continued the feature-expansion burn-down into E11 Tagging and Organization while avoiding dirty Import Staging/audio verification files from other lanes.
+- Added a Playlist Intake tag/organization dry run for matched rows with organization templates, album title override, multi-artist policy, cover-art policy, and ReplayGain policy.
+- The plan reports changed fields, destination paths, skipped rows, cover-art action, ReplayGain action, and explicit no-mutation network/file impact.
+- Persisted the dry-run plan as browser-local review metadata only; it does not write tags, move files, run ReplayGain, contact providers, search Soulseek, browse peers, or download.
+- Validation: focused Playlist Intake tests, broader 28-file frontend feature slice, frontend lint, frontend production build, and `git diff --check` passed.
+
+## 2026-05-01 01:22:02Z
+
+- Fixed the unified Messages workspace follow-up after pod channels were moved into Messages.
+- Folded pod direct channels into matching saved DM rows so the sidebar no longer shows both `Saved Chats` and duplicate `peer / DM` pod entries for the same person.
+- Added cleanup for stale restored bridged pod-DM panels from local workspace storage.
+- Restyled embedded chat, room, and pod composers so the message textbox is visible inside workspace cards, and preserved the room member list rail in room panels.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-BX1czKL6.js`, `Messaging-BV5rhsXT.js`, and `Messaging-FPsQ6joa.css`.
+- Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:38:27Z
+
+- Scoped Listen Along to room/broadcast contexts instead of direct messages.
+- Pod direct-message channels no longer mount Listen Along in either the unified Messages workspace or the legacy Pods detail surface.
+- Added a compact Listen Along room-broadcast strip with a glowing live status icon and small follow, broadcast, directory, mesh-streaming, and stop controls.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-Btm3_g7j.js`, `index-8RtCOAqk.css`, and `Messaging-BVqhWdEj.js`.
+- Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:44:11Z
+
+- Continued the feature-expansion burn-down after validating the T-939 source-feed history/audit backend slice.
+- Added a YAML-backed System Integrations settings panel for Chromaprint, AcoustID, MusicBrainz, and Lidarr.
+- The panel masks existing AcoustID/Lidarr credentials, allows secret replacement, validates required fields and Lidarr path-map pairs, and writes snake_case YAML through the existing options API.
+- Kept the settings pass configuration-only: it does not test credentials, contact providers, search peers, browse, download, or mutate files beyond the explicit YAML update.
+- Validation: focused SourceFeeds backend tests, focused Integrations tests, Integrations ESLint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:58:14Z
+
+- Fixed the stale PR-06 dump endpoint smoke expectation so `501 NotImplemented` is accepted when the hardened dump path cannot create a dump in the test environment.
+- Documented the gotcha in `adr-0001-known-gotchas.md` and committed the doc entry as `fd3b283c0`.
+- Validation: focused DumpTests, full `dotnet test` (`46` slskd.Tests, `3782` unit, `276` integration), `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:46:07Z
+
+- Added explicit confirmed destructive actions to the unified Messages workspace.
+- Saved DM rows and chat panel headers now expose permanent thread deletion through the existing conversations delete API.
+- Joined room rows and room panel headers now expose confirmed room leave through the existing rooms leave API.
+- Pod channel rows and pod panel headers now expose confirmed pod leave through the existing pods leave API, including the stricter Gold Star warning text.
+- Moved rich user badges out of repeated chat/room message rows; dense transcripts show plain sender names, while the rich user card remains in stable identity surfaces such as chat headers and member lists.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-C1NhFVFz.js`, `Messaging-CtlvsdtB.js`, and `Messaging-BCMd8f7c.css`.
+- Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.
+
+## 2026-05-01 01:55:32Z
+
+- Fixed the Soulseek-DM deletion fallback that made hidden pod DMs appear after the saved Soulseek thread was deleted.
+- Pod direct channels are now hidden from the Messages pod-channel list unconditionally, while non-direct pod room channels still appear.
+- Stale workspace panels targeting pod direct channels are closed automatically after pod hydration.
+- Added focused coverage that deleting a matching saved chat does not reveal `peer / dm`.
+- Deployed the rebuilt web bundle to `kspls0`; the active service is serving `index-C4NrW-sY.js`, `Messaging-DLn6J19-.js`, and `Messaging-BCMd8f7c.css`.
+- Validation: focused Messaging/App tests, frontend lint, frontend production build, `bash ./bin/lint`, and `git diff --check` passed.

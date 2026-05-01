@@ -1,10 +1,14 @@
 import {
   clearCommunityQualitySignalsForUser,
+  clearCommunityQualityOverride,
+  communityQualityOverrideStorageKey,
   communityQualitySignalStorageKey,
   getCommunityQualityLabel,
+  getCommunityQualityOverrides,
   getCommunityQualitySignals,
   getCommunityQualitySummary,
   recordCommunityQualitySignal,
+  setCommunityQualityOverride,
 } from './communityQualitySignals';
 
 describe('communityQualitySignals', () => {
@@ -77,5 +81,69 @@ describe('communityQualitySignals', () => {
 
     expect(getCommunityQualitySummary('peer-a').signals).toHaveLength(0);
     expect(getCommunityQualitySummary('peer-b').signals).toHaveLength(1);
+  });
+
+  it('stores local notes and ignores signals for one peer without deleting evidence', () => {
+    recordCommunityQualitySignal({
+      type: 'suspicious-candidate',
+      username: 'fixture-peer',
+    });
+
+    setCommunityQualityOverride('fixture-peer', {
+      mode: 'ignore',
+      note: 'Known household peer; ignore old noisy review signal.',
+    });
+
+    const persisted = JSON.parse(
+      localStorage.getItem(communityQualityOverrideStorageKey),
+    );
+    expect(persisted['fixture-peer']).toEqual(
+      expect.objectContaining({
+        mode: 'ignore',
+        note: 'Known household peer; ignore old noisy review signal.',
+      }),
+    );
+
+    const summary = getCommunityQualitySummary('fixture-peer');
+    expect(summary.rawScore).toBe(-6);
+    expect(summary.score).toBe(0);
+    expect(summary.signals).toHaveLength(1);
+    expect(getCommunityQualityLabel(summary)).toEqual(
+      expect.objectContaining({
+        text: 'Signals ignored',
+      }),
+    );
+
+    clearCommunityQualityOverride('fixture-peer');
+    expect(getCommunityQualityOverrides()['fixture-peer']).toBeUndefined();
+  });
+
+  it('supports explicit local trust and caution overrides for ranking input', () => {
+    setCommunityQualityOverride('fixture-peer', {
+      mode: 'trust',
+      note: 'Verified private source.',
+    });
+
+    expect(getCommunityQualitySummary('fixture-peer')).toEqual(
+      expect.objectContaining({
+        override: expect.objectContaining({
+          mode: 'trust',
+        }),
+        rawScore: 0,
+        score: 8,
+      }),
+    );
+
+    setCommunityQualityOverride('fixture-peer', {
+      mode: 'caution',
+      note: 'Manual caution until review clears.',
+    });
+
+    expect(getCommunityQualitySummary('fixture-peer')).toEqual(
+      expect.objectContaining({
+        rawScore: 0,
+        score: -6,
+      }),
+    );
   });
 });

@@ -15,24 +15,55 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
         Converters = { new JsonStringEnumConverter() },
     };
 
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayEdit> _edits = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayExportDecision> _exportDecisions = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, MusicBrainzOverlayRouteAttempt> _routeAttempts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _storageSync = new();
+    private readonly string _storagePath;
     private readonly IPodMessageRouter? _messageRouter;
     private readonly ILogger<MusicBrainzOverlayService> _logger;
 
     public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger)
-        : this(logger, null)
+        : this(
+            logger,
+            Path.Combine(
+                string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory)
+                    ? global::slskd.Program.DefaultAppDirectory
+                    : global::slskd.Program.AppDirectory,
+                "musicbrainz-overlay.json"))
     {
     }
 
-    public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger, IPodMessageRouter? messageRouter)
+    public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger, IPodMessageRouter messageRouter)
+        : this(
+            logger,
+            Path.Combine(
+                string.IsNullOrWhiteSpace(global::slskd.Program.AppDirectory)
+                    ? global::slskd.Program.DefaultAppDirectory
+                    : global::slskd.Program.AppDirectory,
+                "musicbrainz-overlay.json"),
+            messageRouter)
+    {
+    }
+
+    public MusicBrainzOverlayService(ILogger<MusicBrainzOverlayService> logger, string storagePath)
+        : this(logger, storagePath, null)
+    {
+    }
+
+    public MusicBrainzOverlayService(
+        ILogger<MusicBrainzOverlayService> logger,
+        string storagePath,
+        IPodMessageRouter? messageRouter)
     {
         _logger = logger;
+        _storagePath = storagePath;
         _messageRouter = messageRouter;
+        LoadState();
     }
 
     public Task<MusicBrainzOverlayValidationResult> StoreAsync(
@@ -46,6 +77,7 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
         }
 
         _edits[edit.Id] = edit;
+        PersistState();
         _logger.LogInformation(
             "[MusicBrainzOverlay] Stored {EditType} edit {EditId} for {TargetType}:{TargetId}",
             edit.Type,
@@ -144,6 +176,7 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
         };
         _exportDecisions[editId] = decision;
         result.Decision = decision;
+        PersistState();
         return Task.FromResult(result);
     }
 
@@ -446,7 +479,93 @@ public sealed class MusicBrainzOverlayService : IMusicBrainzOverlayService
     private MusicBrainzOverlayRouteAttempt StoreRouteAttempt(MusicBrainzOverlayRouteAttempt attempt)
     {
         _routeAttempts[attempt.Id] = attempt;
+        PersistState();
         return attempt;
+    }
+
+    private void LoadState()
+    {
+        lock (_storageSync)
+        {
+            if (!File.Exists(_storagePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_storagePath);
+                var state = JsonSerializer.Deserialize<MusicBrainzOverlayStoreState>(json, JsonOptions);
+                if (state == null)
+                {
+                    return;
+                }
+
+                foreach (var edit in state.Edits)
+                {
+                    _edits[edit.Id] = edit;
+                }
+
+                foreach (var decision in state.ExportDecisions)
+                {
+                    _exportDecisions[decision.EditId] = decision;
+                }
+
+                foreach (var attempt in state.RouteAttempts)
+                {
+                    _routeAttempts[attempt.Id] = attempt;
+                }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "[MusicBrainzOverlay] Failed to load persisted overlay state from {Path}", _storagePath);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "[MusicBrainzOverlay] Failed to parse persisted overlay state from {Path}", _storagePath);
+            }
+        }
+    }
+
+    private void PersistState()
+    {
+        lock (_storageSync)
+        {
+            var directory = Path.GetDirectoryName(_storagePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var state = new MusicBrainzOverlayStoreState
+            {
+                Edits = _edits.Values
+                    .OrderBy(edit => edit.CreatedAt)
+                    .ThenBy(edit => edit.Id, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                ExportDecisions = _exportDecisions.Values
+                    .OrderBy(decision => decision.EditId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(decision => decision.CreatedAt)
+                    .ToList(),
+                RouteAttempts = _routeAttempts.Values
+                    .OrderBy(attempt => attempt.EditId, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(attempt => attempt.CreatedAt)
+                    .ToList(),
+            };
+
+            var tempPath = $"{_storagePath}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(state, JsonOptions));
+            File.Move(tempPath, _storagePath, overwrite: true);
+        }
+    }
+
+    private sealed class MusicBrainzOverlayStoreState
+    {
+        public List<MusicBrainzOverlayEdit> Edits { get; set; } = new();
+
+        public List<MusicBrainzOverlayExportDecision> ExportDecisions { get; set; } = new();
+
+        public List<MusicBrainzOverlayRouteAttempt> RouteAttempts { get; set; } = new();
     }
 
     private sealed class MusicBrainzOverlayRouteEnvelope
