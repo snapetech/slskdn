@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z252. Separately Bound Mesh Sections Are Not On `OptionsAtStartup`
+
+**The Bug**: `Program` tried to read `OptionsAtStartup.Mesh.Transport.EnableDirect`, but `OptionsAtStartup` extends the root YAML `Options` model and does not expose the separately bound `Mesh` section.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Core/Options.cs`
+- `src/slskd/Mesh/MeshOptions.cs`
+- `src/slskd/Mesh/MeshTransportOptions.cs`
+
+**Wrong**:
+```csharp
+else if (OptionsAtStartup?.Mesh?.Transport?.EnableDirect == true)
+{
+    Log.Warning("Direct mesh transport is enabled but QUIC runtime support is unavailable");
+}
+```
+
+**Correct**:
+```csharp
+var meshTransportOptionsAtStartup =
+    Configuration.GetSlskdSection("Mesh:Transport").Get<Mesh.MeshTransportOptions>() ??
+    new Mesh.MeshTransportOptions();
+
+else if (meshTransportOptionsAtStartup.EnableDirect)
+{
+    Log.Warning("Direct mesh transport is enabled but QUIC runtime support is unavailable");
+}
+```
+
+**Why This Keeps Happening**: Some feature sections are bound directly through `AddOptions<T>().Bind(...)` instead of being properties on the root `Options` model. Startup-only checks for those sections must read the same configuration section or resolve the typed options, not assume every bound section is available through `OptionsAtStartup`.
+
 ### 0z251. Manual Search Must Not Be Routed Through Acquisition Review
 
 **The Bug**: The Search page exposed a primary action to save the current manual query into Discovery Inbox/Acquisition Review, implying that a user who is actively searching should approve, plan, and execute the same query before getting useful acquisition results.

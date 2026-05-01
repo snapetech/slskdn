@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed the startup mesh transport registration build break by reading the
+  separately bound `Mesh:Transport` section directly instead of assuming it is
+  present on `OptionsAtStartup`.
 - Fixed sharegroups streaming content resolution so non-advertisable share
   repository entries cannot fall through to allowed-root `path:` fallback
   resolution, and hardened share-token claim binding comparisons with the

@@ -2191,11 +2191,15 @@ namespace slskd
             });
 
             // Transport dialers (Tor/I2P integration Phase 2)
+            var meshTransportOptionsAtStartup =
+                Configuration.GetSlskdSection("Mesh:Transport").Get<Mesh.MeshTransportOptions>() ??
+                new Mesh.MeshTransportOptions();
+
             if (Mesh.QuicRuntime.IsAvailable())
             {
                 services.AddSingleton<Mesh.Transport.ITransportDialer, Mesh.Transport.DirectQuicDialer>();
             }
-            else if (OptionsAtStartup?.Mesh?.Transport?.EnableDirect == true)
+            else if (meshTransportOptionsAtStartup.EnableDirect)
             {
                 Log.Warning("[DI] Direct mesh transport is enabled but QUIC runtime support is unavailable; direct clearnet mesh circuits will be disabled until QUIC support is installed or a non-QUIC direct transport is configured");
             }
