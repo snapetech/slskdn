@@ -52,6 +52,27 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z250. Guided YAML UIs Must Write Transfers Under `transfers`
+
+**The Bug**: A guided admin UI wrote upload/download policy to `global.*` paths because the C# options property is named `Global`, but documented YAML uses the `transfers` alias.
+
+**Files Affected**:
+- `src/web/src/components/System/AdminPolicies/index.jsx`
+- `src/slskd/Core/Options.cs`
+- `config/slskd.example.yml`
+
+**Wrong**:
+```javascript
+document.setIn(['global', 'download', 'slots'], toNumber(form.downloadSlots, 500));
+```
+
+**Correct**:
+```javascript
+document.setIn(['transfers', 'download', 'slots'], toNumber(form.downloadSlots, 500));
+```
+
+**Why This Keeps Happening**: The runtime options object exposes the property as `Global`, while the canonical YAML sample and `YamlMember(Alias = "transfers")` expose the section as `transfers`. Browser YAML editors must write the documented YAML key, not infer config keys from C# property names.
+
 ### 0z249. Do Not Persist Stale Transfer Snapshots After Marking Failure
 
 **The Bug**: `UploadService.UploadAsync` called `TryFail(...)` after Soulseek upload failures, then wrote the stale pre-failure `Transfer` object back to the database, clearing the terminal `Completed | Errored` state and leaving refused upload attempts looking active.
