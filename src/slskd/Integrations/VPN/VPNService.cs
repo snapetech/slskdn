@@ -196,21 +196,6 @@ public class VPNService : IDisposable
                     if (status.ForwardedPort.HasValue)
                     {
                         isReadyNow = true;
-
-                        var overlay = Program.ConfigurationOverlay ?? new OptionsOverlay();
-                        overlay = overlay with { Soulseek = overlay.Soulseek ?? new OptionsOverlay.SoulseekOptionsPatch() };
-
-                        // avoid incessant updates
-                        if (overlay.Soulseek.ListenPort != status.ForwardedPort)
-                        {
-                            Program.ApplyConfigurationOverlay(overlay with
-                            {
-                                Soulseek = overlay.Soulseek with
-                                {
-                                    ListenPort = status.ForwardedPort,
-                                },
-                            });
-                        }
                     }
                 }
                 else

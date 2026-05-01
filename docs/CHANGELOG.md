@@ -22,6 +22,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Kept VPN provider forwarded ports separate from the local Soulseek listener
+  so Gluetun status polling no longer tries to rebind `soulseek.listen_port` to
+  the public/NAT port.
 - Fixed browser audio fingerprint hashing so CI, Node/jsdom tests, and browsers
   copy file data into a native typed-array digest input before passing it to
   WebCrypto.
