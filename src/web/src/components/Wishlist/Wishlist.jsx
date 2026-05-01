@@ -1,14 +1,17 @@
 import './Wishlist.css';
 import { urlBase } from '../../config';
 import {
+  addWishlistItemToDiscoveryInbox,
   buildWishlistRequestReviewPacket,
   buildWishlistRequestSummary,
   formatWishlistRequestReviewPacket,
   getWishlistRequestState,
   getRunnableWishlistRequests,
 } from '../../lib/acquisitionRequests';
-import * as sourceFeedImportsAPI from '../../lib/sourceFeedImports';
-import * as spotifyIntegrationAPI from '../../lib/spotifyIntegration';
+import {
+  addDiscoveryInboxItem,
+  getDiscoveryInboxItems,
+} from '../../lib/discoveryInbox';
 import * as wishlistAPI from '../../lib/wishlist';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -384,17 +387,14 @@ const Wishlist = () => {
   const [modalItem, setModalItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showSourceImportModal, setShowSourceImportModal] = useState(false);
-  const [inboxItems, setInboxItems] = useState(() => getDiscoveryInboxItems());
   const [requestCopyStatus, setRequestCopyStatus] = useState('');
   const [bulkRunning, setBulkRunning] = useState(false);
   const requestSummary = useMemo(
     () =>
       buildWishlistRequestSummary({
-        inboxItems,
         items,
       }),
-    [inboxItems, items],
+    [items],
   );
   const runnableRequests = useMemo(
     () => getRunnableWishlistRequests(items, { limit: 3 }),
@@ -403,7 +403,6 @@ const Wishlist = () => {
 
   const copyRequestReviewPacket = async () => {
     const packet = buildWishlistRequestReviewPacket({
-      inboxItems,
       items,
     });
     const report = formatWishlistRequestReviewPacket(packet);
@@ -480,10 +479,6 @@ const Wishlist = () => {
     setShowImportModal(true);
   };
 
-  const handleSourceImportClick = () => {
-    setShowSourceImportModal(true);
-  };
-
   const handleEdit = (item) => {
     setModalItem(item);
     setShowModal(true);
@@ -515,12 +510,6 @@ const Wishlist = () => {
     const result = await wishlistAPI.runSearch(id);
     await loadItems();
     return result;
-  };
-
-  const handleReview = (item) => {
-    const inboxItem = addWishlistItemToDiscoveryInbox(item);
-    setInboxItems(getDiscoveryInboxItems());
-    toast.success(`Added "${inboxItem.title}" to Discovery Inbox`);
   };
 
   const handleImport = async (request) => {
@@ -575,20 +564,6 @@ const Wishlist = () => {
             >
               <Icon name="file alternate outline" />
               Import CSV
-            </Button>
-          }
-        />
-        <Popup
-          content="Preview Spotify URLs, liked/saved/followed feeds with a provider token, CSV/text playlists, M3U, and RSS/OPML sources into Discovery Inbox review without starting searches or downloads."
-          trigger={
-            <Button
-              floated="right"
-              icon
-              labelPosition="left"
-              onClick={handleSourceImportClick}
-            >
-              <Icon name="rss" />
-              Import Feed
             </Button>
           }
         />
@@ -731,12 +706,10 @@ const Wishlist = () => {
           <Table.Body>
             {items.map((item) => (
               <WishlistItemRow
-                inboxItems={inboxItems}
                 item={item}
                 key={item.id}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
-                onReview={handleReview}
                 onRunSearch={handleRunSearch}
               />
             ))}
@@ -756,12 +729,6 @@ const Wishlist = () => {
         <CsvImportModal
           onClose={() => setShowImportModal(false)}
           onImport={handleImport}
-        />
-      )}
-      {showSourceImportModal && (
-        <SourceFeedImportModal
-          onClose={() => setShowSourceImportModal(false)}
-          onImported={() => setInboxItems(getDiscoveryInboxItems())}
         />
       )}
     </div>
