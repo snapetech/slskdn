@@ -8,8 +8,10 @@
     memory-bank notes
   - started P1 by removing fake hard-coded swarm analytics efficiency values
   - added unit coverage for derived efficiency metrics and empty trend output
+  - cleaned the consensus policy success reason and added coverage for
+    consensus-required denial versus consensus-not-required allowance
 - Next steps:
-  1. Validate the focused swarm analytics tests.
+  1. Validate the focused consensus policy tests.
   2. Continue with intentional disabled-feature cleanup and Mesh/Service Fabric
      streaming markers after the current dirty obfuscation lane settles.
 

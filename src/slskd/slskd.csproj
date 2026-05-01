@@ -21,11 +21,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
+    <NoWarn>1701;1702;1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208;CS8981</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208</NoWarn>
+    <NoWarn>1591;S1133;S2094;S1135;S3925;S125;CA2201;CA2252;SA1633;CA3003;CA2208;CS8981</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

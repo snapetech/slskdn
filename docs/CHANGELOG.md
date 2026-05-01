@@ -32,6 +32,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Moved mesh service MessagePack record defaults into constructors to avoid
   deserialization resetting initialized `init` properties, and cleaned the
   adjacent multi-source comment formatting warning.
+- Cleaned consensus policy success wording and added coverage for consensus
+  required versus not-required decisions.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native

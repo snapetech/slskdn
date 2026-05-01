@@ -150,7 +150,7 @@ public class ConsensusPolicy : ISecurityPolicy
             return Task.FromResult(new SecurityDecision(false, "consensus verification unavailable"));
         }
 
-        return Task.FromResult(new SecurityDecision(true, "consensus check not implemented"));
+        return Task.FromResult(new SecurityDecision(true, "consensus not required"));
     }
 }
 

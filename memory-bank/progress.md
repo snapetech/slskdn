@@ -9184,6 +9184,9 @@ Code quality improvements were completed as part of Option A:
   history remains zero/empty instead of invented data.
 - Added focused unit coverage for derived swarm efficiency metrics and empty
   trend semantics.
+- Cleaned the consensus policy success path so non-consensus operations report
+  `consensus not required` instead of a stale "not implemented" reason, with
+  focused coverage for allowed and denied consensus decisions.
 
 ## 2026-05-01 03:05:00Z
 
