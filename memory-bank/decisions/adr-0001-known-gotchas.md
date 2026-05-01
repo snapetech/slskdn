@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z251. Manual Search Must Not Be Routed Through Acquisition Review
+
+**The Bug**: The Search page exposed a primary action to save the current manual query into Discovery Inbox/Acquisition Review, implying that a user who is actively searching should approve, plan, and execute the same query before getting useful acquisition results.
+
+**Files Affected**:
+- `src/web/src/components/Search/Searches.jsx`
+- `src/web/src/components/Search/Searches.test.jsx`
+- `src/web/src/components/DiscoveryInbox/DiscoveryInbox.jsx`
+- `docs/dev/feature-expansion-prd-story-map.md`
+- `docs/design/music-discovery-federation-plan.md`
+
+**Wrong**:
+```jsx
+<Button
+  aria-label="Add search phrase to Discovery Inbox"
+  icon="inbox"
+  onClick={addCurrentSearchToDiscoveryInbox}
+/>
+```
+
+**Correct**:
+```jsx
+<Button
+  aria-label="Search and open results"
+  icon="search"
+  onClick={() => create({ navigate: true })}
+/>
+```
+
+**Why This Keeps Happening**: Review-first acquisition is appropriate for passive, imported, generated, or automated candidates where the user has not explicitly confirmed intent yet. Manual Search is already explicit intent. Adding an approval queue between typing a query and reviewing results creates redundant workflow friction and makes the product feel incoherent.
+
 ### 0z250. Guided YAML UIs Must Write Transfers Under `transfers`
 
 **The Bug**: A guided admin UI wrote upload/download policy to `global.*` paths because the C# options property is named `Global`, but documented YAML uses the `transfers` alias.
