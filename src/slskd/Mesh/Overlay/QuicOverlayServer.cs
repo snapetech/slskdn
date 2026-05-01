@@ -6,6 +6,7 @@
 namespace slskd.Mesh.Overlay;
 
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
@@ -239,7 +240,15 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "[Overlay-QUIC] Error accepting stream from {Endpoint}", remoteEndPoint);
+                        if (IsQuietAcceptStreamException(ex))
+                        {
+                            logger.LogDebug(ex, "[Overlay-QUIC] Peer closed before opening a stream from {Endpoint}", remoteEndPoint);
+                        }
+                        else
+                        {
+                            logger.LogWarning(ex, "[Overlay-QUIC] Error accepting stream from {Endpoint}", remoteEndPoint);
+                        }
+
                         break;
                     }
                 }
@@ -260,6 +269,13 @@ public class QuicOverlayServer : BackgroundService, IOverlayConnectionMetrics
                 activeConnections.TryRemove(remoteEndPoint, out _);
             }
         }
+    }
+
+    internal static bool IsQuietAcceptStreamException(Exception ex)
+    {
+        return ex is QuicException ||
+            ex is ObjectDisposedException ||
+            ex is IOException;
     }
 
     [SupportedOSPlatform("linux")]

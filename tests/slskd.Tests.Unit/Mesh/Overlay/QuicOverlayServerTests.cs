@@ -3,6 +3,8 @@
 // </copyright>
 namespace slskd.Tests.Unit.Mesh.Overlay;
 
+using System;
+using System.IO;
 using System.Net;
 using slskd.Mesh.Overlay;
 using Xunit;
@@ -35,5 +37,13 @@ public class QuicOverlayServerTests
 
         Assert.Equal(IPAddress.Any, endpoint.Address);
         Assert.Equal(50402, endpoint.Port);
+    }
+
+    [Fact]
+    public void IsQuietAcceptStreamException_RecognizesExpectedDisconnects()
+    {
+        Assert.True(QuicOverlayServer.IsQuietAcceptStreamException(new IOException("connection closed")));
+        Assert.True(QuicOverlayServer.IsQuietAcceptStreamException(new ObjectDisposedException("connection")));
+        Assert.False(QuicOverlayServer.IsQuietAcceptStreamException(new InvalidOperationException("bad state")));
     }
 }

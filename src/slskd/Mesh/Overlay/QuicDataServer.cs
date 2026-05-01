@@ -181,7 +181,15 @@ public class QuicDataServer : BackgroundService
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "[Overlay-QUIC-DATA] Error accepting stream from {Endpoint}", remoteEndPoint);
+                        if (QuicOverlayServer.IsQuietAcceptStreamException(ex))
+                        {
+                            logger.LogDebug(ex, "[Overlay-QUIC-DATA] Peer closed before opening a stream from {Endpoint}", remoteEndPoint);
+                        }
+                        else
+                        {
+                            logger.LogWarning(ex, "[Overlay-QUIC-DATA] Error accepting stream from {Endpoint}", remoteEndPoint);
+                        }
+
                         break;
                     }
                 }
