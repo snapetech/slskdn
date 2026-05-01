@@ -14,6 +14,16 @@ Complete guide to all slskdn documentation.
 - [Reverse Proxy Setup](reverse_proxy.md) - Running behind a proxy
 - [Known Issues](known_issues.md) - Current known problems
 
+## 📘 User Guides
+
+- [SongID and Discovery](songid-discovery.md) - Native identification, Acquisition Review, and Discovery Graph workflows
+- [System Admin Surfaces](system-surfaces.md) - Guided System UI for policies, integrations, diagnostics, source providers, and local preferences
+- [Pods, Rooms, and Messages](pods-and-rooms.md) - Gold Star, pod rooms, unified messages, and listen-along boundaries
+- [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
+- [Listening Party and Player](listening-party.md) - Integrated player, streaming, visualizers, and listen-along behavior
+- [Virtual Soulfind User Guide](VIRTUAL_SOULFIND_USER_GUIDE.md) - Using Virtual Soulfind and Shadow Index
+- [Solid Integration User Guide](SOLID_USER_GUIDE.md) - Using Solid WebID and Solid-OIDC integration
+
 ## 📖 Design Documents
 
 ### Core Features
@@ -33,6 +43,7 @@ Complete guide to all slskdn documentation.
 - [Features Overview](FEATURES.md) - Complete feature list and details
 - [Lidarr Integration](lidarr-integration.md) - First-class plugin-free Lidarr wanted sync, download handoff, and safe post-download import
 - [VPN Agent](../src/slskdN.VpnAgent/README.md) - Host-side fail-closed VPN routing and forwarded-port integration
+- [System Admin Surfaces](system-surfaces.md) - Guided System UI and operator panels
 - [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) - Development status and planned features
 
 ## 📚 Development Documentation
@@ -49,12 +60,9 @@ Complete guide to all slskdn documentation.
 - [Migrations](migrations.md) - Database migration guide
 - [Upstream Bug Testing](upstream-bug-testing.md) - Testing upstream issues
 
-## 📘 User Guides
-
-- [Lidarr Integration](lidarr-integration.md) - Configure Lidarr wanted sync, auto-download, path mapping, and import behavior
-- [Virtual Soulfind User Guide](VIRTUAL_SOULFIND_USER_GUIDE.md) - Using Virtual Soulfind and Shadow Index
-- [Solid Integration User Guide](SOLID_USER_GUIDE.md) - Using Solid WebID and Solid-OIDC integration
-
 ---
 
-**Note**: Some design documents may be in the root `docs/` directory or subdirectories. Check the main [README.md](../README.md) for the most up-to-date feature documentation.
+**Note**: Historical implementation notes live under `docs/archive/` and may not
+match current defaults. Prefer this index, [Getting Started](getting-started.md),
+[Configuration](config.md), and feature-specific user guides for current
+behavior.

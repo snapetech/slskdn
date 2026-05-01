@@ -104,6 +104,19 @@
   1. Remaining unchecked items are not immediate feature-expansion implementation work: T-938 is active in another visualizer lane, packaging tasks require real published artifacts, and broad future backlog items need separate prioritization before changing product scope.
   2. If continuing in this lane, prefer small integration migrations to `IBrainzClient` only where they reduce duplicate MusicBrainz/AcoustID orchestration without changing existing API behavior.
 
+## Update 2026-05-01 02:33:43Z
+
+- Current task: Tile-level visualizer controls are implemented locally.
+- Last activity:
+  - moved compact controls to `PlayerVisualTile` so they exist for bars, signal, Butterchurn, and native MilkDrop
+  - tiny tile now always shows switch visual, maximize-to-browser-window, and maximize-to-fullscreen controls
+  - maximizing from bars/signal restores the saved concrete visualizer backend before opening the expanded view
+  - removed duplicate nested compact controls from `Visualizer`
+  - validated focused PlayerBar/Visualizer tests, frontend lint, native browser smoke, frontend production build, and touched-file whitespace checks
+- Next steps:
+  1. In-browser screenshot validation of the compact tile should be the next check if the visual layout still feels cramped.
+  2. Keep controls that must work across analyzer and visualizer variants at the tile layer, not inside renderer-specific components.
+
 ## Update 2026-05-01 02:29:18Z
 
 - Current task: Compact player visualizer tile controls are fixed locally.

@@ -65,6 +65,13 @@
 - Added focused unit coverage for trimmed recording cache reuse, search normalization/dedupe, fingerprint MusicBrainz enrichment, and AcoustID fallback.
 - Validation: focused `BrainzClientTests` passed, touched-file whitespace checks passed, `bash ./bin/lint` passed, and the broader non-live .NET suite passed with `46` slskd.Tests, `3794` unit tests, and `275` integration tests.
 
+## 2026-05-01 02:33:43Z
+
+- Moved compact visualizer controls from the nested visualizer into the player display tile itself so they are present even when the tile is showing spectrum bars or signal scope.
+- The tiny tile now always exposes switch visual, maximize-to-browser-window, and maximize-to-fullscreen controls.
+- Maximizing from bars/signal first restores the saved concrete visualizer backend, so the expanded view opens Butterchurn or native MilkDrop instead of the analyzer.
+- Validation: focused PlayerBar/Visualizer tests, frontend lint, native browser smoke, frontend production build, and touched-file whitespace checks passed.
+
 ## 2026-05-01 02:29:18Z
 
 - Tightened the compact player visualizer tile after screenshot review.
