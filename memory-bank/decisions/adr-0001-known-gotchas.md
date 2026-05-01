@@ -52,6 +52,35 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z276. Shared QUIC/DHT Ports Must Not Also Start The Legacy UDP Overlay Listener
+
+**The Bug**: After restoring QUIC on the reduced shared mesh port, the app still registered the legacy `UdpOverlayServer`. The live `kspls0` build correctly exposed shared UDP `50305` and QUIC backend UDP `55305`, but it also bound legacy UDP `50400`, contradicting the reduced ingress contract and the Web UI port guidance.
+
+**Files Affected**:
+- `src/slskd/Program.cs`
+- `src/slskd/Mesh/Overlay/UdpOverlayServer.cs`
+
+**Wrong**:
+```csharp
+services.AddHostedService(p =>
+{
+    return ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
+});
+```
+
+**Correct**:
+```csharp
+if (Program.ShouldRunUdpOverlayServer(overlayEnabled, quicOverlayRequested, quicRuntimeAvailable))
+{
+    services.AddHostedService(p =>
+    {
+        return ActivatorUtilities.CreateInstance<Mesh.Overlay.UdpOverlayServer>(p);
+    });
+}
+```
+
+**Why This Keeps Happening**: The legacy UDP overlay server and the newer QUIC/shared-port path are separate hosted services. Enabling QUIC does not automatically suppress the older listener unless registration is conditional. Any port-reduction work must validate actual sockets with `ss`, not just API options, public forwards, or UI copy.
+
 ### 0z275. QUIC Probe Connections May Close Without Opening A Stream
 
 **The Bug**: A QUIC client can successfully complete the TLS/QUIC handshake and then close without opening an inbound stream. The overlay server treated `AcceptInboundStreamAsync()` peer-abort exceptions as warnings with stack traces, so a clean connectivity probe looked like a server fault in live logs.
