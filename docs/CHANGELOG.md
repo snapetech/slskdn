@@ -23,7 +23,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Fixed browser audio fingerprint hashing so CI, Node/jsdom tests, and browsers
-  normalize file data before passing it to WebCrypto.
+  copy file data into a native typed-array digest input before passing it to
+  WebCrypto.
 - Restricted tag release automation to the stable `build-main-*` path after
   retiring the obsolete dev package channel.
 - Removed the obsolete `slskdn-dev` package channel from active release

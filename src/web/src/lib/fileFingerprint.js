@@ -7,19 +7,25 @@ const isArrayBuffer = (value) =>
   Object.prototype.toString.call(value) === '[object ArrayBuffer]';
 
 const toDigestInput = (value) => {
-  if (isArrayBuffer(value) || ArrayBuffer.isView(value)) {
-    return value;
+  if (ArrayBuffer.isView(value)) {
+    return Uint8Array.from(value);
   }
 
   if (value?.buffer && isArrayBuffer(value.buffer)) {
-    return new Uint8Array(
-      value.buffer,
-      value.byteOffset || 0,
-      value.byteLength ?? value.buffer.byteLength,
+    return Uint8Array.from(
+      new Uint8Array(
+        value.buffer,
+        value.byteOffset || 0,
+        value.byteLength ?? value.buffer.byteLength,
+      ),
     );
   }
 
-  return new Uint8Array(value);
+  if (isArrayBuffer(value)) {
+    return Uint8Array.from(new Uint8Array(value));
+  }
+
+  return Uint8Array.from(value);
 };
 
 export const fingerprintFile = async (file) => {

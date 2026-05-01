@@ -54,7 +54,7 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z255. Browser Fingerprints Must Normalize WebCrypto Digest Input
 
-**The Bug**: The release gate failed in frontend tests because `File.arrayBuffer()` can return a Buffer-like value under Node/jsdom, and Node WebCrypto rejects it unless it is normalized to an `ArrayBuffer` or typed-array view.
+**The Bug**: The release gate failed in frontend tests because `File.arrayBuffer()` can return Buffer-like values or cross-realm ArrayBuffers under Node/jsdom, and Node WebCrypto rejects them unless they are copied into a native digest input.
 
 **Files Affected**:
 - `src/web/src/lib/fileFingerprint.js`
@@ -69,11 +69,11 @@ await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
 ```javascript
 await globalThis.crypto.subtle.digest(
   'SHA-256',
-  toDigestInput(await file.arrayBuffer()),
+  Uint8Array.from(new Uint8Array(await file.arrayBuffer())),
 );
 ```
 
-**Why This Keeps Happening**: Browser `File` objects, jsdom `File` objects, and Node-backed test doubles do not always hand WebCrypto the same concrete buffer type. Normalize digest input at the file-fingerprint boundary instead of assuming `arrayBuffer()` returns a native browser `ArrayBuffer` in every runtime.
+**Why This Keeps Happening**: Browser `File` objects, jsdom `File` objects, and Node-backed test doubles do not always hand WebCrypto the same concrete buffer type or realm. Normalize digest input at the file-fingerprint boundary by copying bytes into a local `Uint8Array` instead of assuming `arrayBuffer()` returns a native browser `ArrayBuffer` that the current WebCrypto implementation accepts.
 
 ### 0z254. WebGPU Visualizer Mode Must Degrade To Native WebGL2
 
