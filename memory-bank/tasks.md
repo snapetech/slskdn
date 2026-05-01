@@ -2211,7 +2211,7 @@
 
 - [x] Add first-class Soulseek type-1 obfuscation feature options
   - Status: completed (2026-05-01)
-  - Notes: Added validated Soulseek type-1 obfuscation options, a serializable runtime plan, startup/status API exposure, Network tab visibility, config examples, and a dedicated feature doc. Current Soulseek.NET support is surfaced honestly as `configured_unsupported` when enabled.
+  - Notes: Added validated Soulseek type-1 obfuscation options, a serializable runtime plan, startup/status API exposure, Network tab visibility, config examples, README coverage, and a dedicated feature doc. The default is compatibility mode with regular fallback preserved; current Soulseek.NET support is surfaced honestly as `configured_pending_runtime`.
 
 - [x] Resolve current-doc broken links and stale documentation banners
   - Status: completed (2026-05-01)

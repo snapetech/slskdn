@@ -138,6 +138,25 @@ public class DhtRendezvousServiceTests
         Assert.Equal(1, service.GetStats().TotalCandidatesAccepted);
     }
 
+    [Fact]
+    public void GetBootstrapTimeoutSeconds_UsesAdaptiveWarmColdAndLanOnlyWindows()
+    {
+        var options = new DhtRendezvousOptions
+        {
+            BootstrapTimeoutSeconds = 120,
+            ColdBootstrapTimeoutSeconds = 180,
+            LanOnlyBootstrapTimeoutSeconds = 30,
+        };
+
+        Assert.Equal(120, DhtRendezvousService.GetBootstrapTimeoutSeconds(options, savedNodeTableBytes: 256));
+        Assert.Equal(180, DhtRendezvousService.GetBootstrapTimeoutSeconds(options, savedNodeTableBytes: 0));
+
+        options.LanOnly = true;
+
+        Assert.Equal(30, DhtRendezvousService.GetBootstrapTimeoutSeconds(options, savedNodeTableBytes: 0));
+        Assert.Equal(30, DhtRendezvousService.GetBootstrapTimeoutSeconds(options, savedNodeTableBytes: 256));
+    }
+
     private static void InvokeOnPeersFound(DhtRendezvousService service, PeersFoundEventArgs eventArgs)
     {
         var method = typeof(DhtRendezvousService).GetMethod("OnPeersFound", BindingFlags.Instance | BindingFlags.NonPublic)

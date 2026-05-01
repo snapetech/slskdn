@@ -1,3 +1,18 @@
+## Update 2026-05-01 02:56:49Z
+
+- Current task: Soulseek type-1 obfuscation default posture and README coverage are complete locally.
+- Last activity:
+  - changed `soulseek.obfuscation.enabled` to default `true`
+  - kept default mode as `compatibility`, with `advertise_regular_port: true` and `prefer_outbound: true`
+  - renamed the current runtime state to `configured_pending_runtime`
+  - changed startup logging from warning to informational because the default mode preserves normal fallback and is currently a no-op until runtime support lands
+  - added top-level README and docs-index entries for the feature
+  - updated config docs, example YAML, and the dedicated guide to document default-on compatibility semantics
+  - validated focused backend and Network tab tests, repo lint, and touched-file whitespace checks
+- Next steps:
+  1. Runtime activation still needs Soulseek.NET hooks or a slskdN-owned peer-message transport adapter.
+  2. Keep `only` mode explicit and non-default because it can break clients that ignore obfuscated metadata.
+
 ## Update 2026-05-01 03:05:00Z
 
 - Current task: Feature-expansion documentation hygiene is complete locally.

@@ -9233,6 +9233,14 @@ Code quality improvements were completed as part of Option A:
 - Documented the modes, flags, current Soulseek.NET runtime limitation, proven research scope, and network-health caveats in config docs and a dedicated guide.
 - Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, frontend lint, repo lint, broad non-live `.NET` tests, and touched-file whitespace checks passed.
 
+## 2026-05-01 02:56:49Z
+
+- Made Soulseek type-1 obfuscation default-on in compatibility mode so future runtime support can add obfuscated peer-message reachability without blocking the regular peer-message path.
+- Renamed the current unsupported runtime status to `configured_pending_runtime` and changed startup logging to informational because compatibility mode is now the default no-op plan until runtime hooks exist.
+- Added top-level README coverage and docs-index links for Soulseek type-1 obfuscation.
+- Updated config docs and examples to show `enabled: true`, compatibility mode, and regular fallback preservation.
+- Validation: focused `SoulseekOptionsValidationTests`, focused System Network tests, repo lint, and touched-file whitespace checks passed.
+
 ## 2026-05-01 02:52:32Z
 
 - Deployed the latest MilkDrop/Butterchurn player tile frontend bundle to `kspls0`.
