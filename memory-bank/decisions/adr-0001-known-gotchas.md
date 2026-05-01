@@ -52,6 +52,41 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z265. Launchpad SFTP Upload Failure Must Fall Back To FTP
+
+**The Bug**: The PPA workflow selected SFTP after a TCP port-22 preflight succeeded, but the actual `dput` upload later failed during SSH banner negotiation. Because the upload step treated selected SFTP as final, it exited before trying the signed anonymous FTP fallback.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+if [ "$SLSKDN_PPA_UPLOAD_METHOD" = "sftp" ]; then
+  timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+else
+  ftp_upload
+fi
+```
+
+**Correct**:
+```bash
+uploaded=0
+if [ "$SLSKDN_PPA_UPLOAD_METHOD" = "sftp" ]; then
+  if timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"; then
+    uploaded=1
+  else
+    echo "::warning::Launchpad SFTP upload failed; trying FTP fallback"
+  fi
+fi
+
+if [ "$uploaded" -ne 1 ]; then
+  ftp_upload
+fi
+```
+
+**Why This Keeps Happening**: A successful TCP connect to Launchpad SFTP does not guarantee the later SSH/SFTP session will negotiate successfully. SFTP is only the preferred transport; the actual upload step must still be able to fall back to the signed FTP path when `dput` fails after preflight.
+
 ### 0z264. Launchpad SFTP Secrets Must Not Disable FTP Fallback
 
 **The Bug**: The PPA workflow treated `LAUNCHPAD_SFTP_KEY` as a hard switch to SFTP. When `ppa.launchpad.net:22` timed out from a GitHub runner, the preflight failed immediately and never tried the signed anonymous FTP fallback that the workflow still advertised.
