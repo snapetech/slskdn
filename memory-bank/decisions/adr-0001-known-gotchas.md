@@ -12522,3 +12522,11 @@ stats and a removed neighbor is deleted from the circuit peer inventory.
 **Why it happened:** The frontend build and backend HTML rewrite rules were solving different eras of the same problem. Legacy backend rewrites handled old root-relative assets, but the modern Vite build needed relative bundle references plus an injected mounted `<base>` tag for deep-link resolution. The build-output check only asserted that some proxy-safe paths existed, not that root-relative asset regressions were forbidden.
 
 **How to prevent it:** Keep `src/web/vite.config.js` on relative build assets for packaged output, inject a mounted base href for non-root `web.url_base`, and run both `npm run test:build-output` and `node src/web/scripts/smoke-subpath-build.mjs` before release-tag work that touches frontend tooling, routing, or HTML rewriting.
+
+### 0z69. Capability-Gate Tests Should Assert Stable Semantics, Not Placeholder Cleanup Wording
+
+**What went wrong:** The placeholder burn-down changed mesh-sync's user-facing unavailable message from "Mesh sync transport is not implemented" to "Mesh sync transport unavailable", but a unit test still asserted the old exact string during the full `dotnet test` run. The behavior was unchanged, yet the stale assertion made the repo-wide test pass look broken.
+
+**Why it happened:** Placeholder wording cleanup intentionally edits text around feature gates. Tests that assert the whole sentence couple themselves to phrasing rather than the stable contract: operation failed, no local sequence leaked, and the message described unavailable mesh sync transport.
+
+**How to prevent it:** For capability-gate and unavailable-feature paths, assert stable status/error categories and sensitive-data absence. Use exact message assertions only when API compatibility explicitly requires that exact sentence.
