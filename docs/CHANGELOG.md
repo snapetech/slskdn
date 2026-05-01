@@ -42,6 +42,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Removed the separate `sftp pwd` Launchpad PPA shell probe after it timed out
   on the upload endpoint despite account-level SSH key acceptance; the SFTP
   path now relies on noninteractive SSH config plus the bounded `dput` upload.
+- Kept PPA FTP fallback active when `LAUNCHPAD_SFTP_KEY` is configured but the
+  runner cannot reach Launchpad's SFTP port.
 - Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and switched
   the transfer step from fragile `dput` passive FTP retries to signed source
   verification followed by bounded anonymous `curl` uploads with a longer
