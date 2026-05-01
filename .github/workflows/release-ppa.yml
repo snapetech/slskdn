@@ -218,6 +218,7 @@ jobs:
             exit 1
           fi
 
+          uploaded=0
           if [ "${SLSKDN_PPA_UPLOAD_METHOD:-ftp}" = "sftp" ] && [ -n "$LAUNCHPAD_SFTP_KEY" ]; then
             mkdir -p ~/.ssh
             printf '%s\n' "$LAUNCHPAD_SFTP_KEY" > ~/.ssh/launchpad_ppa
@@ -249,8 +250,14 @@ jobs:
           EOF
 
             echo "Uploading $(basename "$CHANGES_FILE") to Launchpad PPA over SFTP"
-            timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
-          else
+            if timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"; then
+              uploaded=1
+            else
+              echo "::warning::Launchpad SFTP upload failed; trying anonymous FTP fallback"
+            fi
+          fi
+
+          if [ "$uploaded" -ne 1 ]; then
             for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
               if [ ! -f "$source_file" ]; then
                 echo "::error::Source upload file not found: $source_file"

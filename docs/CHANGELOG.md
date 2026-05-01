@@ -52,6 +52,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   path now relies on noninteractive SSH config plus the bounded `dput` upload.
 - Kept PPA FTP fallback active when `LAUNCHPAD_SFTP_KEY` is configured but the
   runner cannot reach Launchpad's SFTP port.
+- Made the PPA upload step fall through to anonymous FTP when the selected
+  SFTP `dput` upload fails after preflight.
 - Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and switched
   the transfer step from fragile `dput` passive FTP retries to signed source
   verification followed by bounded anonymous `curl` uploads with a longer
