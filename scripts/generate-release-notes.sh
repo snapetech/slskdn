@@ -335,7 +335,7 @@ if [[ -n "$COMMITS" ]]; then
   DISPLAY_COMMITS="$(printf '%s' "$DISPLAY_COMMITS" | trim_blank_edges || true)"
 fi
 
-INCLUDE_COMMIT_DETAILS=1
+INCLUDE_COMMIT_DETAILS="${RELEASE_NOTES_INCLUDE_COMMITS:-0}"
 
 if [[ -n "$DISPLAY_COMMITS" ]]; then
   commit_count="$(printf '%s\n' "$DISPLAY_COMMITS" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"

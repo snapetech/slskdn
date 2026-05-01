@@ -29,6 +29,9 @@ For dev or build tags, use the same logical version string embedded in the tag.
 - Filtered release-note highlights so CI, release plumbing, documentation
   gotchas, tests, and repo-maintenance commits do not crowd out
   user-facing changes.
+- Stopped generated release notes from including commit-detail sections by
+  default; release pages now stay focused on product highlights unless commit
+  details are explicitly requested for diagnostics.
 - Added native Soulseek discovery support for interests, hated interests,
   recommendations, item recommendations, similar users, and user-interest
   lookup through the vendored runtime and slskdN API.
