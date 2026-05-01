@@ -14,7 +14,7 @@
 - [x] **runtime**: Switch slskdN to slskNet.Runtime fork and deploy to kspls0.
  - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: Replaced the upstream `Soulseek` package reference with the sibling `slskNet.Runtime` project reference across app and test projects, passed type-1 peer-message obfuscation options into startup/runtime patches, and changed the runtime plan from pending to active. Published a Linux x64 self-contained artifact and deployed it to `kspls0` as `/usr/lib/slskd/releases/manual-slsknet-runtime-20260501171217`; `current` now points there. Live validation confirmed login, regular listener `50300`, obfuscated listener `50301`, a 500-response Soulseek search, and a completed 49-byte download smoke.
+ - Notes: Replaced the upstream `Soulseek` package reference with the vendored `vendor/slskNet.Runtime` project reference across app and test projects, passed type-1 peer-message obfuscation options into startup/runtime patches, and changed the runtime plan from pending to active. Published a Linux x64 self-contained artifact and deployed it to `kspls0` as `/usr/lib/slskd/releases/manual-slsknet-runtime-20260501171217`; `current` now points there. Live validation confirmed login, regular listener `50300`, obfuscated listener `50301`, a 500-response Soulseek search, and a completed 49-byte download smoke. Follow-up release work added Docker Hub publishing as `snapetech/slskdn` when Docker Hub secrets are configured.
 
 - [x] **release**: Configure Launchpad SFTP PPA upload path.
  - Status: completed (2026-05-01)

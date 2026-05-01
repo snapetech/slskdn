@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/slskd/slskd.csproj" />
-    <ProjectReference Include="../../../slskNet.Runtime/src/Soulseek.csproj" />
+    <ProjectReference Include="../../vendor/slskNet.Runtime/src/Soulseek.csproj" />
   </ItemGroup>
 
   <ItemGroup>

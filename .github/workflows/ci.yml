@@ -193,6 +193,9 @@ jobs:
     runs-on: ${{ vars.PREFER_SELF_HOSTED != 'false' && 'self-hosted' || 'ubuntu-latest' }}
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
+    env:
+      DOCKERHUB_IMAGE: snapetech/slskdn
+      HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
     permissions:
       contents: read
       packages: write
@@ -235,6 +238,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        if: env.HAS_DOCKERHUB == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Prepare Docker Tags
+        id: docker_tags
+        run: |
+          {
+            echo 'canary_tags<<EOF'
+            echo "ghcr.io/snapetech/slskdn:${CONTAINER_VERSION}"
+            echo 'ghcr.io/snapetech/slskdn:canary'
+            if [ "${HAS_DOCKERHUB}" = "true" ]; then
+              echo "${DOCKERHUB_IMAGE}:${CONTAINER_VERSION}"
+              echo "${DOCKERHUB_IMAGE}:canary"
+            else
+              echo "Docker Hub secrets are not configured; publishing GHCR tags only." >&2
+            fi
+            echo 'EOF'
+            echo 'release_tags<<EOF'
+            echo "ghcr.io/snapetech/slskdn:${CONTAINER_VERSION}"
+            echo "ghcr.io/snapetech/slskdn:${TAG}"
+            echo 'ghcr.io/snapetech/slskdn:canary'
+            echo 'ghcr.io/snapetech/slskdn:latest'
+            if [ "${HAS_DOCKERHUB}" = "true" ]; then
+              echo "${DOCKERHUB_IMAGE}:${CONTAINER_VERSION}"
+              echo "${DOCKERHUB_IMAGE}:${TAG}"
+              echo "${DOCKERHUB_IMAGE}:canary"
+              echo "${DOCKERHUB_IMAGE}:latest"
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push Canary
         if: "!startsWith(github.ref, 'refs/tags/')"
         uses: docker/build-push-action@v6
@@ -246,9 +284,7 @@ jobs:
             VERSION=${{ env.APP_VERSION }}
             REVISION=${{ env.REVISION }}
             BUILD_DATE=${{ env.BUILD_DATE }}
-          tags: |
-            ghcr.io/snapetech/slskdn:${{ env.CONTAINER_VERSION }}
-            ghcr.io/snapetech/slskdn:canary
+          tags: ${{ steps.docker_tags.outputs.canary_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -260,11 +296,7 @@ jobs:
           push: true
           build-args: |
             VERSION=${{ env.APP_VERSION }}
-          tags: |
-            ghcr.io/snapetech/slskdn:${{ env.CONTAINER_VERSION }}
-            ghcr.io/snapetech/slskdn:${{ env.TAG }}
-            ghcr.io/snapetech/slskdn:canary
-            ghcr.io/snapetech/slskdn:latest
+          tags: ${{ steps.docker_tags.outputs.release_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

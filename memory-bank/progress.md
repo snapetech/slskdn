@@ -9328,3 +9328,11 @@ Code quality improvements were completed as part of Option A:
 - Generated a dedicated Launchpad PPA SFTP SSH key for slskdN release uploads and stored the private key plus Launchpad username as GitHub repository secrets.
 - Updated `build-on-tag.yml` and `release-ppa.yml` to preflight Launchpad SSH/SFTP when `LAUNCHPAD_SFTP_KEY` is configured, upload signed source packages with `dput` over SFTP, and keep the anonymous FTP/curl path as fallback.
 - Documented the SFTP-preferred PPA upload gotcha immediately in ADR-0001 and committed it separately.
+- The first SFTP workflow retry showed the preflight still selected Launchpad IPv6 on GitHub and failed with `[Errno 101] Network is unreachable`; documented that gotcha separately and pinned the SFTP preflight to IPv4 too.
+
+## 2026-05-01 17:35:00Z
+
+- Vendored the `slskNet.Runtime` source into `vendor/slskNet.Runtime` and updated slskdN app/test project references plus `slskd.sln` so local builds do not depend on a sibling checkout.
+- Simplified the ingress-port migration notice to old/new port lists, added the obfuscated `50301` listener to the new required ports, and rebuilt the frontend bundle locally.
+- Added Docker Hub release publishing for `snapetech/slskdn` alongside GHCR when Docker Hub credentials are configured.
+- Validation in progress: Web UI tests and production build passed, backend build passed against the vendored runtime, and unit/API tests passed before the user interrupted the long integration-test phase to add Docker Hub work.

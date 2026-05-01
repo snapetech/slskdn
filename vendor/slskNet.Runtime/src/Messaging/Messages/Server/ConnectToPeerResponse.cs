@@ -1,0 +1,169 @@
+﻿// <copyright file="ConnectToPeerResponse.cs" company="JP Dillingham">
+//     Copyright (c) JP Dillingham.
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, version 3.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with this program.  If not, see https://www.gnu.org/licenses/.
+//
+//     This program is distributed with Additional Terms pursuant to Section 7
+//     of the GPLv3.  See the LICENSE file in the root directory of this
+//     project for the complete terms and conditions.
+//
+//     SPDX-FileCopyrightText: JP Dillingham
+//     SPDX-License-Identifier: GPL-3.0-only
+//
+//     Modified by slskdN Team.
+//     Modified: Parse optional type-1 obfuscated port metadata.
+// </copyright>
+
+namespace Soulseek.Messaging.Messages
+{
+    using System;
+    using System.Net;
+
+    /// <summary>
+    ///     A server response which solicits a peer connection.
+    /// </summary>
+    internal sealed class ConnectToPeerResponse : IIncomingMessage
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ConnectToPeerResponse"/> class.
+        /// </summary>
+        /// <param name="username">The username of the peer.</param>
+        /// <param name="type">The connection type ('P' for message or 'F' for transfer).</param>
+        /// <param name="ipAddress">The IP address to which to connect.</param>
+        /// <param name="port">The port to which to connect.</param>
+        /// <param name="token">The unique connection token.</param>
+        /// <param name="isPrivileged">A value indicating whether the user is privileged.</param>
+        /// <param name="obfuscationType">The peer-message obfuscation type, if advertised.</param>
+        /// <param name="obfuscatedPort">The obfuscated peer-message port, if advertised.</param>
+        public ConnectToPeerResponse(string username, string type, IPAddress ipAddress, int port, int token, bool isPrivileged, int obfuscationType = 0, int obfuscatedPort = 0)
+            : this(username, type, new IPEndPoint(ipAddress, port), token, isPrivileged, obfuscationType, obfuscatedPort)
+        {
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ConnectToPeerResponse"/> class.
+        /// </summary>
+        /// <param name="username">The username of the peer.</param>
+        /// <param name="type">The connection type ('P' for message or 'F' for transfer).</param>
+        /// <param name="endpoint">The IP endpoint to which to connect.</param>
+        /// <param name="token">The unique connection token.</param>
+        /// <param name="isPrivileged">A value indicating whether the user is privileged.</param>
+        /// <param name="obfuscationType">The peer-message obfuscation type, if advertised.</param>
+        /// <param name="obfuscatedPort">The obfuscated peer-message port, if advertised.</param>
+        public ConnectToPeerResponse(string username, string type, IPEndPoint endpoint, int token, bool isPrivileged, int obfuscationType = 0, int obfuscatedPort = 0)
+        {
+            Username = username;
+            Type = type;
+            Token = token;
+            IPEndPoint = endpoint;
+            IsPrivileged = isPrivileged;
+            ObfuscationType = obfuscationType;
+            ObfuscatedPort = obfuscatedPort;
+
+            IPAddress = IPEndPoint.Address;
+            Port = IPEndPoint.Port;
+        }
+
+        /// <summary>
+        ///     Gets the obfuscated peer-message endpoint, if advertised.
+        /// </summary>
+        public IPEndPoint ObfuscatedIPEndPoint => HasObfuscatedEndpoint ? new IPEndPoint(IPAddress, ObfuscatedPort) : null;
+
+        /// <summary>
+        ///     Gets the obfuscated peer-message port, if advertised.
+        /// </summary>
+        public int ObfuscatedPort { get; }
+
+        /// <summary>
+        ///     Gets the peer-message obfuscation type, if advertised.
+        /// </summary>
+        public int ObfuscationType { get; }
+
+        /// <summary>
+        ///     Gets a value indicating whether compatible obfuscated peer-message metadata was advertised.
+        /// </summary>
+        public bool HasObfuscatedEndpoint => ObfuscationType == 1 && ObfuscatedPort > 0 && ObfuscatedPort <= IPEndPoint.MaxPort;
+
+        /// <summary>
+        ///     Gets the IP address to which to connect.
+        /// </summary>
+        public IPAddress IPAddress { get; }
+
+        /// <summary>
+        ///     Gets the IP endpoint to which to connect.
+        /// </summary>
+        public IPEndPoint IPEndPoint { get; }
+
+        /// <summary>
+        ///     Gets a value indicating whether the user is privileged.
+        /// </summary>
+        public bool IsPrivileged { get; }
+
+        /// <summary>
+        ///     Gets the port to which to connect.
+        /// </summary>
+        public int Port { get; }
+
+        /// <summary>
+        ///     Gets the unique connection token.
+        /// </summary>
+        public int Token { get; }
+
+        /// <summary>
+        ///     Gets the connection type ('P' for message, 'F' for transfer, or 'D' for distributed).
+        /// </summary>
+        public string Type { get; }
+
+        /// <summary>
+        ///     Gets the username of the peer.
+        /// </summary>
+        public string Username { get; }
+
+        /// <summary>
+        ///     Creates a new instance of <see cref="ConnectToPeerResponse"/> from the specified <paramref name="bytes"/>.
+        /// </summary>
+        /// <param name="bytes">The byte array from which to parse.</param>
+        /// <returns>The created instance.</returns>
+        public static ConnectToPeerResponse FromByteArray(byte[] bytes)
+        {
+            var reader = new MessageReader<MessageCode.Server>(bytes);
+            var code = reader.ReadCode();
+
+            if (code != MessageCode.Server.ConnectToPeer)
+            {
+                throw new MessageException($"Message Code mismatch creating {nameof(ConnectToPeerResponse)} (expected: {(int)MessageCode.Server.ConnectToPeer}, received: {(int)code}");
+            }
+
+            var username = reader.ReadString();
+            var type = reader.ReadString();
+
+            var ipBytes = reader.ReadBytes(4);
+            Array.Reverse(ipBytes);
+            var ipAddress = new IPAddress(ipBytes);
+
+            var port = reader.ReadInteger();
+            var token = reader.ReadInteger();
+            var isPrivileged = reader.ReadByte() > 0;
+            var obfuscationType = 0;
+            var obfuscatedPort = 0;
+
+            if (reader.HasMoreData)
+            {
+                obfuscationType = reader.ReadInteger();
+                obfuscatedPort = reader.ReadInteger();
+            }
+
+            return new ConnectToPeerResponse(username, type, ipAddress, port, token, isPrivileged, obfuscationType, obfuscatedPort);
+        }
+    }
+}

@@ -296,6 +296,12 @@ const CURRENT_INGRESS_PORTS = [
     proto: 'TCP',
   },
   {
+    config: 'soulseek.obfuscation.listen_port',
+    label: 'Soulseek obfuscated peer messages',
+    port: 50301,
+    proto: 'TCP',
+  },
+  {
     config: 'dht.overlay_port + dht.dht_port',
     label: 'slskdN mesh overlay and DHT rendezvous',
     port: 50305,
@@ -405,19 +411,19 @@ const VpnPortChangeNotice = ({ onDismiss, portForwards, previousSnapshot }) => {
         <div className="network-endpoint-change-notice-copy">
           <strong>slskdN ingress ports were reduced.</strong>
           <span>
-            Old builds exposed several local ingress ports. Current builds only
-            need the Soulseek port and the shared mesh/DHT port. Remove stale
-            router, firewall, and VPN forwards that are not in the current list.
+            Router, firewall, and VPN forwards only need to point at the local
+            ports below. Remove forwards for ports that were used by older
+            builds but are no longer used.
           </span>
           <IngressPortList
             expectedPorts={LEGACY_INGRESS_PORTS}
             portForwards={[]}
-            title="Old builds often exposed"
+            title="Old port list"
           />
           <IngressPortList
             expectedPorts={CURRENT_INGRESS_PORTS}
             portForwards={portForwards}
-            title="Current build requires"
+            title="New port list"
           />
           {hasDismissedOlderForwardSet ? (
             <span className="network-endpoint-change-note">

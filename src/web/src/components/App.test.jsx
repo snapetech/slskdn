@@ -280,9 +280,11 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('slskdN ingress ports were reduced.')).toBeInTheDocument();
     expect(screen.getAllByText('Soulseek peer/file transfers')).toHaveLength(2);
-    expect(screen.getByText('Old builds often exposed')).toBeInTheDocument();
-    expect(screen.getByText('Current build requires')).toBeInTheDocument();
+    expect(screen.getByText('Old port list')).toBeInTheDocument();
+    expect(screen.getByText('New port list')).toBeInTheDocument();
     expect(screen.getAllByText('TCP 50300')).toHaveLength(2);
+    expect(screen.getAllByText('TCP 50301')).toHaveLength(2);
+    expect(screen.getByText('Soulseek obfuscated peer messages')).toBeInTheDocument();
     expect(screen.getByText('TCP/UDP 50305')).toBeInTheDocument();
     expect(screen.getByText('legacy mesh UDP overlay')).toBeInTheDocument();
     expect(screen.getByText('UDP 50400')).toBeInTheDocument();

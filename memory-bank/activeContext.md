@@ -1,11 +1,24 @@
+## Update 2026-05-01 17:35:00Z
+
+- Current task: slskdN runtime vendoring, ingress notice cleanup, and Docker Hub release-channel work are in progress.
+- Last activity:
+  - vendored `slskNet.Runtime` under `vendor/slskNet.Runtime` and moved app/test project references to the in-repo project
+  - simplified the ingress-port migration notice to plain old/new port lists and added the obfuscated listener to the new required list
+  - rebuilt the Web UI bundle locally and started full `bin/build`; frontend tests, frontend production build, backend build, unit tests, and API tests passed before the integration test run was interrupted by the user
+  - added Docker Hub tags to release Docker jobs, gated on `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+- Next steps:
+  1. Run focused workflow/YAML and build validation after the Docker Hub workflow edit.
+  2. Publish a fresh `linux-x64` artifact from this repo and redeploy `kspls0`.
+  3. Commit and push the complete repo state to `snapetech/slskdn`.
+
 ## Update 2026-05-01 17:30:00Z
 
 - Current task: Launchpad SFTP PPA upload setup is in progress.
 - Last activity:
   - generated `~/.ssh/slskdn_launchpad_ppa_ed25519`
   - stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in `snapetech/slskdn` GitHub repository secrets
-  - updated both PPA workflows to prefer SFTP when the key is configured and retain anonymous FTP as fallback
-  - documented the SFTP-preferred PPA upload gotcha and committed it separately
+  - updated both PPA workflows to prefer IPv4-pinned SFTP when the key is configured and retain anonymous FTP as fallback
+  - documented the SFTP-preferred PPA upload and SFTP IPv4-pinning gotchas as separate commits
 - Next steps:
   1. Validate workflow YAML and run the standalone PPA upload workflow for `2026050100-slskdn.215`.
   2. Register the generated public key on the `~keefshape` Launchpad account if SFTP authentication rejects it.

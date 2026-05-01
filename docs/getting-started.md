@@ -85,6 +85,7 @@ scoop install slskdn
 
 ```bash
 docker pull ghcr.io/snapetech/slskdn:latest
+docker pull snapetech/slskdn:latest
 docker run -d \
   --name slskdn \
   -p 5030:5030 \
