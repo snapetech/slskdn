@@ -67,7 +67,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
     private long _totalCandidatesSkippedReconnectBackoff;
     private long _totalConnectionsAttempted;
     private long _totalConnectionsSucceeded;
-    private int _loadedSavedNodeCount;
+    private int _loadedSavedNodeTableBytes;
     private CancellationTokenSource? _backgroundInitializationCts;
     private Task? _backgroundInitializationTask;
     private bool _backgroundServiceStarted;
@@ -263,11 +263,11 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         // Wait for DHT to bootstrap. Cold public-DHT starts routinely need longer
         // than warm saved-node starts; LAN-only mode should fail fast because it
         // intentionally skips public routers.
-        var bootstrapTimeoutSeconds = GetBootstrapTimeoutSeconds(_options, _loadedSavedNodeCount);
+        var bootstrapTimeoutSeconds = GetBootstrapTimeoutSeconds(_options, _loadedSavedNodeTableBytes);
         _logger.LogInformation(
-            "Waiting up to {TimeoutSeconds}s for DHT to bootstrap (savedNodes={SavedNodes}, lanOnly={LanOnly})...",
+            "Waiting up to {TimeoutSeconds}s for DHT to bootstrap (savedNodeTableBytes={SavedNodeTableBytes}, lanOnly={LanOnly})...",
             bootstrapTimeoutSeconds,
-            _loadedSavedNodeCount,
+            _loadedSavedNodeTableBytes,
             _options.LanOnly);
         var bootstrapTimeout = TimeSpan.FromSeconds(bootstrapTimeoutSeconds);
         sw.Restart();
@@ -284,14 +284,14 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         else
         {
             _logger.LogWarning(
-                "DHT bootstrap did not reach Ready within adaptive {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}, savedNodes: {SavedNodes}, lanOnly: {LanOnly}). " +
+                "DHT bootstrap did not reach Ready within adaptive {TimeoutSeconds}s on UDP port {Port} (state: {State}, nodes: {Nodes}, savedNodeTableBytes: {SavedNodeTableBytes}, lanOnly: {LanOnly}). " +
                 "Peer announce/discovery will stay disabled until bootstrap succeeds. If the DHT still has not reached Ready after this grace period, " +
                 "verify that UDP port {Port} is reachable, forwarded, and allowed through the host firewall.",
                 (int)bootstrapTimeout.TotalSeconds,
                 _options.DhtPort,
                 _dhtEngine?.State,
                 _dhtEngine?.NodeCount ?? 0,
-                _loadedSavedNodeCount,
+                _loadedSavedNodeTableBytes,
                 _options.LanOnly,
                 _options.DhtPort);
         }
@@ -393,7 +393,7 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
                 try
                 {
                     initialNodes = await File.ReadAllBytesAsync(dhtStatePath, cancellationToken);
-                    _loadedSavedNodeCount = initialNodes.Length > 0 ? 1 : 0;
+                    _loadedSavedNodeTableBytes = initialNodes.Length;
                     _logger.LogDebug("Loaded {Bytes} bytes of saved DHT state", initialNodes.Length);
                 }
                 catch (Exception ex)
@@ -674,14 +674,14 @@ public sealed class DhtRendezvousService : BackgroundService, IDhtRendezvousServ
         return interval <= MaxPeerReconnectInterval ? interval : MaxPeerReconnectInterval;
     }
 
-    internal static int GetBootstrapTimeoutSeconds(DhtRendezvousOptions options, int savedNodeCount)
+    internal static int GetBootstrapTimeoutSeconds(DhtRendezvousOptions options, int savedNodeTableBytes)
     {
         if (options.LanOnly)
         {
             return Math.Max(1, options.LanOnlyBootstrapTimeoutSeconds);
         }
 
-        if (savedNodeCount <= 0)
+        if (savedNodeTableBytes <= 0)
         {
             return Math.Max(1, options.ColdBootstrapTimeoutSeconds);
         }
