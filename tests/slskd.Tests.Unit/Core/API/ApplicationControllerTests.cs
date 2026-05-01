@@ -3,6 +3,7 @@
 // </copyright>
 namespace slskd.Tests.Unit.Core.API;
 
+using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +15,14 @@ using Xunit;
 
 public class ApplicationControllerTests
 {
+
+    [Fact]
+    public void GetRestartArguments_DropsExecutablePath()
+    {
+        var args = ApplicationController.GetRestartArguments(new[] { "/usr/lib/slskd/slskd", "--config", "/etc/slskd/slskd.yml" }).ToList();
+
+        Assert.Equal(new[] { "--config", "/etc/slskd/slskd.yml" }, args);
+    }
 
     [Fact]
     public void State_ExposesRuntimeIdentityForTheRunningProcess()

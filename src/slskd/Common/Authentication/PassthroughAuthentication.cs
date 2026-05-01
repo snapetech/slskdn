@@ -58,9 +58,9 @@ namespace slskd.Authentication
 
         /// <summary>
         ///     Authenticates using the configured <see cref="PassthroughAuthenticationOptions.Username"/> and <see cref="PassthroughAuthenticationOptions.Role"/>.
-        ///     When AllowRemoteNoAuth is false, only loopback requests are allowed (PR-03).
+        ///     Remote requests require AllowRemoteNoAuth=true and at least one matching AllowedCidrs entry; otherwise passthrough is loopback-only (PR-03).
         /// </summary>
-        /// <returns>A successful authentication result, or failure when remote and AllowRemoteNoAuth is false.</returns>
+        /// <returns>A successful authentication result, or failure when remote access is not explicitly allowed by CIDR.</returns>
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             var remote = Context.Connection.RemoteIpAddress?.NormalizeMappedIPv4();
@@ -135,12 +135,12 @@ namespace slskd.Authentication
         public Role Role { get; set; } = Role.Administrator;
 
         /// <summary>
-        ///     When true, allow passthrough from non-loopback addresses. When false, passthrough is loopback-only (PR-03).
+        ///     When true, allow passthrough from non-loopback addresses only when <see cref="AllowedCidrs"/> is non-empty and matches the remote address. When false, passthrough is loopback-only (PR-03).
         /// </summary>
         public bool AllowRemoteNoAuth { get; set; } = false;
 
         /// <summary>
-        ///     Optional. Comma-separated CIDRs (e.g. 127.0.0.1/32,::1/128) allowed when no-auth in addition to loopback (PR-03).
+        ///     Optional. Comma-separated CIDRs (e.g. 127.0.0.1/32,::1/128) allowed when no-auth in addition to loopback. Required for AllowRemoteNoAuth to permit remote passthrough (PR-03).
         /// </summary>
         public string? AllowedCidrs { get; set; }
     }

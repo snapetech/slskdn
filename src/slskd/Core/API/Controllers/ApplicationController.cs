@@ -23,7 +23,9 @@ using Microsoft.Extensions.Options;
 namespace slskd.Core.API
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using System.Net;
     using System.Threading.Tasks;
     using Asp.Versioning;
@@ -105,12 +107,17 @@ namespace slskd.Core.API
             var currentExecutable = Process.GetCurrentProcess().MainModule?.FileName;
             if (!string.IsNullOrEmpty(currentExecutable))
             {
-                Process.Start(currentExecutable, Environment.CommandLine);
+                Process.Start(currentExecutable, GetRestartArguments(Environment.GetCommandLineArgs()));
             }
 
             Lifetime.StopApplication();
 
             return NoContent();
+        }
+
+        internal static IEnumerable<string> GetRestartArguments(IEnumerable<string> commandLineArgs)
+        {
+            return commandLineArgs.Skip(1);
         }
 
         /// <summary>

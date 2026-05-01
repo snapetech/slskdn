@@ -177,6 +177,20 @@ public class StreamsControllerTests
     }
 
     [Fact]
+    public async Task Get_StreamSetupThrows_ReleasesLimiter()
+    {
+        var controller = CreateController();
+        SetContext(controller, authenticated: true);
+        _locatorMock.Setup(x => x.Resolve("c1", It.IsAny<CancellationToken>()))
+            .Returns(new ResolvedContent("\0", 100, "audio/mpeg"));
+        _limiterMock.Setup(x => x.TryAcquire("user:alice", 5)).Returns(true);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => controller.Get("c1", null, null, CancellationToken.None));
+
+        _limiterMock.Verify(x => x.Release("user:alice"), Times.Once);
+    }
+
+    [Fact]
     public async Task Get_NormalAuth_Success_ReturnsFileWithRange()
     {
         var path = Path.Combine(Path.GetTempPath(), "StreamsCtrl_" + Guid.NewGuid().ToString("N")[..8] + ".bin");

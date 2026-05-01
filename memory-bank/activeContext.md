@@ -1,3 +1,16 @@
+## Update 2026-05-01 19:10:00Z
+
+- Current task: Review-reported non-security correctness bugs are fixed locally.
+- Last activity:
+  - fixed admin restart argument handling so the restarted process receives argv[1..], not a duplicated executable path
+  - fixed streaming setup failure cleanup so the limiter slot is released if setup throws before `ReleaseOnDisposeStream` takes ownership
+  - tightened passthrough no-auth XML docs to state that remote access requires both `AllowRemoteNoAuth=true` and a matching non-empty `AllowedCidrs`
+  - added focused regression tests for restart argument trimming and stream setup failure limiter release
+  - documented ADR-0001 gotchas `0z268`, `0z269`, and `0z270`
+  - validation passed: focused controller tests, `bash ./bin/lint`, full `dotnet test`
+- Next steps:
+  1. Push local commits when ready.
+
 ## Update 2026-05-01 18:55:00Z
 
 - Current task: Current repo code is built and running on `kspls0` for user testing.

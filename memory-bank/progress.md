@@ -1,3 +1,10 @@
+## 2026-05-01 19:10:00Z
+
+- Fixed three non-security correctness bugs from review: admin restart now preserves only argv[1..], stream setup failures release the reserved limiter slot before rethrowing, and passthrough no-auth XML docs now state that remote access requires both `AllowRemoteNoAuth=true` and a matching non-empty `AllowedCidrs`.
+- Added focused regression coverage for restart argument trimming and stream setup failure limiter release.
+- Documented the restart argument, stream ownership handoff, and passthrough CIDR documentation gotchas in ADR-0001.
+- Validation: focused `ApplicationControllerTests`/`StreamsControllerTests` passed, `bash ./bin/lint` passed, and full `dotnet test` passed.
+
 ## 2026-05-01 18:55:00Z
 
 - Built and deployed current repo code to `kspls0` as `0.0.0-slskdn.manual.20260501185541.9d639c7d3.dirty` under `/usr/lib/slskd/releases/manual-20260501185541.9d639c7d3.dirty`.

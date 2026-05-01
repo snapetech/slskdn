@@ -161,6 +161,7 @@ public class StreamsController : ControllerBase
             return StatusCode(429, "Too many concurrent streams.");
 
         Stream? stream = null;
+        var limiterAcquired = true;
         try
         {
 #pragma warning disable CA2000 // Ownership is transferred to ReleaseOnDisposeStream/FileResult on success and disposed in finally on failure.
@@ -170,12 +171,28 @@ public class StreamsController : ControllerBase
 #pragma warning restore CA2000
             ownedStream = null;
             stream = null;
+            limiterAcquired = false;
             return File(wrapped, resolved.ContentType, enableRangeProcessing: true);
         }
         catch (IOException)
         {
-            _limiter.Release(limiterKey);
+            if (limiterAcquired)
+            {
+                _limiter.Release(limiterKey);
+                limiterAcquired = false;
+            }
+
             return NotFound();
+        }
+        catch
+        {
+            if (limiterAcquired)
+            {
+                _limiter.Release(limiterKey);
+                limiterAcquired = false;
+            }
+
+            throw;
         }
         finally
         {
