@@ -23,7 +23,7 @@ For dev or build tags, use the same logical version string embedded in the tag.
 ## [Unreleased]
 
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
-  links.
+  links, with focused UI coverage.
 - Added adaptive DHT rendezvous bootstrap timeouts for warm, cold, and LAN-only
   startup paths, with bootstrap logs reporting saved node-table bytes.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
