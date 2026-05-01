@@ -15,7 +15,7 @@ slskdn needs one repeatable gate for release-critical behavior, not scattered on
 
 For tester-reported or externally reported regressions, the release bar is not just "some tests passed." The team must capture the reported repro contract, reproduce the same failure locally or in an equivalent environment when practical, then verify the same path after the patch.
 
-Use [bugfix-verification-checklist.md](<repo-root>/docs/dev/bugfix-verification-checklist.md) before calling a reported issue "fixed."
+Use [bugfix-verification-checklist.md](bugfix-verification-checklist.md) before calling a reported issue "fixed."
 
 Rules:
 
@@ -43,7 +43,7 @@ This is the minimum bar for code that is about to ship or gate CI:
   - `CanonicalSelectionTests`
   - `LibraryHealthTests`
 
-See [release-checklist.md](<repo-root>/docs/dev/release-checklist.md) for the operator-facing release steps and what this gate does or does not prove.
+See [release-checklist.md](release-checklist.md) for the operator-facing release steps and what this gate does or does not prove.
 
 ### 2. Focused Regression Tests
 

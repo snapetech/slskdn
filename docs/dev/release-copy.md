@@ -4,8 +4,8 @@ This repo has multiple release-description surfaces with different practical lim
 
 ## GitHub Release Bodies
 
-- Source of truth: [`.github/release-notes/main.md.tmpl`](<repo-root>/.github/release-notes/main.md.tmpl) and [`.github/release-notes/dev.md.tmpl`](<repo-root>/.github/release-notes/dev.md.tmpl)
-- Rendered by: [`packaging/scripts/render-release-notes.sh`](<repo-root>/packaging/scripts/render-release-notes.sh)
+- Source of truth: [`.github/release-notes/main.md.tmpl`](../../.github/release-notes/main.md.tmpl) and [`.github/release-notes/dev.md.tmpl`](../../.github/release-notes/dev.md.tmpl)
+- Rendered by: [`packaging/scripts/render-release-notes.sh`](../../packaging/scripts/render-release-notes.sh)
 - Enforced budget:
   - main: `<= 4800` chars
   - dev: `<= 4200` chars
@@ -15,8 +15,8 @@ GitHub does not publish a tight small cap for release bodies, so these are inter
 ## Winget Default Locale Copy
 
 - Source files:
-  - [`packaging/winget/snapetech.slskdn.locale.en-US.yaml`](<repo-root>/packaging/winget/snapetech.slskdn.locale.en-US.yaml)
-  - [`packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml`](<repo-root>/packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml)
+  - [`packaging/winget/snapetech.slskdn.locale.en-US.yaml`](../../packaging/winget/snapetech.slskdn.locale.en-US.yaml)
+  - [`packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml`](../../packaging/winget/snapetech.slskdn-dev.locale.en-US.yaml)
 - Official schema:
   - `ShortDescription <= 256`
   - `Description <= 10000`
