@@ -52,6 +52,71 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z249. Do Not Persist Stale Transfer Snapshots After Marking Failure
+
+**The Bug**: `UploadService.UploadAsync` called `TryFail(...)` after Soulseek upload failures, then wrote the stale pre-failure `Transfer` object back to the database, clearing the terminal `Completed | Errored` state and leaving refused upload attempts looking active.
+
+**Files Affected**:
+- `src/slskd/Transfers/Uploads/UploadService.cs`
+- `tests/slskd.Tests.Unit/Transfers/Uploads/UploadServiceLifecycleTests.cs`
+
+**Wrong**:
+```csharp
+TryFail(transfer.Id, exception: ex);
+SynchronizedUpdate(transfer, semaphore: syncRoot, cancellationToken: CancellationToken.None);
+throw;
+```
+
+**Correct**:
+```csharp
+TryFail(transfer.Id, exception: ex);
+throw;
+```
+
+**Why This Keeps Happening**: Transfer methods keep a mutable local transfer snapshot while callbacks and database helpers update state. Once a helper persists a terminal failure, never write an older in-memory snapshot afterward unless it was explicitly refreshed from the database.
+
+### 0z248. Visualizer Tile Tokens Must Resolve To Concrete Backends
+
+**The Bug**: The player display tile still wrote the legacy `milkdrop` tile token after the visualizer engine state split into concrete `butterchurn`, `native-webgl2`, and `native-webgpu` values, so the display area could fall back to album art or analyzer output instead of creating the requested visualizer backend.
+
+**Files Affected**:
+- `src/web/src/components/Player/PlayerBar.jsx`
+- `src/web/src/components/Player/Visualizer.jsx`
+
+**Wrong**:
+```jsx
+const readStoredTileMode = () =>
+  getLocalStorageItem(visualTileStorageKey) === 'milkdrop' ? 'milkdrop' : 'art';
+
+const toggleVisualizer = () => {
+  setVisualTileMode('milkdrop');
+  setVisualizerMode((mode) => (mode === 'off' ? 'inline' : 'off'));
+};
+```
+
+**Correct**:
+```jsx
+const readStoredVisualizerEngineTileMode = () => {
+  const engine = getLocalStorageItem(visualizerEngineStorageKey);
+  if (engine === 'native') return 'native-webgl2';
+  return ['butterchurn', 'native-webgl2', 'native-webgpu'].includes(engine)
+    ? engine
+    : 'butterchurn';
+};
+
+const toggleVisualizer = () => {
+  setVisualizerMode((mode) => {
+    if (mode === 'off') {
+      setVisualTileMode(readStoredVisualizerEngineTileMode());
+      return 'inline';
+    }
+    return 'off';
+  });
+};
+```
+
+**Why This Keeps Happening**: The tile mode and renderer engine used to be separate, coarse states. Once the UI exposes multiple concrete visualizer backends in the same display surface, any legacy umbrella token like `milkdrop` has to be migrated at read/write boundaries; otherwise controls can enable the visualizer without selecting an actual engine implementation.
+
 ### 0z247. ContentId Fallbacks Must Not Bypass Non-Advertisable Share Entries
 
 **The Bug**: `ContentLocator` rejected a matching repository content item when `IsAdvertisable` was false, but then continued into the allowed-local-root fallback, letting `path:` content ids bypass the explicit non-advertisable share decision.
