@@ -4503,6 +4503,7 @@ dotnet test
   - kept explicit player tile modes for spectrum, signal scope, Butterchurn, MilkDrop3 WebGL2, and MilkDrop3 WebGPU
   - synced the rebuilt `wwwroot` to `/usr/lib/slskd/current/wwwroot` on `kspls0` and restarted the live `slskd` service
   - verified `http://kspls0:5030` serves `index-CaQ2HqYt.js` and `index-6lV9-732.css`
+  - fixed the bad restart state where the process briefly ran without `/etc/slskd/slskd.yml` and only listened on `127.0.0.1:5030`; verified it now listens on `0.0.0.0:5030`
 - Next steps:
   1. If the browser still shows the old visualizer tile, hard-refresh once or unregister the old service worker; the server endpoint is now serving the new bundle.
   2. Continue debugging any runtime browser-console errors from Butterchurn or native MilkDrop after confirming the new bundle is loaded.
