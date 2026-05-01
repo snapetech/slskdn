@@ -697,13 +697,33 @@ body {
     padding: 0;
 }
 
-.network-endpoint-change-item > .icon {
-    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
-    margin: 0;
-}
-
 .network-endpoint-change-config {
     color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+}
+
+.network-endpoint-change-status {
+    border: 1px solid var(--slskd-tertiary-border-color, rgba(34, 36, 38, 0.15));
+    border-radius: 999px;
+    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+    font-size: 0.86em;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 1px 7px;
+}
+
+.network-endpoint-change-status.open {
+    background: rgba(33, 186, 69, 0.16);
+    border-color: rgba(33, 186, 69, 0.45);
+    color: var(--slskdn-success, #21ba45);
+}
+
+.network-endpoint-change-status.unknown {
+    background: rgba(110, 118, 129, 0.12);
+}
+
+.network-endpoint-change-note {
+    color: var(--slskd-color-subtle, rgba(0, 0, 0, 0.58));
+    font-size: 0.92em;
 }
 
 .network-endpoint-change-notice .ui.basic.button {

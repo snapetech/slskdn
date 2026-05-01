@@ -22,6 +22,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Reworded the ingress-port migration notice to show plain old-versus-current
+  port requirements and mark currently reported forwards as active.
 - Kept VPN provider forwarded ports separate from the local Soulseek listener
   so Gluetun status polling no longer tries to rebind `soulseek.listen_port` to
   the public/NAT port.
