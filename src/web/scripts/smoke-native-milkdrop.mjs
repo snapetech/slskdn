@@ -37,7 +37,7 @@ const smokeHtml = `
           };
         };
 
-        window.__nativeMilkdropSmoke = fixtureIds.map((fixtureId, index) => {
+        const smokeStats = fixtureIds.map((fixtureId, index) => {
           const fixture = getNativeMilkdropFixture(fixtureId);
           const parsed = parseMilkdropPreset(fixture.source, {
             format: fixtureId.startsWith('milkdrop3-') || fixtureId === 'milk2-double' ? 'milk2' : undefined,
@@ -62,6 +62,32 @@ const smokeHtml = `
             ...stats,
           };
         });
+
+        const contextLossExtension = gl.getExtension('WEBGL_lose_context');
+        let contextLost = false;
+        let contextRestored = false;
+        canvas.addEventListener('webglcontextlost', (event) => {
+          event.preventDefault();
+          contextLost = true;
+        });
+        canvas.addEventListener('webglcontextrestored', () => {
+          contextRestored = true;
+        });
+        if (contextLossExtension) {
+          contextLossExtension.loseContext();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          contextLossExtension.restoreContext();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+
+        window.__nativeMilkdropSmoke = {
+          contextLoss: {
+            restored: contextRestored,
+            supported: Boolean(contextLossExtension),
+            lost: contextLost,
+          },
+          stats: smokeStats,
+        };
       </script>
     </body>
   </html>
@@ -103,14 +129,17 @@ try {
   const result = await page.waitForFunction(() => window.__nativeMilkdropSmoke, null, {
     timeout: 10_000,
   });
-  const stats = await result.jsonValue();
+  const { contextLoss, stats } = await result.jsonValue();
   const blankResult = stats.find((fixtureStats) =>
     fixtureStats.litPixels < fixtureStats.pixelCount * 0.05
     || fixtureStats.channelTotal <= 0);
   if (blankResult) {
     throw new Error(`Native MilkDrop smoke rendered a blank canvas: ${JSON.stringify(stats)}`);
   }
-  console.log(`Native MilkDrop smoke passed: ${JSON.stringify(stats)}`);
+  if (!contextLoss.supported || !contextLoss.lost || !contextLoss.restored) {
+    throw new Error(`Native MilkDrop context loss smoke failed: ${JSON.stringify(contextLoss)}`);
+  }
+  console.log(`Native MilkDrop smoke passed: ${JSON.stringify({ contextLoss, stats })}`);
 } finally {
   await browser.close();
   await server.close();

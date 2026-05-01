@@ -91,6 +91,14 @@
   gap: 0.35rem;
 }
 
+.import-staging-override-form.ui.form {
+  margin-top: 0.5rem;
+}
+
+.import-staging-override-form .fields {
+  margin-bottom: 0 !important;
+}
+
 @media only screen and (max-width: 760px) {
   .import-staging-header {
     align-items: stretch;

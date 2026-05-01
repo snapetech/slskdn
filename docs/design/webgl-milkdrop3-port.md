@@ -149,7 +149,7 @@ Current parser/VM scope:
 - Native mode summarizes active custom shape and wave fragments, lets users choose which fragment to export, and can remove a selected fragment from the active preset while persisting the edited preset locally.
 - Native mode includes first safe parameter editing for common global values such as decay, zoom, rotation, and waveform color/alpha. Edits rebuild the active renderer, persist as an edited browser-local preset, and can be exported as preset text.
 - Native mode can randomize the same bounded visual parameter set to create a local mashup/edit, exposes pointer position/delta/button state as MilkDrop-style mouse variables, and has a compact debug snapshot overlay for preset format, primitive counts, shader sections, and active title.
-- Native mode includes first browser-local FPS caps plus a debug frame-time readout so users can trade smoothness for lower GPU load.
+- Native mode includes browser-local quality presets, FPS caps, WebGPU capability reporting in the debug overlay, and a debug frame-time readout so users can trade smoothness for lower GPU load.
 - Native render errors are caught at the animation-frame boundary, surfaced in the visualizer overlay with the underlying unsupported-function/syntax detail, and clear the persisted imported preset so a bad preset does not fail every future native-engine session.
 - The expression VM now supports additional common NSEEL helpers and constants used by imported presets: `pi`, `e`, `acos`, `asin`, `atan`, `atan2`, `tan`, `log`, `log10`, `exp`, `sign`, `sigmoid`, `rand`, and bitwise helper functions `band`, `bor`, `bxor`, and `bnot`.
 - The expression VM also supports inline `&`, `|`, `^`, `~`, `!`, `<<`, `>>`, `&&`, and `||` operators so presets that use operator syntax instead of helper functions do not get rejected.
@@ -195,8 +195,9 @@ Current parser/VM scope:
 ### Phase 4: WebGPU And Native-Like Polish
 
 - Add optional WebGPU renderer for heavier shaders and better texture pipelines.
+- [x] Add first WebGPU capability reporting while keeping WebGL2 as the renderer baseline.
 - Add shader cache/precompile where browser APIs allow it.
-- Add performance quality presets, FPS caps, and GPU load indicators.
+- [x] Add performance quality presets, FPS caps, and GPU load indicators.
 - [x] Add first browser-local FPS caps and debug frame-time indicator.
 - Keep WebGL2 as the compatibility baseline.
 
@@ -212,6 +213,6 @@ Current parser/VM scope:
 - Unit tests for parser and expression VM.
 - Golden snapshots for parsed preset models.
 - Headless Playwright screenshots with pixel statistics across desktop/mobile sizes.
-- WebGL context loss/recovery smoke tests.
+- WebGL context loss/recovery smoke tests. `npm run test:native-milkdrop-smoke` now verifies the standard WebGL context-loss extension loses and restores the smoke canvas after fixture rendering.
 - Performance checks for FPS, GPU memory pressure, and bundle chunk sizes.
 - Manual compatibility runs against a curated MilkDrop/MilkDrop3 preset matrix.
