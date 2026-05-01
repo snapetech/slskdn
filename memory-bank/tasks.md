@@ -2222,10 +2222,6 @@
   - Status: completed (2026-05-01)
   - Notes: Added `docs/dev/placeholder-completion-plan-2026-05-01.md`, removed fake swarm analytics values, replaced misleading production placeholder/TODO wording with explicit capability-gate and unavailable-path behavior, and re-ran the documented production-source scan. Only `FeatureNotImplementedException` infrastructure and its startup handling remain, which the plan allows as feature-gate infrastructure.
 
-- [x] Move Launchpad PPA uploads from FTP to SFTP
-  - Status: completed (2026-05-01)
-  - Notes: The `2026050100-slskdn.215` source package built and signed, but FTP upload to `ppa.launchpad.net` failed with runner-level `Network is unreachable`. Main release and standalone PPA workflows now use Launchpad SFTP via `LAUNCHPAD_SSH_PRIVATE_KEY`.
-
 - [x] Fix standalone PPA web asset staging
   - Status: completed (2026-05-01)
   - Notes: The manual `.215` PPA rerun rebuilt frontend assets into `src/web/build`, but failed because `publish-linux-x64/wwwroot` did not exist. `release-ppa.yml` now creates the web root before copying assets.

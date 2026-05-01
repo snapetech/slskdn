@@ -4606,12 +4606,12 @@ dotnet test
 
 ## Update 2026-05-01 09:18:00Z
 
-- Current task: PPA upload transport failure fix is implemented locally.
+- Current task: PPA upload retry investigation is in progress.
 - Last activity:
   - confirmed the `.215` PPA source package built and signed correctly before upload
-  - identified anonymous FTP to `ppa.launchpad.net` as the failing runner transport
-  - changed release PPA workflows to use Launchpad SFTP with `LAUNCHPAD_SSH_PRIVATE_KEY`
+  - confirmed historical `.197` PPA success used anonymous FTP with passive mode, not SFTP
+  - reverted the incorrect SFTP/Launchpad SSH secret change
   - fixed standalone PPA web asset staging after the manual retry failed on a missing `publish-linux-x64/wwwroot`
 - Next steps:
-  1. Push the workflow fix and rerun the PPA upload path for a fresh tag or manually dispatched PPA workflow.
-  2. Ensure the `LAUNCHPAD_SSH_PRIVATE_KEY` repository secret is present and belongs to the `keefshape` Launchpad account.
+  1. Retry the original tag workflow's failed PPA job with the known-good FTP configuration.
+  2. If FTP still fails, inspect whether this is a transient GitHub/Launchpad network issue or a changed runner/network policy.
