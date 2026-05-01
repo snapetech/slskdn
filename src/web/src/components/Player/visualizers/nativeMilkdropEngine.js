@@ -540,16 +540,15 @@ export const createNativeMilkdropEngine = async ({
   let webGpuFallbackReason = requestedRendererBackend === 'webgpu' && activeRendererBackend === 'webgl2'
     ? webGpuStatus.reason || 'WebGPU unavailable'
     : '';
-  const createActiveRendererSet = async (options) => {
-    try {
-      return await Promise.resolve(createRendererSet({
-        ...options,
-        rendererBackend: activeRendererBackend,
-      }));
-    } catch (error) {
-      if (activeRendererBackend !== 'webgpu') {
-        throw error;
-      }
+  const createActiveRendererSet = (options) => {
+    const rendererSetOptions = {
+      ...options,
+      rendererBackend: activeRendererBackend,
+    };
+    if (activeRendererBackend !== 'webgpu') {
+      return createRendererSet(rendererSetOptions);
+    }
+    return Promise.resolve(createRendererSet(rendererSetOptions)).catch((error) => {
       activeRendererBackend = 'webgl2';
       webGpuFallbackReason = error?.message || 'WebGPU renderer failed';
       // eslint-disable-next-line no-console
@@ -558,7 +557,7 @@ export const createNativeMilkdropEngine = async ({
         ...options,
         rendererBackend: activeRendererBackend,
       });
-    }
+    });
   };
   let presetIndex = 0;
   let activeParsedPresetSet = parseMilkdropPreset(nativePresets[presetIndex].source);
@@ -697,10 +696,25 @@ export const createNativeMilkdropEngine = async ({
     return loadPreset(presetIndex + 1);
   };
 
+  const getEngineName = () => {
+    if (activeRendererBackend === 'webgpu') return 'slskdN MilkDrop WebGPU';
+    return requestedRendererBackend === 'webgpu'
+      ? 'slskdN MilkDrop WebGL2 fallback'
+      : 'slskdN MilkDrop WebGL2';
+  };
+
+  const getEffectiveWebGpuStatus = () => (
+    requestedRendererBackend === 'webgpu' && activeRendererBackend === 'webgl2'
+      ? {
+        ...webGpuStatus,
+        available: false,
+        reason: webGpuFallbackReason || webGpuStatus.reason || 'WebGPU unavailable',
+      }
+      : webGpuStatus
+  );
+
   return {
-    name: activeRendererBackend === 'webgpu'
-      ? 'slskdN MilkDrop WebGPU'
-      : 'slskdN MilkDrop WebGL2',
+    name: getEngineName(),
     presetName: nativePresets[presetIndex].name,
     dispose: () => {
       frameReader.disconnect();
@@ -775,7 +789,7 @@ export const createNativeMilkdropEngine = async ({
     getPresetDebugSnapshot: () => getPresetDebugSnapshot(
       activeParsedPresetSet,
       activePresetTitle,
-      webGpuStatus,
+      getEffectiveWebGpuStatus(),
     ),
     getPresetFragmentSummary: () => getPresetFragmentSummary(activeParsedPresetSet),
     getPresetParameterSummary: () => getPresetParameterSummary(activeParsedPresetSet),

@@ -118,6 +118,35 @@ describe('createNativeMilkdropEngine', () => {
     expect(renderer.resize).toHaveBeenCalledWith(320, 180);
   });
 
+  it('falls back to native WebGL2 when WebGPU is unavailable', async () => {
+    const analyser = createAnalyser();
+    const engine = await createNativeMilkdropEngine({
+      audioContext: {
+        createAnalyser: () => analyser,
+        currentTime: 12,
+        sampleRate: 48000,
+      },
+      audioNode: {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      },
+      canvas: { getContext: vi.fn() },
+      rendererBackend: 'webgpu',
+    });
+
+    engine.render();
+
+    expect(engine.name).toBe('slskdN MilkDrop WebGL2 fallback');
+    expect(createMilkdropRenderer).toHaveBeenCalled();
+    expect(renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sampleRate: 48000,
+        time: 12,
+      }),
+      { clearScreen: true, compositeMode: 'alpha', outputAlpha: 1 },
+    );
+  });
+
   it('feeds mouse state into native preset render frames', async () => {
     const analyser = createAnalyser();
     const engine = await createNativeMilkdropEngine({
