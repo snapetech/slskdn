@@ -14,7 +14,7 @@ public enum TorIsolationMethod
     SocksAuth,
 
     /// <summary>
-    /// Use Tor control port to create isolated circuits (not implemented in MVP).
+    /// Use Tor control port to create isolated circuits when Tor control integration is available.
     /// </summary>
     ControlPort
 }

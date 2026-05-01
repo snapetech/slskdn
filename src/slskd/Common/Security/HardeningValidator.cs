@@ -40,7 +40,7 @@ namespace slskd.Common.Security
         public const string RuleMemoryDumpWithAuthDisabled = "MemoryDumpWithAuthDisabled";
 
         /// <summary>
-        ///     Rule name for HashFromAudioFileEnabled when the feature is not implemented.
+        ///     Rule name for HashFromAudioFileEnabled when the gated feature is unavailable.
         ///     §11: Enabling an incomplete feature must fail at startup when EnforceSecurity.
         /// </summary>
         public const string RuleHashFromAudioFileEnabled = "HashFromAudioFileEnabled";
@@ -127,10 +127,10 @@ namespace slskd.Common.Security
                     Log.Warning("[{Rule}] {Message}", RuleWeakMetricsPassword, msg);
             }
 
-            // 5. §11: HashFromAudioFileEnabled — feature not implemented (PCM extraction requires FFmpeg/NAudio)
+            // 5. §11: HashFromAudioFileEnabled requires PCM extraction support from FFmpeg/NAudio.
             if (options.Flags?.HashFromAudioFileEnabled == true)
             {
-                const string msg = "Flags.HashFromAudioFileEnabled is true but audio hash from file is not implemented. PCM extraction requires FFmpeg/NAudio integration. Set to false or implement the feature.";
+                const string msg = "Flags.HashFromAudioFileEnabled is true but audio hash from file requires unavailable PCM extraction support. Set to false unless FFmpeg/NAudio integration is available.";
                 if (enforce)
                     throw new HardeningValidationException(RuleHashFromAudioFileEnabled, msg);
                 else

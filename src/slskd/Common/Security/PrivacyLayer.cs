@@ -20,6 +20,7 @@ public sealed class PrivacyLayer : IPrivacyLayer
     private long _outboundMessagesProcessed;
     private long _inboundMessagesProcessed;
     private long _totalPaddingBytes;
+    private long _batchesCreated;
     private TimeSpan _averageProcessingLatency = TimeSpan.Zero;
     private readonly object _statsLock = new();
     private bool _disposed;
@@ -192,7 +193,7 @@ public sealed class PrivacyLayer : IPrivacyLayer
                 InboundMessagesProcessed = _inboundMessagesProcessed,
                 TotalPaddingBytes = _totalPaddingBytes,
                 AverageProcessingLatencyMs = _averageProcessingLatency.TotalMilliseconds,
-                BatchesCreated = 0,
+                BatchesCreated = _batchesCreated,
                 CoverMessagesSent = _coverTrafficGenerator?.GetStats().CoverMessagesSent ?? 0,
             });
         }
@@ -210,7 +211,9 @@ public sealed class PrivacyLayer : IPrivacyLayer
         if (_batcher == null)
             return Array.Empty<BatchedMessage>();
 
-        return await _batcher.GetNextBatchAsync(cancellationToken);
+        var batch = await _batcher.GetNextBatchAsync(cancellationToken);
+        TrackBatchCreated(batch);
+        return batch;
     }
 
     /// <summary>
@@ -224,7 +227,9 @@ public sealed class PrivacyLayer : IPrivacyLayer
         if (_batcher == null)
             return Array.Empty<BatchedMessage>();
 
-        return await _batcher.FlushAsync();
+        var batch = await _batcher.FlushAsync();
+        TrackBatchCreated(batch);
+        return batch;
     }
 
     public void Dispose()
@@ -272,5 +277,18 @@ public sealed class PrivacyLayer : IPrivacyLayer
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private void TrackBatchCreated(IReadOnlyCollection<BatchedMessage> batch)
+    {
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        lock (_statsLock)
+        {
+            _batchesCreated++;
+        }
     }
 }

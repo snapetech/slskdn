@@ -42,6 +42,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   comments to reflect current local validation and fetch-path enforcement.
 - Removed more stale placeholder comments from privacy, DHT publishing, pods,
   transport selection, descriptor publishing, and mesh circuit code paths.
+- Added real privacy-layer batch-created stats and clarified gated
+  hash-from-audio and Tor control-port wording.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
