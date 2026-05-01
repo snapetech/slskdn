@@ -112,10 +112,41 @@ subject_highlight() {
 
 is_release_hygiene_subject() {
   local subject="$1"
-  [[ "$subject" =~ ^docs:\ Add\ gotcha\ for\  ]] && return 0
-  [[ "$subject" =~ ^docs:\ add\ release\ notes\  ]] && return 0
-  [[ "$subject" =~ ^docs:\ update\ release\  ]] && return 0
-  [[ "$subject" =~ ^chore\(release\):\ update\ stable\ metadata\  ]] && return 0
+  case "$subject" in
+    ci:\ *|ci\(*\):\ *|build:\ *|build\(*\):\ *|test:\ *|test\(*\):\ *)
+      return 0
+      ;;
+    fix\(release\):\ *|chore\(release\):\ *|docs\(release\):\ *)
+      return 0
+      ;;
+    Revert\ \"fix\(release\):\ *|Revert\ \"docs:\ Add\ gotcha\ *)
+      return 0
+      ;;
+    docs:\ Add\ gotcha\ for\ *|docs:\ add\ gotcha\ for\ *)
+      return 0
+      ;;
+    docs:\ add\ release\ notes\ *|docs:\ update\ release\ *)
+      return 0
+      ;;
+    docs:\ update\ *status|docs:\ Record\ *deploy|docs:\ record\ *deploy)
+      return 0
+      ;;
+    docs:\ Update\ *context|docs:\ update\ *context)
+      return 0
+      ;;
+    chore:\ commit\ packaging\ release\ cleanup)
+      return 0
+      ;;
+    chore:\ finish\ vendored\ runtime\ rollout)
+      return 0
+      ;;
+    chore:\ finish\ *cleanup|chore:\ include\ remaining\ *cleanup)
+      return 0
+      ;;
+    chore:\ remove\ remaining\ *references)
+      return 0
+      ;;
+  esac
   return 1
 }
 
