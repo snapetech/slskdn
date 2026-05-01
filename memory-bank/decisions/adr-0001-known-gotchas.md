@@ -52,6 +52,47 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z274. Fire-And-Forget Shutdown Tasks Must Observe Expected Listener Stop Faults
+
+**The Bug**: The vendored Soulseek TCP listener used `Task.Run(...).Forget()` for its accept loop. When `Stop()` raced an outstanding `AcceptTcpClientAsync()`, the runtime threw `InvalidOperationException: Not listening`, and the helper did not observe the faulted task exception. kspls0 stayed up, but the journal reported a fatal unobserved task exception.
+
+**Files Affected**:
+- `vendor/slskNet.Runtime/src/Common/Extensions.cs`
+- `vendor/slskNet.Runtime/src/Network/Tcp/Listener.cs`
+
+**Wrong**:
+```csharp
+public static void Forget(this Task task)
+{
+    task.ContinueWith(t => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
+}
+
+while (Listening)
+{
+    var client = await TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+}
+```
+
+**Correct**:
+```csharp
+public static void Forget(this Task task)
+{
+    task.ContinueWith(t => { _ = t.Exception; },
+        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.RunContinuationsAsynchronously);
+}
+
+try
+{
+    client = await TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+}
+catch (InvalidOperationException) when (!Listening)
+{
+    break;
+}
+```
+
+**Why This Keeps Happening**: Listener shutdown often closes the underlying socket while an accept is pending. That is a normal stop path, not a process-level failure. Fire-and-forget helpers must touch `Task.Exception` when swallowing faults, and listener loops must explicitly treat stop-time accept failures as completion.
+
 ### 0z271. Docker Builds Must Copy Vendored Project References
 
 **The Bug**: Release Docker builds copied only `bin`, `config`, `src/slskd`, and `tests`, but `src/slskd/slskd.csproj` references `../../vendor/slskNet.Runtime/src/Soulseek.csproj`. The normal release build passed from the full checkout while Docker failed inside the trimmed image context because `vendor/` was missing.
