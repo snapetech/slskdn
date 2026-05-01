@@ -52,6 +52,42 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z275. QUIC Probe Connections May Close Without Opening A Stream
+
+**The Bug**: A QUIC client can successfully complete the TLS/QUIC handshake and then close without opening an inbound stream. The overlay server treated `AcceptInboundStreamAsync()` peer-abort exceptions as warnings with stack traces, so a clean connectivity probe looked like a server fault in live logs.
+
+**Files Affected**:
+- `src/slskd/Mesh/Overlay/QuicOverlayServer.cs`
+- `src/slskd/Mesh/Overlay/QuicDataServer.cs`
+
+**Wrong**:
+```csharp
+catch (Exception ex)
+{
+    logger.LogWarning(ex, "[Overlay-QUIC] Error accepting stream from {Endpoint}", remoteEndPoint);
+    break;
+}
+```
+
+**Correct**:
+```csharp
+catch (Exception ex)
+{
+    if (QuicOverlayServer.IsQuietAcceptStreamException(ex))
+    {
+        logger.LogDebug(ex, "[Overlay-QUIC] Peer closed before opening a stream from {Endpoint}", remoteEndPoint);
+    }
+    else
+    {
+        logger.LogWarning(ex, "[Overlay-QUIC] Error accepting stream from {Endpoint}", remoteEndPoint);
+    }
+
+    break;
+}
+```
+
+**Why This Keeps Happening**: QUIC has two layers of success: connection establishment and application stream exchange. A port/handshake probe only needs the first layer and may never create a stream. Server accept loops should classify peer close/abort during stream accept as expected disconnect noise while preserving warnings for real stream-processing failures.
+
 ### 0z274. Fire-And-Forget Shutdown Tasks Must Observe Expected Listener Stop Faults
 
 **The Bug**: The vendored Soulseek TCP listener used `Task.Run(...).Forget()` for its accept loop. When `Stop()` raced an outstanding `AcceptTcpClientAsync()`, the runtime threw `InvalidOperationException: Not listening`, and the helper did not observe the faulted task exception. kspls0 stayed up, but the journal reported a fatal unobserved task exception.
