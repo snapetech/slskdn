@@ -423,6 +423,7 @@ namespace slskd
                 maximumConcurrentDownloads: optionsAtStartup.Global.Download.Slots,
                 minimumDiagnosticLevel: optionsAtStartup.Soulseek.DiagnosticLevel.ToEnum<Soulseek.Diagnostics.DiagnosticLevel>(),
                 maximumConcurrentSearches: 2,
+                peerObfuscationOptions: SoulseekObfuscationSupport.BuildRuntimeOptions(optionsAtStartup.Soulseek),
                 raiseEventsAsynchronously: true);
         }
 

@@ -1,3 +1,29 @@
+## Update 2026-05-01 17:30:00Z
+
+- Current task: Launchpad SFTP PPA upload setup is in progress.
+- Last activity:
+  - generated `~/.ssh/slskdn_launchpad_ppa_ed25519`
+  - stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in `snapetech/slskdn` GitHub repository secrets
+  - updated both PPA workflows to prefer SFTP when the key is configured and retain anonymous FTP as fallback
+  - documented the SFTP-preferred PPA upload gotcha and committed it separately
+- Next steps:
+  1. Validate workflow YAML and run the standalone PPA upload workflow for `2026050100-slskdn.215`.
+  2. Register the generated public key on the `~keefshape` Launchpad account if SFTP authentication rejects it.
+
+## Update 2026-05-01 17:17:00Z
+
+- Current task: slskdN is switched to `slskNet.Runtime` and deployed on `kspls0`.
+- Last activity:
+  - changed slskdN app/test project references to use the sibling `../slskNet.Runtime` runtime project
+  - wired `soulseek.obfuscation` options into `SoulseekClientOptions` and `SoulseekClientOptionsPatch`
+  - changed type-1 obfuscation runtime reporting from pending to active
+  - published a `linux-x64` self-contained artifact and installed it as `/usr/lib/slskd/releases/manual-slsknet-runtime-20260501171217`
+  - restarted `slskd.service`; confirmed Soulseek login, regular listener `50300`, obfuscated listener `50301`, and successful live search/download smoke
+  - validated targeted startup/options tests, transfer tests, full unit suite, and repo lint
+- Next steps:
+  1. Commit the slskNet.Runtime wiring separately from the pre-existing PPA workflow changes if this branch is being prepared for review.
+  2. If we want CI to build this without a sibling checkout, publish `slskNet.Runtime` to a private package feed or add a documented submodule/source-fetch step.
+
 ## Update 2026-05-01 16:09:39Z
 
 - Current task: PPA reachability fix is complete locally.

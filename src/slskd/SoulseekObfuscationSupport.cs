@@ -17,7 +17,7 @@ public static class SoulseekObfuscationSupport
     /// <summary>
     ///     Indicates whether the current Soulseek.NET runtime exposes the type-1 listener and dialer hooks.
     /// </summary>
-    public const bool RuntimeSupportsType1PeerMessages = false;
+    public static bool RuntimeSupportsType1PeerMessages => true;
 
     /// <summary>
     ///     Build a serializable runtime plan for configuration, diagnostics, and the web UI.
@@ -34,7 +34,7 @@ public static class SoulseekObfuscationSupport
         var requestedListenPort = options.ListenPort > 0 ? options.ListenPort : (int?)null;
         var effectiveListenPort = requestedListenPort ?? DeriveListenPort(soulseek.ListenPort);
         var runtimeState = options.Enabled
-            ? RuntimeSupportsType1PeerMessages ? "active_compatibility" : "configured_pending_runtime"
+            ? RuntimeSupportsType1PeerMessages ? "active" : "configured_pending_runtime"
             : "disabled";
 
         var limitations = new List<string>();
@@ -69,6 +69,23 @@ public static class SoulseekObfuscationSupport
 
     private static int? DeriveListenPort(int regularListenPort)
         => regularListenPort < 65535 ? regularListenPort + 1 : null;
+
+    /// <summary>
+    ///     Build runtime options for the Soulseek client.
+    /// </summary>
+    /// <param name="soulseek">Soulseek options.</param>
+    /// <returns>Runtime peer obfuscation options.</returns>
+    public static Soulseek.PeerObfuscationOptions BuildRuntimeOptions(Options.SoulseekOptions soulseek)
+    {
+        var plan = BuildPlan(soulseek);
+
+        return new Soulseek.PeerObfuscationOptions(
+            enabled: plan.Enabled && plan.RuntimeSupported && plan.EffectiveListenPort.HasValue,
+            listenPort: plan.EffectiveListenPort ?? 0,
+            type: plan.Type,
+            advertiseRegularPort: plan.AdvertiseRegularPort,
+            preferOutbound: plan.PreferOutbound);
+    }
 
     private static string BuildSummary(bool enabled, SoulseekObfuscationMode mode)
     {

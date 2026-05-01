@@ -708,6 +708,7 @@ namespace slskd
                 peerConnectionOptions: connectionOptions,
                 transferConnectionOptions: transferOptions,
                 incomingConnectionOptions: connectionOptions,
+                peerObfuscationOptions: SoulseekObfuscationSupport.BuildRuntimeOptions(optionsAtStartup.Soulseek),
                 distributedConnectionOptions: distributedOptions,
                 userInfoResolver: userInfoResolver,
                 browseResponseResolver: browseResponseResolver,

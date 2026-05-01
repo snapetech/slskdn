@@ -141,6 +141,8 @@ public class ProgramPathNormalizationTests
         Assert.True(options.EnableDistributedNetwork);
         Assert.True(options.AcceptDistributedChildren);
         Assert.Equal(7, options.DistributedChildLimit);
+        Assert.True(options.PeerObfuscationOptions.Enabled);
+        Assert.Equal(50445, options.PeerObfuscationOptions.ListenPort);
     }
 
     [Fact]

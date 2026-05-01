@@ -135,7 +135,7 @@ public class SoulseekOptionsValidationTests
     }
 
     [Fact]
-    public void SoulseekObfuscationPlan_ReportsConfiguredUnsupportedRuntime()
+    public void SoulseekObfuscationPlan_ReportsConfiguredActiveRuntime()
     {
         var plan = SoulseekObfuscationSupport.BuildPlan(new Options.SoulseekOptions
         {
@@ -152,8 +152,8 @@ public class SoulseekOptionsValidationTests
         Assert.Equal("prefer", plan.Mode);
         Assert.Equal(1, plan.Type);
         Assert.Equal(50301, plan.EffectiveListenPort);
-        Assert.False(plan.RuntimeSupported);
-        Assert.Equal("configured_pending_runtime", plan.RuntimeState);
+        Assert.True(plan.RuntimeSupported);
+        Assert.Equal("active", plan.RuntimeState);
     }
 
     [Fact]

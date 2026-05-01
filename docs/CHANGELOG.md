@@ -22,6 +22,13 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Switched slskdN to the private `slskNet.Runtime` Soulseek.NET-derived
+  runtime fork for local builds, activated Soulseek type-1 peer-message
+  obfuscation runtime wiring, and live-validated `kspls0` with regular and
+  obfuscated listeners plus a successful Soulseek search/download smoke.
+- Added Launchpad SFTP upload support for PPA releases when
+  `LAUNCHPAD_SFTP_KEY` is configured, while retaining the signed anonymous FTP
+  upload path as a fallback.
 - Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and switched
   the transfer step from fragile `dput` passive FTP retries to signed source
   verification followed by bounded anonymous `curl` uploads with a longer

@@ -129,8 +129,24 @@ jobs:
           cd slskdn-${{ steps.version.outputs.version }}
           debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
-      - name: Preflight Launchpad FTP
+      - name: Preflight Launchpad PPA Upload
+        env:
+          LAUNCHPAD_SFTP_KEY: ${{ secrets.LAUNCHPAD_SFTP_KEY }}
         run: |
+          if [ -n "$LAUNCHPAD_SFTP_KEY" ]; then
+            if ! python3 - <<'PY'
+          import socket
+
+          with socket.create_connection(("ppa.launchpad.net", 22), timeout=120) as sock:
+              print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]} over SSH")
+          PY
+            then
+              echo "::error::Launchpad PPA SFTP endpoint is not reachable"
+              exit 1
+            fi
+            exit 0
+          fi
+
           LAUNCHPAD_PPA_FTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
           if [ -z "$LAUNCHPAD_PPA_FTP_IPV4" ]; then
             echo "::error::Unable to resolve an IPv4 address for ppa.launchpad.net"
@@ -156,11 +172,14 @@ jobs:
       - name: Upload to PPA
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          LAUNCHPAD_SFTP_KEY: ${{ secrets.LAUNCHPAD_SFTP_KEY }}
+          LAUNCHPAD_SFTP_USER: ${{ secrets.LAUNCHPAD_SFTP_USER }}
         run: |
           if [ -z "$GPG_PRIVATE_KEY" ]; then
             echo "Skipping PPA upload - GPG_PRIVATE_KEY not configured"
             exit 0
           fi
+          LAUNCHPAD_SFTP_USER="${LAUNCHPAD_SFTP_USER:-keefshape}"
           ls -la *.changes || true
           CHANGES_FILE=$(find . -name "*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
@@ -186,23 +205,51 @@ jobs:
             exit 1
           fi
 
-          for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
-            if [ ! -f "$source_file" ]; then
-              echo "::error::Source upload file not found: $source_file"
-              exit 1
-            fi
+          if [ -n "$LAUNCHPAD_SFTP_KEY" ]; then
+            mkdir -p ~/.ssh
+            printf '%s\n' "$LAUNCHPAD_SFTP_KEY" > ~/.ssh/launchpad_ppa
+            chmod 600 ~/.ssh/launchpad_ppa
+            ssh-keyscan -T 30 -t rsa,ecdsa,ed25519 ppa.launchpad.net >> ~/.ssh/known_hosts 2>/dev/null || true
+            cat >> ~/.ssh/config << EOF
+          Host ppa.launchpad.net
+            HostName ppa.launchpad.net
+            User ${LAUNCHPAD_SFTP_USER}
+            IdentityFile ~/.ssh/launchpad_ppa
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+            ServerAliveInterval 30
+          EOF
 
-            echo "Uploading $source_file to Launchpad PPA over anonymous FTP"
-            curl --fail --show-error --silent --verbose \
-              --ipv4 \
-              --ftp-pasv \
-              --retry 5 \
-              --retry-all-errors \
-              --retry-delay 10 \
-              --connect-timeout 120 \
-              --max-time 900 \
-              --upload-file "$source_file" \
-              "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
-          done
+            cat > ~/.dput.cf << EOF
+          [slskdn-ppa-sftp]
+          fqdn = ppa.launchpad.net
+          method = sftp
+          incoming = ~keefshape/ubuntu/slskdn/
+          login = ${LAUNCHPAD_SFTP_USER}
+          allow_unsigned_uploads = 0
+          EOF
+
+            echo "Uploading $(basename "$CHANGES_FILE") to Launchpad PPA over SFTP"
+            dput --config ~/.dput.cf slskdn-ppa-sftp "$CHANGES_FILE"
+          else
+            for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
+              if [ ! -f "$source_file" ]; then
+                echo "::error::Source upload file not found: $source_file"
+                exit 1
+              fi
+
+              echo "Uploading $source_file to Launchpad PPA over anonymous FTP"
+              curl --fail --show-error --silent --verbose \
+                --ipv4 \
+                --ftp-pasv \
+                --retry 5 \
+                --retry-all-errors \
+                --retry-delay 10 \
+                --connect-timeout 120 \
+                --max-time 900 \
+                --upload-file "$source_file" \
+                "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
+            done
+          fi
 
           echo "✅ Uploaded to PPA: slskdn"

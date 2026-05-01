@@ -9314,3 +9314,17 @@ Code quality improvements were completed as part of Option A:
 
 - Investigated the failed `2026050100-slskdn.215` PPA release job and confirmed package assembly/signing succeeded; upload failed because anonymous FTP to `ppa.launchpad.net` was unreachable from the GitHub runner on all retries.
 - Fixed the standalone PPA retry path to create `publish-linux-x64/wwwroot` before copying Vite output, after the manual `.215` PPA rerun failed before packaging on that missing directory.
+
+## 2026-05-01 17:17:00Z
+
+- Switched slskdN app and test projects from the upstream `Soulseek` package to the sibling `slskNet.Runtime` project reference.
+- Wired configured Soulseek type-1 obfuscation options into initial client creation and startup reconfiguration, and changed runtime status reporting to active.
+- Published `0.0.0-slskdn.slsknetruntime.1` for `linux-x64` and deployed it to `kspls0` as `/usr/lib/slskd/releases/manual-slsknet-runtime-20260501171217`.
+- Live validation on `kspls0`: service active, logged into Soulseek, regular listener bound on `50300`, obfuscated listener bound on `50301`, search for `test mp3` returned 500 responses, and a tiny download completed successfully.
+- Validation: targeted startup/options tests passed, transfer unit tests passed, full `slskd.Tests.Unit` passed (`3807` tests), `bash ./bin/lint` passed, and the live transfer smoke passed.
+
+## 2026-05-01 17:30:00Z
+
+- Generated a dedicated Launchpad PPA SFTP SSH key for slskdN release uploads and stored the private key plus Launchpad username as GitHub repository secrets.
+- Updated `build-on-tag.yml` and `release-ppa.yml` to preflight Launchpad SSH/SFTP when `LAUNCHPAD_SFTP_KEY` is configured, upload signed source packages with `dput` over SFTP, and keep the anonymous FTP/curl path as fallback.
+- Documented the SFTP-preferred PPA upload gotcha immediately in ADR-0001 and committed it separately.
