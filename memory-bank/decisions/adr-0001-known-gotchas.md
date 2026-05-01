@@ -52,6 +52,37 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z264. Launchpad SFTP Secrets Must Not Disable FTP Fallback
+
+**The Bug**: The PPA workflow treated `LAUNCHPAD_SFTP_KEY` as a hard switch to SFTP. When `ppa.launchpad.net:22` timed out from a GitHub runner, the preflight failed immediately and never tried the signed anonymous FTP fallback that the workflow still advertised.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+if [ -n "$LAUNCHPAD_SFTP_KEY" ]; then
+  # SFTP preflight
+  exit 0
+fi
+
+# FTP fallback only runs when no key exists.
+```
+
+**Correct**:
+```bash
+if [ -n "$LAUNCHPAD_SFTP_KEY" ] && sftp_preflight; then
+  echo "SLSKDN_PPA_UPLOAD_METHOD=sftp" >> "$GITHUB_ENV"
+  exit 0
+fi
+
+ftp_preflight
+echo "SLSKDN_PPA_UPLOAD_METHOD=ftp" >> "$GITHUB_ENV"
+```
+
+**Why This Keeps Happening**: Launchpad's FTP and SFTP endpoints fail independently depending on runner routing and Launchpad-side behavior. Adding SFTP as the preferred path must not remove the old FTP path; preflight should select the first reachable method and the upload step must honor that selection.
+
 ### 0z263. Do Not Preflight Launchpad PPA SFTP With `sftp pwd`
 
 **The Bug**: The PPA workflow replaced a hanging `dput` upload with a bounded `sftp -b - ppa.launchpad.net` authentication probe that runs `pwd`. Even with a Launchpad-accepted SSH key, the PPA SFTP endpoint can sit until the probe timeout, so the workflow fails before `dput` gets a chance to upload.
