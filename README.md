@@ -756,8 +756,6 @@ Features in the `master` branch:
 | **VirtualSoulfind v2** | 🟡 Experimental | Shadow index, disaster mode |
 | **Service Fabric** | 🟡 Experimental | Generic service layer |
 
-For the stable upstream client, see [slskd/slskd](https://github.com/slskd/slskd).
-
 ---
 
 ## Reverse Proxy
