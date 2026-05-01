@@ -52,6 +52,38 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z259. Launchpad PPA SFTP Preflight Must Also Pin IPv4
+
+**The Bug**: The SFTP-preferred PPA workflow added a port-22 preflight but let Python resolve `ppa.launchpad.net` normally. GitHub runners selected Launchpad's IPv6 address first and failed with `[Errno 101] Network is unreachable` before trying the reachable IPv4 address family.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/release-ppa.yml`
+
+**Wrong**:
+```bash
+python3 - <<'PY'
+import socket
+
+with socket.create_connection(("ppa.launchpad.net", 22), timeout=120) as sock:
+    print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
+PY
+```
+
+**Correct**:
+```bash
+LAUNCHPAD_PPA_SFTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
+echo "${LAUNCHPAD_PPA_SFTP_IPV4} ppa.launchpad.net" | sudo tee -a /etc/hosts
+python3 - <<'PY'
+import socket
+
+with socket.create_connection(("ppa.launchpad.net", 22), timeout=120) as sock:
+    print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
+PY
+```
+
+**Why This Keeps Happening**: Launchpad publishes IPv6 for the same upload host used by FTP and SFTP, while some GitHub runners have no usable IPv6 route. Any workflow preflight or upload path that uses `ppa.launchpad.net` must resolve and pin a reachable IPv4 address before opening the connection, regardless of whether the final protocol is FTP or SFTP.
+
 ### 0z258. Launchpad PPA Uploads Should Prefer SFTP When A Key Is Configured
 
 **The Bug**: After IPv4-pinning anonymous FTP, PPA uploads still failed from GitHub, the local workstation, and `kspls0` with slow greetings, resets, or passive-transfer failures. Treating anonymous FTP as the only release path leaves the package pipeline dependent on the least reliable Launchpad transport.
