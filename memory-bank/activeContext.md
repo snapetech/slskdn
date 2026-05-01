@@ -5,8 +5,9 @@
   - confirmed the successful `.197` PPA release used Launchpad anonymous FTP, so SFTP/SSH secrets were not the historical requirement
   - confirmed local and `kspls0` TCP reachability to `ppa.launchpad.net:21`
   - documented the IPv4 reachability gotcha in ADR-0001 and committed it separately
-  - updated `build-on-tag.yml` and `release-ppa.yml` to pin `ppa.launchpad.net` to a resolved IPv4 address before `dput`
+  - updated `build-on-tag.yml` and `release-ppa.yml` to pin `ppa.launchpad.net` to a resolved IPv4 address
   - added a Python TCP preflight so runner logs fail early if Launchpad FTP is unreachable
+  - replaced the `dput` transfer with signed source verification plus bounded anonymous `curl` FTP uploads after IPv4-pinned `dput` reached Launchpad but failed during passive data transfer
 - Validation:
   - Python TCP connect to Launchpad FTP passed locally
   - PyYAML parsed both edited workflows

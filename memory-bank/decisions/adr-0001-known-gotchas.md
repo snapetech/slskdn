@@ -54,20 +54,15 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ### 0z257. PPA FTP Uploads Must Pin Launchpad To Reachable IPv4
 
-**The Bug**: GitHub-hosted PPA uploads can fail with `Connection failed, aborting. Check your network` and `[Errno 101] Network is unreachable` when `dput` chooses Launchpad's IPv6 FTP endpoint on a runner without IPv6 egress.
+**The Bug**: GitHub-hosted PPA uploads can fail with `Connection failed, aborting. Check your network`, `[Errno 101] Network is unreachable`, `550 Requested action not taken: internal server error`, resets, or timeouts when `dput` chooses Launchpad's IPv6 FTP endpoint or stalls during passive FTP data transfer.
 
 **Files Affected**:
 - `.github/workflows/build-on-tag.yml`
 - `.github/workflows/release-ppa.yml`
 
 **Wrong**:
-```ini
-[slskdn-ppa]
-fqdn = ppa.launchpad.net
-method = ftp
-incoming = ~keefshape/ubuntu/slskdn/
-login = anonymous
-passive_ftp = 1
+```bash
+dput slskdn-ppa "$CHANGES_FILE"
 ```
 
 **Correct**:
@@ -80,9 +75,13 @@ import socket
 with socket.create_connection(("ppa.launchpad.net", 21), timeout=15) as sock:
     print(f"Connected to {sock.getpeername()[0]}:{sock.getpeername()[1]}")
 PY
+
+curl --fail --show-error --ipv4 --ftp-pasv --retry 5 --retry-all-errors \
+  --upload-file "$source_file" \
+  "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
 ```
 
-**Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address and preflight port 21 so the logs separate runner reachability from package signing or Launchpad rejection.
+**Why This Keeps Happening**: Launchpad still accepts anonymous FTP uploads for PPAs, and historical slskdN releases used that path successfully. Do not convert the workflow to a required SSH/SFTP secret just because FTP selected an unreachable address family. Pin the existing FTP hostname to a currently resolved IPv4 address, preflight port 21, verify the signed `.changes` and `.dsc`, then upload the exact source files with bounded `curl` retries so the logs separate runner reachability, FTP transfer failures, signing, and Launchpad rejection.
 
 ### 0z256. VPN Forwarded Ports Are Not Local Soulseek Listen Ports
 

@@ -2,7 +2,7 @@
 
 - Diagnosed the PPA failure as runner reachability, not missing Launchpad SSH credentials: the last known successful `.197` PPA upload used anonymous FTP to `ppa.launchpad.net`.
 - Reverted the incorrect SFTP/Launchpad-secret change and documented the actual gotcha: `dput` can choose an unreachable IPv6 FTP path on GitHub-hosted runners.
-- Updated both tag-driven and standalone PPA workflows to resolve and pin `ppa.launchpad.net` to IPv4, then preflight TCP port 21 before invoking `dput`.
+- Updated both tag-driven and standalone PPA workflows to resolve and pin `ppa.launchpad.net` to IPv4, preflight TCP port 21, verify the signed `.changes` and `.dsc`, and upload source files with bounded anonymous `curl` FTP transfers instead of `dput`.
 - Validation: local Launchpad TCP connect to `185.125.190.80:21` passed, workflow YAML parsed with PyYAML, and `git diff --check` passed.
 
 ## 2026-05-01 03:45:00Z

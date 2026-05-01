@@ -638,7 +638,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dput gnupg build-essential patchelf
+          sudo apt-get install -y devscripts debhelper gnupg build-essential patchelf
 
       - name: Import GPG Key
         env:
@@ -711,7 +711,7 @@ jobs:
           cd slskdn-${VERSION}
           debuild -S -sa -d -k07E2531E1F470F8008ACCFC996A07606FE65392F
 
-      - name: Configure dput
+      - name: Preflight Launchpad FTP
         run: |
           LAUNCHPAD_PPA_FTP_IPV4=$(getent ahostsv4 ppa.launchpad.net | awk '$2 == "STREAM" { print $1; exit }')
           if [ -z "$LAUNCHPAD_PPA_FTP_IPV4" ]; then
@@ -735,16 +735,6 @@ jobs:
             exit 1
           fi
 
-          cat > ~/.dput.cf << 'EOF'
-          [slskdn-ppa]
-          fqdn = ppa.launchpad.net
-          method = ftp
-          incoming = ~keefshape/ubuntu/slskdn/
-          login = anonymous
-          passive_ftp = 1
-          allow_unsigned_uploads = 0
-          EOF
-
       - name: Upload to PPA
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -756,16 +746,48 @@ jobs:
           ls -la *.changes || true
           CHANGES_FILE=$(find . -name "slskdn_*.changes" -type f | head -1)
           echo "Found changes file: $CHANGES_FILE"
-          for attempt in 1 2 3; do
-            if dput slskdn-ppa "$CHANGES_FILE"; then
-              echo "✅ Uploaded to PPA: slskdn"
-              exit 0
+
+          gpg --verify "$CHANGES_FILE"
+          DSC_FILE=$(awk '/\.dsc$/ { print $NF; exit }' "$CHANGES_FILE")
+          if [ -z "$DSC_FILE" ] || [ ! -f "$DSC_FILE" ]; then
+            echo "::error::Unable to find signed .dsc referenced by $CHANGES_FILE"
+            exit 1
+          fi
+          gpg --verify "$DSC_FILE"
+
+          mapfile -t SOURCE_FILES < <(
+            awk '
+              /^Files:/ { in_files = 1; next }
+              in_files && /^[A-Za-z0-9-]+:/ { in_files = 0 }
+              in_files && NF >= 5 { print $5 }
+            ' "$CHANGES_FILE"
+          )
+
+          if [ "${#SOURCE_FILES[@]}" -eq 0 ]; then
+            echo "::error::No source files found in $CHANGES_FILE"
+            exit 1
+          fi
+
+          for source_file in "${SOURCE_FILES[@]}" "$(basename "$CHANGES_FILE")"; do
+            if [ ! -f "$source_file" ]; then
+              echo "::error::Source upload file not found: $source_file"
+              exit 1
             fi
-            echo "PPA upload attempt $attempt failed; retrying..."
-            sleep $((attempt * 15))
+
+            echo "Uploading $source_file to Launchpad PPA over anonymous FTP"
+            curl --fail --show-error --silent --verbose \
+              --ipv4 \
+              --ftp-pasv \
+              --retry 5 \
+              --retry-all-errors \
+              --retry-delay 10 \
+              --connect-timeout 30 \
+              --max-time 900 \
+              --upload-file "$source_file" \
+              "ftp://anonymous:anonymous@ppa.launchpad.net/~keefshape/ubuntu/slskdn/$source_file"
           done
-          echo "::error::PPA upload failed after 3 attempts"
-          exit 1
+
+          echo "✅ Uploaded to PPA: slskdn"
 
   docker-main:
     name: Build and Push Docker (Main)
