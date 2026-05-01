@@ -120,6 +120,7 @@ namespace Soulseek.Network
         private async Task AddOrUpdateMessageConnectionAsync(string username, IConnection incomingConnection, bool obfuscated)
         {
             var c = incomingConnection;
+            obfuscated |= c.Obfuscated;
 
             try
             {
@@ -365,9 +366,7 @@ namespace Soulseek.Network
             {
                 cached = false;
 
-                var useObfuscated = SoulseekClient.Options.PeerObfuscationOptions.Enabled &&
-                    SoulseekClient.Options.PeerObfuscationOptions.PreferOutbound &&
-                    r.HasObfuscatedEndpoint;
+                var useObfuscated = ShouldUseObfuscatedEndpoint(r.HasObfuscatedEndpoint);
                 var endPoint = useObfuscated ? r.ObfuscatedIPEndPoint : r.IPEndPoint;
 
                 Diagnostic.Debug($"Attempting inbound indirect message connection to {r.Username} ({endPoint}) for token {r.Token}");
@@ -482,10 +481,11 @@ namespace Soulseek.Network
                 Task<IMessageConnection> obfuscated = null;
                 var tasks = new[] { direct, indirect }.ToList();
 
-                if (SoulseekClient.Options.PeerObfuscationOptions.Enabled &&
-                    SoulseekClient.Options.PeerObfuscationOptions.PreferOutbound)
+                var obfuscatedEndPoint = GetPreferredObfuscatedEndPoint(username, ipEndPoint);
+
+                if (obfuscatedEndPoint != null)
                 {
-                    obfuscated = GetMessageConnectionOutboundObfuscatedAsync(username, ipEndPoint, directLinkedCts.Token);
+                    obfuscated = GetMessageConnectionOutboundObfuscatedAsync(username, obfuscatedEndPoint, directLinkedCts.Token);
                     tasks.Insert(0, obfuscated);
                 }
 
@@ -540,6 +540,23 @@ namespace Soulseek.Network
                 return connection;
             }
         }
+
+        private IPEndPoint GetPreferredObfuscatedEndPoint(string username, IPEndPoint regularEndPoint)
+        {
+            if (!ShouldUseObfuscatedEndpoint(true))
+            {
+                return null;
+            }
+
+            return SoulseekClient.TryGetObfuscatedPeerEndPoint(username, regularEndPoint.Address, out var obfuscatedEndPoint)
+                ? obfuscatedEndPoint
+                : null;
+        }
+
+        private bool ShouldUseObfuscatedEndpoint(bool hasObfuscatedEndpoint)
+            => SoulseekClient.Options.PeerObfuscationOptions.Enabled &&
+                SoulseekClient.Options.PeerObfuscationOptions.PreferOutbound &&
+                hasObfuscatedEndpoint;
 
         /// <summary>
         ///     Adds a new transfer connection from an incoming connection.
@@ -817,11 +834,17 @@ namespace Soulseek.Network
                     .Wait<IConnection>(new WaitKey(Constants.WaitKey.SolicitedPeerConnection, username, solicitationToken), SoulseekClient.Options.PeerConnectionOptions.ConnectTimeout, cancellationToken)
                     .ConfigureAwait(false);
 
-                var connection = ConnectionFactory.GetMessageConnection(
-                    username,
-                    incomingConnection.IPEndPoint,
-                    SoulseekClient.Options.PeerConnectionOptions,
-                    incomingConnection.HandoffTcpClient());
+                var connection = incomingConnection.Obfuscated
+                    ? ConnectionFactory.GetObfuscatedMessageConnection(
+                        username,
+                        incomingConnection.IPEndPoint,
+                        SoulseekClient.Options.PeerConnectionOptions,
+                        incomingConnection.HandoffTcpClient())
+                    : ConnectionFactory.GetMessageConnection(
+                        username,
+                        incomingConnection.IPEndPoint,
+                        SoulseekClient.Options.PeerConnectionOptions,
+                        incomingConnection.HandoffTcpClient());
 
                 Diagnostic.Debug($"Indirect message connection to {username} ({incomingConnection.IPEndPoint}) handed off. (old: {incomingConnection.Id}, new: {connection.Id})");
 

@@ -150,4 +150,19 @@ describe('FederatedTasteRecommendationsPanel', () => {
     );
     expect(screen.getByText('pod-a')).toBeInTheDocument();
   });
+
+  it('can request native Soulseek recommendations', async () => {
+    render(<FederatedTasteRecommendationsPanel />);
+
+    fireEvent.click(screen.getByLabelText('Include Soulseek native recommendations'));
+    fireEvent.click(screen.getByRole('button', { name: 'Load Recommendations' }));
+
+    await waitFor(() =>
+      expect(fetchTasteRecommendations).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          includeSoulseekRecommendations: true,
+        }),
+      ),
+    );
+  });
 });

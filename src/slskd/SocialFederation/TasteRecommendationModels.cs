@@ -12,6 +12,8 @@ public sealed class TasteRecommendationRequest
     public bool IncludeSourceActors { get; set; }
 
     public bool IncludeGraphEvidence { get; set; } = true;
+
+    public bool IncludeSoulseekRecommendations { get; set; }
 }
 
 public sealed class TasteRecommendation

@@ -39,7 +39,15 @@ namespace slskd.SocialFederation
             services.AddSingleton<IActivityPubInboxStore, ActivityPubInboxStore>();
             services.AddSingleton<IActivityPubOutboxStore, ActivityPubOutboxStore>();
             services.AddSingleton<IActivityPubRelationshipStore, ActivityPubRelationshipStore>();
-            services.AddSingleton<ITasteRecommendationService, TasteRecommendationService>();
+            services.AddSingleton<ITasteRecommendationService>(sp => new TasteRecommendationService(
+                sp.GetRequiredService<IActivityPubInboxStore>(),
+                sp.GetRequiredService<IActivityPubRelationshipStore>(),
+                sp.GetService<slskd.DiscoveryGraph.IDiscoveryGraphService>(),
+                sp.GetService<slskd.Wishlist.IWishlistService>(),
+                sp.GetService<slskd.Integrations.MusicBrainz.Radar.IArtistReleaseRadarService>(),
+                sp.GetService<slskd.SoulseekDiscovery.ISoulseekDiscoveryService>(),
+                sp.GetService<slskd.Common.Security.ISoulseekSafetyLimiter>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TasteRecommendationService>>()));
 
             // Register activity delivery service
             services.AddSingleton<ActivityDeliveryService>(sp =>

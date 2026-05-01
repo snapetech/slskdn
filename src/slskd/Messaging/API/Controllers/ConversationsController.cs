@@ -307,9 +307,61 @@ namespace slskd.Messaging.API
             return StatusCode(201);
         }
 
+        /// <summary>
+        ///     Sends a private message to multiple usernames.
+        /// </summary>
+        /// <param name="request">The multi-recipient private message request.</param>
+        /// <returns></returns>
+        /// <response code="201">The request completed successfully.</response>
+        /// <response code="400">The specified request is invalid.</response>
+        [HttpPost("batch")]
+        [Authorize(Policy = AuthPolicy.Any)]
+        [ProducesResponseType(201)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> SendBatch([FromBody] MultiRecipientPrivateMessageRequest? request)
+        {
+            if (Program.IsRelayAgent)
+            {
+                return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest("request is required");
+            }
+
+            var usernames = request.Usernames?
+                .Select(NormalizeRequiredValue)
+                .Where(username => !string.IsNullOrWhiteSpace(username))
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList() ?? new List<string>();
+            var message = NormalizeRequiredValue(request.Message);
+
+            if (usernames.Count == 0)
+            {
+                return BadRequest("at least one username is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return BadRequest("message is required");
+            }
+
+            await Messages.Conversations.SendMessageAsync(usernames, message);
+
+            return StatusCode(201);
+        }
+
         private static string NormalizeRequiredValue(string? value)
         {
             return value?.Trim() ?? string.Empty;
         }
+    }
+
+    public sealed class MultiRecipientPrivateMessageRequest
+    {
+        public IEnumerable<string>? Usernames { get; set; }
+
+        public string? Message { get; set; }
     }
 }

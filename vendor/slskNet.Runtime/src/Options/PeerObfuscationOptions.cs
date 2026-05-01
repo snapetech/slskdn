@@ -49,9 +49,9 @@ namespace Soulseek
             bool advertiseRegularPort = true,
             bool preferOutbound = false)
         {
-            if (type < 0)
+            if (enabled && type != 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(type), "Must be greater than or equal to zero");
+                throw new ArgumentOutOfRangeException(nameof(type), "Only type 1 peer-message obfuscation is supported");
             }
 
             if (enabled && listenPort == 0)
@@ -62,6 +62,11 @@ namespace Soulseek
             if (listenPort != 0 && (listenPort < 1024 || listenPort > IPEndPoint.MaxPort))
             {
                 throw new ArgumentOutOfRangeException(nameof(listenPort), $"Must be zero or between 1024 and {IPEndPoint.MaxPort}");
+            }
+
+            if (enabled && !advertiseRegularPort)
+            {
+                throw new ArgumentException("The regular peer port must be advertised when peer obfuscation is enabled", nameof(advertiseRegularPort));
             }
 
             Enabled = enabled;

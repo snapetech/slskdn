@@ -21,6 +21,7 @@ import SearchDetail from './Detail/SearchDetail';
 import SearchList from './List/SearchList';
 import MusicBrainzLookup from './MusicBrainzLookup';
 import SongIDPanel from './SongIDPanel';
+import SoulseekDiscoveryPanel from './SoulseekDiscoveryPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   useLocation,
@@ -586,6 +587,16 @@ const Searches = ({ server } = {}) => {
         title="Artist Release Radar"
       >
         <ArtistReleaseRadarPanel disabled={!normalizedServer.isConnected} />
+      </CollapsibleSection>
+      <CollapsibleSection
+        defaultOpen={false}
+        storageKey="slskdn.search.section.soulseekDiscovery"
+        title="Soulseek Discovery"
+      >
+        <SoulseekDiscoveryPanel
+          disabled={!normalizedServer.isConnected}
+          onSearch={(search) => create({ navigate: true, search })}
+        />
       </CollapsibleSection>
       <CollapsibleSection
         defaultOpen={false}

@@ -132,11 +132,6 @@ namespace Soulseek.Network
         public bool IsServerConnection => string.IsNullOrEmpty(Username);
 
         /// <summary>
-        ///     Gets a value indicating whether this peer-message stream uses type-1 obfuscated frames.
-        /// </summary>
-        public bool Obfuscated { get; }
-
-        /// <summary>
         ///     Gets the unique identifier for the connection.
         /// </summary>
         public override ConnectionKey Key => new ConnectionKey(Username, IPEndPoint);
@@ -318,16 +313,26 @@ namespace Soulseek.Network
             var firstBlock = await ReadAsync(8, cancellationToken).ConfigureAwait(false);
             var decodedFirstBlock = RotatedObfuscation.Decode(firstBlock);
             var length = BitConverter.ToInt32(decodedFirstBlock, 0);
+            ValidateObfuscatedMessageLength(length);
+
             var encoded = new byte[8 + length];
             Buffer.BlockCopy(firstBlock, 0, encoded, 0, firstBlock.Length);
 
-            if (length > 4)
+            if (length > 0)
             {
-                var remaining = await ReadAsync(length - 4, cancellationToken).ConfigureAwait(false);
+                var remaining = await ReadAsync(length, cancellationToken).ConfigureAwait(false);
                 Buffer.BlockCopy(remaining, 0, encoded, 8, remaining.Length);
             }
 
             return RotatedObfuscation.Decode(encoded);
+        }
+
+        private void ValidateObfuscatedMessageLength(int length)
+        {
+            if (length < CodeLength || length > RotatedObfuscation.MaxMessageLength)
+            {
+                throw new MessageReadException($"Invalid obfuscated message length: {length}");
+            }
         }
     }
 }

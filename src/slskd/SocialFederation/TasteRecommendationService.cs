@@ -5,8 +5,10 @@ namespace slskd.SocialFederation;
 
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using slskd.Common.Security;
 using slskd.DiscoveryGraph;
 using slskd.Integrations.MusicBrainz.Radar;
+using slskd.SoulseekDiscovery;
 using slskd.Wishlist;
 
 public sealed class TasteRecommendationService : ITasteRecommendationService
@@ -19,6 +21,8 @@ public sealed class TasteRecommendationService : ITasteRecommendationService
     private readonly IDiscoveryGraphService? _discoveryGraphService;
     private readonly IWishlistService? _wishlistService;
     private readonly IArtistReleaseRadarService? _artistRadarService;
+    private readonly ISoulseekDiscoveryService? _soulseekDiscoveryService;
+    private readonly ISoulseekSafetyLimiter? _soulseekSafetyLimiter;
     private readonly ILogger<TasteRecommendationService> _logger;
 
     public TasteRecommendationService(
@@ -36,12 +40,27 @@ public sealed class TasteRecommendationService : ITasteRecommendationService
         IWishlistService? wishlistService,
         IArtistReleaseRadarService? artistRadarService,
         ILogger<TasteRecommendationService> logger)
+        : this(inboxStore, relationshipStore, discoveryGraphService, wishlistService, artistRadarService, null, null, logger)
+    {
+    }
+
+    public TasteRecommendationService(
+        IActivityPubInboxStore inboxStore,
+        IActivityPubRelationshipStore relationshipStore,
+        IDiscoveryGraphService? discoveryGraphService,
+        IWishlistService? wishlistService,
+        IArtistReleaseRadarService? artistRadarService,
+        ISoulseekDiscoveryService? soulseekDiscoveryService,
+        ISoulseekSafetyLimiter? soulseekSafetyLimiter,
+        ILogger<TasteRecommendationService> logger)
     {
         _inboxStore = inboxStore;
         _relationshipStore = relationshipStore;
         _discoveryGraphService = discoveryGraphService;
         _wishlistService = wishlistService;
         _artistRadarService = artistRadarService;
+        _soulseekDiscoveryService = soulseekDiscoveryService;
+        _soulseekSafetyLimiter = soulseekSafetyLimiter;
         _logger = logger;
     }
 
@@ -70,6 +89,11 @@ public sealed class TasteRecommendationService : ITasteRecommendationService
             observations.AddRange(ExtractObservations(entry));
         }
 
+        if (request.IncludeSoulseekRecommendations)
+        {
+            observations.AddRange(await GetSoulseekRecommendationObservationsAsync(cancellationToken).ConfigureAwait(false));
+        }
+
         var result = BuildRecommendations(observations, trustedActorSet.Count, minimumTrustedSources, limit, request.IncludeSourceActors);
         if (request.IncludeGraphEvidence && _discoveryGraphService != null)
         {
@@ -82,6 +106,52 @@ public sealed class TasteRecommendationService : ITasteRecommendationService
         }
 
         return result;
+    }
+
+    private async Task<IReadOnlyCollection<FederatedWorkRefObservation>> GetSoulseekRecommendationObservationsAsync(CancellationToken cancellationToken)
+    {
+        if (_soulseekDiscoveryService == null || _soulseekSafetyLimiter == null)
+        {
+            return Array.Empty<FederatedWorkRefObservation>();
+        }
+
+        if (!_soulseekSafetyLimiter.TryConsumeSearch("taste-recommendations-soulseek"))
+        {
+            _logger.LogWarning("[TasteRecommendations] Soulseek native recommendation lookup rejected by safety limiter");
+            return Array.Empty<FederatedWorkRefObservation>();
+        }
+
+        try
+        {
+            var recommendations = await _soulseekDiscoveryService.GetRecommendationsAsync(cancellationToken).ConfigureAwait(false);
+            var now = DateTimeOffset.UtcNow;
+
+            return recommendations.Recommendations
+                .Where(recommendation => !string.IsNullOrWhiteSpace(recommendation.Item))
+                .Select(recommendation => new FederatedWorkRefObservation
+                {
+                    ActorName = "music",
+                    RemoteActor = "soulseek:native-recommendations",
+                    WorkRef = new WorkRef
+                    {
+                        Domain = "music",
+                        Title = recommendation.Item.Trim(),
+                        Metadata = new Dictionary<string, object>
+                        {
+                            ["source"] = "soulseek-native-recommendations",
+                            ["score"] = recommendation.Score,
+                        },
+                    },
+                    ObservedAt = now,
+                })
+                .Where(observation => IsRecommendable(observation.WorkRef))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogInformation(ex, "[TasteRecommendations] Soulseek native recommendations unavailable");
+            return Array.Empty<FederatedWorkRefObservation>();
+        }
     }
 
     public async Task<TasteRecommendationWishlistPromotionResult> PromoteToWishlistAsync(
@@ -408,6 +478,12 @@ public sealed class TasteRecommendationService : ITasteRecommendationService
         {
             $"appeared in {sourceCount} trusted federated music libraries",
         };
+
+        if (workRef.Metadata.TryGetValue("source", out var source) &&
+            string.Equals(source?.ToString(), "soulseek-native-recommendations", StringComparison.OrdinalIgnoreCase))
+        {
+            reasons.Add("suggested by Soulseek native recommendations");
+        }
 
         if (!string.IsNullOrWhiteSpace(workRef.Creator))
         {

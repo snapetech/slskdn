@@ -70,6 +70,7 @@ namespace Soulseek.Network
             var listenerPort = listener?.Port ?? SoulseekClient.Listener?.Port ?? 0;
             var listenerAddress = listener?.IPAddress ?? SoulseekClient.Listener?.IPAddress;
             var obfuscated = listener?.Obfuscated == true;
+            connection.Obfuscated = obfuscated;
 
             Diagnostic.Debug($"Accepted incoming connection from {connection.IPEndPoint.Address} on {listenerAddress}:{listenerPort} (id: {connection.Id})");
 
@@ -82,12 +83,14 @@ namespace Soulseek.Network
                     var firstBlock = await connection.ReadAsync(8).ConfigureAwait(false);
                     var decodedFirstBlock = RotatedObfuscation.Decode(firstBlock);
                     var length = BitConverter.ToInt32(decodedFirstBlock, 0);
+                    ValidateObfuscatedMessageLength(length);
+
                     var obfuscatedMessage = new byte[8 + length];
                     Buffer.BlockCopy(firstBlock, 0, obfuscatedMessage, 0, firstBlock.Length);
 
-                    if (length > 4)
+                    if (length > 0)
                     {
-                        var remainingBytes = await connection.ReadAsync(length - 4).ConfigureAwait(false);
+                        var remainingBytes = await connection.ReadAsync(length).ConfigureAwait(false);
                         Buffer.BlockCopy(remainingBytes, 0, obfuscatedMessage, 8, remainingBytes.Length);
                     }
 
@@ -125,6 +128,11 @@ namespace Soulseek.Network
                     }
                     else if (peerInit.ConnectionType == Constants.ConnectionType.Transfer)
                     {
+                        if (obfuscated)
+                        {
+                            throw new ConnectionException("Obfuscated listener does not accept transfer connections");
+                        }
+
                         // slightly misleading name; this hands the incoming connection off instead of establishing new
                         var (transferConnection, remoteToken) = await SoulseekClient.PeerConnectionManager.GetTransferConnectionAsync(
                             peerInit.Username,
@@ -148,6 +156,11 @@ namespace Soulseek.Network
                     }
                     else if (peerInit.ConnectionType == Constants.ConnectionType.Distributed)
                     {
+                        if (obfuscated)
+                        {
+                            throw new ConnectionException("Obfuscated listener does not accept distributed connections");
+                        }
+
                         await SoulseekClient.DistributedConnectionManager.AddOrUpdateChildConnectionAsync(
                             peerInit.Username,
                             connection).ConfigureAwait(false);
@@ -165,6 +178,11 @@ namespace Soulseek.Network
                     }
                     else if (SoulseekClient.DistributedConnectionManager.PendingSolicitations.TryGetValue(pierceFirewall.Token, out var distributedUsername))
                     {
+                        if (obfuscated)
+                        {
+                            throw new ConnectionException($"Obfuscated listener does not accept distributed PierceFirewall with token {pierceFirewall.Token}");
+                        }
+
                         Diagnostic.Debug($"Distributed PierceFirewall with token {pierceFirewall.Token} received from {distributedUsername} ({connection.IPEndPoint.Address}:{listenerPort}) (id: {connection.Id})");
                         SoulseekClient.Waiter.Complete(new WaitKey(Constants.WaitKey.SolicitedDistributedConnection, distributedUsername, pierceFirewall.Token), connection);
                     }
@@ -175,7 +193,15 @@ namespace Soulseek.Network
                         var (username, _, _, _) = cachedSearchResponse;
 
                         Diagnostic.Debug($"PierceFirewall matching pending search response received from {username} ({connection.IPEndPoint.Address}:{listenerPort}) (id: {connection.Id})");
-                        await SoulseekClient.PeerConnectionManager.AddOrUpdateMessageConnectionAsync(username, connection).ConfigureAwait(false);
+                        if (obfuscated)
+                        {
+                            await SoulseekClient.PeerConnectionManager.AddOrUpdateObfuscatedMessageConnectionAsync(username, connection).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await SoulseekClient.PeerConnectionManager.AddOrUpdateMessageConnectionAsync(username, connection).ConfigureAwait(false);
+                        }
+
                         await SoulseekClient.SearchResponder.TryRespondAsync(pierceFirewall.Token).ConfigureAwait(false);
                     }
                     else
@@ -193,6 +219,14 @@ namespace Soulseek.Network
                 Diagnostic.Debug($"Failed to initialize direct connection from {connection.IPEndPoint.Address}:{connection.IPEndPoint.Port}: {ex.Message}");
                 connection.Disconnect(exception: ex);
                 connection.Dispose();
+            }
+        }
+
+        private static void ValidateObfuscatedMessageLength(int length)
+        {
+            if (length < 4 || length > RotatedObfuscation.MaxMessageLength)
+            {
+                throw new MessageReadException($"Invalid obfuscated message length: {length}");
             }
         }
     }

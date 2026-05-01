@@ -11,14 +11,18 @@ import RoomSession from '../Rooms/RoomSession';
 import UserCard from '../Shared/UserCard';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   Button,
   Card,
   Dropdown,
+  Form,
   Icon,
   Input,
   Label,
   List,
+  Message,
+  Modal,
   Popup,
   Segment,
 } from 'semantic-ui-react';
@@ -254,6 +258,10 @@ const Messaging = ({ initialKind = 'mixed', state }) => {
   const [joinedRooms, setJoinedRooms] = useState([]);
   const [podChannels, setPodChannels] = useState([]);
   const [availableRooms, setAvailableRooms] = useState([]);
+  const [batchMessage, setBatchMessage] = useState('');
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
+  const [batchUsernames, setBatchUsernames] = useState('');
   const [roomSearchLoading, setRoomSearchLoading] = useState(false);
 
   const openPanel = useCallback((type, target, metadata = {}) => {
@@ -530,6 +538,43 @@ const Messaging = ({ initialKind = 'mixed', state }) => {
     }
   };
 
+  const sendBatchMessage = async () => {
+    const usernames = batchUsernames
+      .split(/[\s,;]+/)
+      .map((username) => username.trim())
+      .filter(Boolean);
+    const message = batchMessage.trim();
+
+    if (usernames.length === 0) {
+      toast.error('At least one recipient is required');
+      return;
+    }
+
+    if (!message) {
+      toast.error('Message is required');
+      return;
+    }
+
+    setBatchSending(true);
+    try {
+      await chat.sendBatch({ message, usernames });
+      toast.success(`Sent batch message to ${new Set(usernames.map((name) => name.toLowerCase())).size} users`);
+      setBatchMessage('');
+      setBatchUsernames('');
+      setBatchModalOpen(false);
+      await hydrate();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.response?.data ||
+          error?.message ||
+          'Failed to send batch message',
+      );
+    } finally {
+      setBatchSending(false);
+    }
+  };
+
   const roomOptions = useMemo(
     () =>
       availableRooms.map((room) => ({
@@ -786,6 +831,18 @@ const Messaging = ({ initialKind = 'mixed', state }) => {
               <Label size="small">{openPanels.length} open</Label>
             </div>
             <Popup
+              content="Send one private message to multiple users through the native Soulseek batch command."
+              trigger={
+                <Button
+                  aria-label="Open batch private-message dialog"
+                  icon="send"
+                  onClick={() => setBatchModalOpen(true)}
+                  size="small"
+                  title="Batch private message"
+                />
+              }
+            />
+            <Popup
               content="Collapse every open message panel into the dock."
               trigger={
                 <Button
@@ -803,6 +860,53 @@ const Messaging = ({ initialKind = 'mixed', state }) => {
               }
             />
           </Segment>
+
+          <Modal
+            onClose={() => setBatchModalOpen(false)}
+            open={batchModalOpen}
+            size="small"
+          >
+            <Modal.Header>Batch Private Message</Modal.Header>
+            <Modal.Content>
+              <Message info>
+                Sends through Soulseek's multi-recipient private-message command and stores one local conversation per recipient.
+              </Message>
+              <Form>
+                <Form.TextArea
+                  aria-label="Batch private-message recipients"
+                  label="Recipients"
+                  onChange={(event) => setBatchUsernames(event.target.value)}
+                  placeholder="alice, bob, carol"
+                  value={batchUsernames}
+                />
+                <Form.TextArea
+                  aria-label="Batch private-message body"
+                  label="Message"
+                  onChange={(event) => setBatchMessage(event.target.value)}
+                  placeholder="Message"
+                  value={batchMessage}
+                />
+              </Form>
+            </Modal.Content>
+            <Modal.Actions>
+              <Button onClick={() => setBatchModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  batchSending ||
+                  !batchMessage.trim() ||
+                  !batchUsernames.trim()
+                }
+                loading={batchSending}
+                onClick={sendBatchMessage}
+                primary
+              >
+                <Icon name="send" />
+                Send
+              </Button>
+            </Modal.Actions>
+          </Modal>
 
           {openPanels.length === 0 ? (
             <PlaceholderSegment

@@ -44,6 +44,10 @@ html.dark .user-card-username {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.user-card-stat-clickable {
+  cursor: pointer;
+}
+
 .user-card-stat .icon {
   margin: 0 !important;
   opacity: 0.8;
@@ -146,6 +150,33 @@ html.dark .user-card-username {
 
 .user-card-loading .icon {
   margin: 0 !important;
+}
+
+.user-card-interest-popup {
+  max-width: 280px;
+}
+
+.user-card-interest-section + .user-card-interest-section {
+  margin-top: 0.65em;
+}
+
+.user-card-interest {
+  display: inline-block;
+  margin: 0.2em 0.25em 0 0;
+  padding: 0.15em 0.45em;
+  border-radius: 3px;
+  font-size: 0.85em;
+  line-height: 1.25;
+}
+
+.user-card-interest-liked {
+  background: rgba(33, 186, 69, 0.12);
+  color: #1f8f3a;
+}
+
+.user-card-interest-hated {
+  background: rgba(219, 40, 40, 0.12);
+  color: #b82020;
 }
 
 /* Dark theme enhancements */

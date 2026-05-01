@@ -1,5 +1,6 @@
 import './UserCard.css';
 import * as security from '../../lib/security';
+import * as soulseekDiscovery from '../../lib/soulseekDiscovery';
 import * as users from '../../lib/users';
 import React, { Component } from 'react';
 import { Icon, Popup } from 'semantic-ui-react';
@@ -9,6 +10,9 @@ class UserCard extends Component {
     super(props);
     this.state = {
       info: null,
+      interests: null,
+      interestsError: null,
+      interestsLoading: false,
       loading: false,
       reputation: null,
     };
@@ -20,6 +24,11 @@ class UserCard extends Component {
 
   componentDidUpdate(previousProps) {
     if (previousProps.username !== this.props.username) {
+      this.setState({
+        interests: null,
+        interestsError: null,
+        interestsLoading: false,
+      });
       this.fetchUserData();
     }
   }
@@ -52,6 +61,34 @@ class UserCard extends Component {
     }
   };
 
+  fetchInterests = async () => {
+    const { username } = this.props;
+    const { interests, interestsLoading } = this.state;
+    if (!username || interests || interestsLoading) return;
+
+    this.setState({ interestsError: null, interestsLoading: true });
+
+    try {
+      const response = await soulseekDiscovery.getUserInterests({
+        username,
+      });
+
+      this.setState({
+        interests: response.data || {},
+        interestsLoading: false,
+      });
+    } catch (error) {
+      this.setState({
+        interestsError:
+          error?.response?.data?.message ||
+          error?.response?.data ||
+          error?.message ||
+          'Interests unavailable',
+        interestsLoading: false,
+      });
+    }
+  };
+
   getReputationColor = (score) => {
     if (score === null || score === undefined) return 'grey';
     if (score >= 80) return 'purple'; // Amazing (80-100)
@@ -59,6 +96,69 @@ class UserCard extends Component {
     if (score >= 40) return 'olive'; // OK (40-59)
     if (score >= 20) return 'orange'; // Poor (20-39)
     return 'red'; // Very poor (0-19)
+  };
+
+  renderInterestPopup = () => {
+    const { username } = this.props;
+    const { interests, interestsError, interestsLoading } = this.state;
+
+    if (interestsLoading) {
+      return (
+        <span>
+          <Icon
+            loading
+            name="spinner"
+          />{' '}
+          Loading native interests
+        </span>
+      );
+    }
+
+    if (interestsError) {
+      return <span>{interestsError}</span>;
+    }
+
+    const liked = interests?.liked || interests?.Liked || [];
+    const hated = interests?.hated || interests?.Hated || [];
+
+    if (!interests) {
+      return <span>Click to load native Soulseek interests for {username}.</span>;
+    }
+
+    return (
+      <div className="user-card-interest-popup">
+        <div className="user-card-interest-section">
+          <strong>Liked</strong>
+          <div>
+            {liked.length === 0
+              ? 'None reported'
+              : liked.slice(0, 12).map((interest) => (
+                <span
+                  className="user-card-interest user-card-interest-liked"
+                  key={`liked-${interest}`}
+                >
+                  {interest}
+                </span>
+              ))}
+          </div>
+        </div>
+        <div className="user-card-interest-section">
+          <strong>Hated</strong>
+          <div>
+            {hated.length === 0
+              ? 'None reported'
+              : hated.slice(0, 12).map((interest) => (
+                <span
+                  className="user-card-interest user-card-interest-hated"
+                  key={`hated-${interest}`}
+                >
+                  {interest}
+                </span>
+              ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   render() {
@@ -183,6 +283,22 @@ class UserCard extends Component {
                 }
               />
             ))}
+            <Popup
+              content={this.renderInterestPopup()}
+              on="click"
+              onOpen={this.fetchInterests}
+              position="top center"
+              trigger={
+                <span className="user-card-stat user-card-stat-red user-card-stat-clickable">
+                  <Icon
+                    fitted
+                    name="heart outline"
+                    size="small"
+                  />
+                  <span className="user-card-stat-value">i</span>
+                </span>
+              }
+            />
           </span>
         )}
       </span>

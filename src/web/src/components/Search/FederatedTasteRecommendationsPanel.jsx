@@ -33,6 +33,7 @@ const getSearchText = (workRef = {}) =>
 const FederatedTasteRecommendationsPanel = ({ disabled }) => {
   const [error, setError] = useState('');
   const [graphPreview, setGraphPreview] = useState(null);
+  const [includeSoulseekRecommendations, setIncludeSoulseekRecommendations] = useState(false);
   const [includeSourceActors, setIncludeSourceActors] = useState(false);
   const [limit, setLimit] = useState(20);
   const [loading, setLoading] = useState(false);
@@ -46,6 +47,7 @@ const FederatedTasteRecommendationsPanel = ({ disabled }) => {
     setLoading(true);
     try {
       const response = await fetchTasteRecommendations({
+        includeSoulseekRecommendations,
         includeSourceActors,
         limit: Number(limit) || 20,
         minimumTrustedSources: Number(minimumTrustedSources) || 2,
@@ -146,9 +148,18 @@ const FederatedTasteRecommendationsPanel = ({ disabled }) => {
               toggle
             />
           </Form.Field>
+          <Form.Field>
+            <label>Include Soulseek native</label>
+            <Checkbox
+              aria-label="Include Soulseek native recommendations"
+              checked={includeSoulseekRecommendations}
+              onChange={(_event, data) => setIncludeSoulseekRecommendations(data.checked)}
+              toggle
+            />
+          </Form.Field>
         </Form.Group>
         <Popup
-          content="Load privacy-filtered recommendations from followed federated actors. Source actors remain hidden unless explicitly revealed."
+          content="Load privacy-filtered recommendations from followed federated actors. Optionally include raw native Soulseek recommendation seeds."
           position="top center"
           trigger={
             <Button

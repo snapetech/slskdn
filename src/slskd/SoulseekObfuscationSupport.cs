@@ -33,23 +33,16 @@ public static class SoulseekObfuscationSupport
 
         var requestedListenPort = options.ListenPort > 0 ? options.ListenPort : (int?)null;
         var effectiveListenPort = requestedListenPort ?? DeriveListenPort(soulseek.ListenPort);
-        var runtimeState = options.Enabled
-            ? RuntimeSupportsType1PeerMessages ? "active" : "configured_pending_runtime"
-            : "disabled";
+        var runtimeState = options.Enabled ? "active" : "disabled";
 
         var limitations = new List<string>();
-
-        if (!RuntimeSupportsType1PeerMessages)
-        {
-            limitations.Add("Current Soulseek.NET runtime does not expose SetWaitPort obfuscation metadata or type-1 peer-message listener/dialer hooks.");
-        }
 
         limitations.Add("Type-1 obfuscation is a compatibility/privacy posture, not transport security or meaningful encryption.");
         limitations.Add("Current research covers peer-message streams; file transfer and distributed-network paths remain regular-port based.");
 
         if (mode == SoulseekObfuscationMode.Only)
         {
-            limitations.Add("Only mode breaks clients that ignore obfuscated peer metadata.");
+            limitations.Add("Only mode is not supported by the current runtime because slskdN keeps the regular peer-message path advertised for legacy compatibility.");
         }
 
         return new SoulseekObfuscationPlan(
@@ -96,15 +89,13 @@ public static class SoulseekObfuscationSupport
 
         var posture = mode switch
         {
-            SoulseekObfuscationMode.Compatibility => "Compatibility mode keeps the regular peer-message path available and adds obfuscated reachability when runtime support is available.",
-            SoulseekObfuscationMode.Prefer => "Prefer mode would use obfuscated peer-message dials when peers advertise type-1 metadata and keep regular fallback.",
-            SoulseekObfuscationMode.Only => "Only mode would advertise obfuscated peer-message reachability without regular fallback.",
+            SoulseekObfuscationMode.Compatibility => "Compatibility mode keeps the regular peer-message path available and adds obfuscated reachability.",
+            SoulseekObfuscationMode.Prefer => "Prefer mode uses obfuscated peer-message dials when peers advertise type-1 metadata and keeps regular fallback.",
+            SoulseekObfuscationMode.Only => "Only mode is not currently supported; the runtime keeps regular peer-message fallback for legacy compatibility.",
             _ => "Soulseek type-1 peer-message obfuscation is configured.",
         };
 
-        return RuntimeSupportsType1PeerMessages
-            ? posture
-            : $"{posture} The current Soulseek.NET runtime cannot activate the wire path yet.";
+        return posture;
     }
 }
 

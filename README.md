@@ -346,12 +346,22 @@ Discover other slskdN users via BitTorrent DHT and form encrypted mesh overlay.
 ### 🕶️ Soulseek Type-1 Obfuscation Options
 First-class Soulseek peer-message obfuscation posture for compatible clients.
 - **Default-on compatibility mode** — keeps the regular peer-message path available and adds type-1 obfuscated reachability when runtime support exists
-- **Prefer mode** — future runtime posture for preferring obfuscated outbound peer-message dials while keeping regular fallback
-- **Only mode** — explicit opt-in posture for obfuscated-only peer-message reachability; this can break clients that ignore obfuscated metadata
+- **Prefer mode** — prefers obfuscated outbound peer-message dials while keeping regular fallback
+- **Only mode reserved** — obfuscated-only reachability is intentionally not enabled while the runtime preserves legacy-client fallback
 - **Visible status** — System → Network reports enablement, mode, advertised ports, fallback posture, and runtime activation state
-- **Current runtime honesty** — today’s Soulseek.NET dependency does not expose the required SetWaitPort or type-1 listener/dialer hooks yet, so slskdN reports `configured_pending_runtime` until those hooks or a local transport adapter land
+- **Active runtime support** — slskdN’s vendored runtime now advertises type-1 metadata, accepts obfuscated peer-message listeners, and can prefer compatible outbound obfuscated peer-message dials
 
 📖 **Guide**: [Soulseek type-1 obfuscation](docs/soulseek-type1-obfuscation.md) • [Configuration](docs/config.md#type-1-peer-message-obfuscation)
+
+### 🧭 Soulseek Native Discovery
+Native Soulseek interests, recommendations, similar users, and multi-recipient messages are available as explicit opt-in workflows.
+- **Search → Soulseek Discovery** — manage interests, load personal/global recommendations, branch from item recommendations, inspect similar users, and send raw seeds into normal searches or review-only Wishlist entries
+- **Federated Taste toggle** — optionally folds native Soulseek recommendations into privacy-filtered taste recommendations without treating them as verified metadata
+- **User-card interests** — lazy-loads liked/hated native interests for a peer only when opened
+- **Messages batch send** — uses the native multi-recipient private-message command and persists one local conversation per recipient
+- **Safety limiter buckets** — discovery calls are rate-limited separately from manual searches, browse requests, transfers, and rooms
+
+📖 **Guide**: [Soulseek native discovery](docs/soulseek-native-discovery.md)
 
 ### 🔒 Security Hardening
 Active zero-trust hardening work with defense-in-depth controls:

@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../lib/chat', () => ({
   getAll: vi.fn(),
   remove: vi.fn(),
+  sendBatch: vi.fn(),
 }));
 
 vi.mock('../../lib/pods', () => ({
@@ -113,6 +114,37 @@ describe('Messaging', () => {
     fireEvent.click(screen.getByLabelText('Open direct-message panel'));
 
     expect(screen.getByText('Chat panel: new-user')).toBeInTheDocument();
+  });
+
+  it('sends one batch private message to multiple recipients', async () => {
+    chat.getAll.mockResolvedValue([]);
+    chat.sendBatch.mockResolvedValue({});
+    pods.list.mockResolvedValue([]);
+    rooms.getJoined.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Messaging />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Workspace')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Open batch private-message dialog'));
+    fireEvent.change(screen.getByLabelText('Batch private-message recipients'), {
+      target: { value: 'alice, bob' },
+    });
+    fireEvent.change(screen.getByLabelText('Batch private-message body'), {
+      target: { value: 'hello' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() =>
+      expect(chat.sendBatch).toHaveBeenCalledWith({
+        message: 'hello',
+        usernames: ['alice', 'bob'],
+      }),
+    );
   });
 
   it('hides pod direct channels from the unified message workspace', async () => {

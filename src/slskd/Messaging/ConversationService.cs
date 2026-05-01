@@ -111,6 +111,14 @@ namespace slskd.Messaging
         /// <param name="message">The message.</param>
         /// <returns>The operation context.</returns>
         Task SendMessageAsync(string username, string message);
+
+        /// <summary>
+        ///     Sends the specified <paramref name="message"/> to the specified <paramref name="usernames"/>.
+        /// </summary>
+        /// <param name="usernames">The usernames of the recipients.</param>
+        /// <param name="message">The message.</param>
+        /// <returns>The operation context.</returns>
+        Task SendMessageAsync(IEnumerable<string> usernames, string message);
     }
 
     public class ConversationService : IConversationService
@@ -557,6 +565,46 @@ namespace slskd.Messaging
                 Message = message,
                 IsAcknowledged = true,
             });
+
+            context.SaveChanges();
+        }
+
+        /// <inheritdoc />
+        public async Task SendMessageAsync(IEnumerable<string> usernames, string message)
+        {
+            var recipients = usernames
+                .Where(username => !string.IsNullOrWhiteSpace(username))
+                .Select(username => username.Trim())
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
+
+            if (recipients.Count == 0)
+            {
+                throw new ArgumentException("At least one username is required", nameof(usernames));
+            }
+
+            foreach (var username in recipients)
+            {
+                ActivateConversation(username);
+            }
+
+            await SoulseekClient.SendPrivateMessageAsync(recipients, message);
+
+            using var context = ContextFactory.CreateDbContext();
+            var timestamp = DateTime.UtcNow;
+
+            foreach (var username in recipients)
+            {
+                context.PrivateMessages.Add(new PrivateMessage
+                {
+                    Timestamp = timestamp,
+                    Id = 0,
+                    Username = username,
+                    Direction = MessageDirection.Out,
+                    Message = message,
+                    IsAcknowledged = true,
+                });
+            }
 
             context.SaveChanges();
         }

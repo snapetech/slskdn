@@ -379,6 +379,24 @@ internal sealed class TestConversationService : IConversationService
         return Task.CompletedTask;
     }
 
+    public Task SendMessageAsync(IEnumerable<string> usernames, string message)
+    {
+        foreach (var username in usernames)
+        {
+            EnsureConversation(username).Add(new PrivateMessage
+            {
+                Id = _nextId++,
+                Username = username,
+                Message = message,
+                Timestamp = DateTime.UtcNow,
+                Direction = MessageDirection.Out,
+                IsAcknowledged = true,
+            });
+        }
+
+        return Task.CompletedTask;
+    }
+
     private List<PrivateMessage> EnsureConversation(string username)
     {
         if (!_messages.TryGetValue(username, out var messages))

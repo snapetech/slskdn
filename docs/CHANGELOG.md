@@ -22,6 +22,14 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Added native Soulseek discovery support for interests, hated interests,
+  recommendations, item recommendations, similar users, and user-interest
+  lookup through the vendored runtime and slskdN API.
+- Surfaced native discovery in the Web UI with Search handoffs, review-only
+  Wishlist handoffs, lazy user-card interest lookup, Federated Taste opt-in,
+  and Messages batch private-message sending.
+- Documented Soulseek type-1 obfuscation activation, native discovery
+  workflows, compatibility posture, and safety limiter buckets.
 - Added shared UDP port handling so the DHT rendezvous listener can keep the
   public `50305/udp` forward while proxying QUIC overlay traffic to a loopback
   MsQuic listener, putting direct QUIC back on the reduced two-forward mesh

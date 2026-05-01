@@ -20,6 +20,13 @@ export const send = ({ username, message }) => {
   );
 };
 
+export const sendBatch = ({ message, usernames }) => {
+  return api.post('/conversations/batch', {
+    message,
+    usernames,
+  });
+};
+
 export const remove = ({ username }) => {
   return api.delete(`/conversations/${encodeURIComponent(username)}`);
 };

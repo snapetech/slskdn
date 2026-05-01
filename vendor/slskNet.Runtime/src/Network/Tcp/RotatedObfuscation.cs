@@ -35,6 +35,7 @@ namespace Soulseek.Network.Tcp
     internal static class RotatedObfuscation
     {
         public const int Type = 1;
+        public const int MaxMessageLength = 256 * 1024 * 1024;
 
         public static byte[] Encode(byte[] input)
         {

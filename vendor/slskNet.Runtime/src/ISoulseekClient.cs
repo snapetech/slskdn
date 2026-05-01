@@ -347,6 +347,22 @@ namespace Soulseek
         Task AcknowledgePrivilegeNotificationAsync(int privilegeNotificationId, CancellationToken? cancellationToken = null);
 
         /// <summary>
+        ///     Asynchronously adds the specified <paramref name="item"/> to the current user's hated interests.
+        /// </summary>
+        /// <param name="item">The interest item to add.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        Task AddHatedInterestAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously adds the specified <paramref name="item"/> to the current user's liked interests.
+        /// </summary>
+        /// <param name="item">The interest item to add.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        Task AddInterestAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
         ///     Asynchronously adds the specified <paramref name="username"/> to the list of members in the specified private <paramref name="roomName"/>.
         /// </summary>
         /// <param name="roomName">The room to which to add the user.</param>
@@ -880,6 +896,20 @@ namespace Soulseek
         Task<int> GetPrivilegesAsync(CancellationToken? cancellationToken = null);
 
         /// <summary>
+        ///     Asynchronously fetches recommendations related to the current user's interests.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<RecommendationList> GetRecommendationsAsync(CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously fetches global recommendations.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<RecommendationList> GetGlobalRecommendationsAsync(CancellationToken? cancellationToken = null);
+
+        /// <summary>
         ///     Asynchronously fetches the list of chat rooms on the server.
         /// </summary>
         /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -921,6 +951,37 @@ namespace Soulseek
         /// <exception cref="UserOfflineException">Thrown when the specified user is offline.</exception>
         /// <exception cref="SoulseekClientException">Thrown when an exception is encountered during the operation.</exception>
         Task<UserInfo> GetUserInfoAsync(string username, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously fetches recommendations related to the specified <paramref name="item"/>.
+        /// </summary>
+        /// <param name="item">The item for which to fetch recommendations.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<ItemRecommendations> GetItemRecommendationsAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously fetches users with interests similar to the specified <paramref name="item"/>.
+        /// </summary>
+        /// <param name="item">The item for which to fetch similar users.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<ItemSimilarUsers> GetItemSimilarUsersAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously fetches users with interests similar to the current user's interests.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<IReadOnlyCollection<SimilarUser>> GetSimilarUsersAsync(CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously fetches liked and hated interests for the specified <paramref name="username"/>.
+        /// </summary>
+        /// <param name="username">The username for which to fetch interests.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        Task<UserInterests> GetUserInterestsAsync(string username, CancellationToken? cancellationToken = null);
 
         /// <summary>
         ///     Asynchronously fetches the status of the privileges of the specified <paramref name="username"/>.
@@ -1130,6 +1191,22 @@ namespace Soulseek
         Task RemovePrivateRoomModeratorAsync(string roomName, string username, CancellationToken? cancellationToken = null);
 
         /// <summary>
+        ///     Asynchronously removes the specified <paramref name="item"/> from the current user's hated interests.
+        /// </summary>
+        /// <param name="item">The interest item to remove.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        Task RemoveHatedInterestAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously removes the specified <paramref name="item"/> from the current user's liked interests.
+        /// </summary>
+        /// <param name="item">The interest item to remove.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        Task RemoveInterestAsync(string item, CancellationToken? cancellationToken = null);
+
+        /// <summary>
         ///     Asynchronously searches for the specified <paramref name="query"/> using the specified unique
         ///     <paramref name="token"/> and with the optionally specified <paramref name="options"/> and <paramref name="cancellationToken"/>.
         /// </summary>
@@ -1190,6 +1267,15 @@ namespace Soulseek
         /// <exception cref="OperationCanceledException">Thrown when the operation has been cancelled.</exception>
         /// <exception cref="SoulseekClientException">Thrown when an exception is encountered during the operation.</exception>
         Task SendPrivateMessageAsync(string username, string message, CancellationToken? cancellationToken = null);
+
+        /// <summary>
+        ///     Asynchronously sends the specified private <paramref name="message"/> to the specified <paramref name="usernames"/>.
+        /// </summary>
+        /// <param name="usernames">The users to which the message is to be sent.</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        Task SendPrivateMessageAsync(IEnumerable<string> usernames, string message, CancellationToken? cancellationToken = null);
 
         /// <summary>
         ///     Asynchronously sends the specified chat room <paramref name="message"/> to the specified <paramref name="roomName"/>.

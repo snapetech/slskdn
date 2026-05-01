@@ -1,6 +1,6 @@
 # Soulseek Type-1 Obfuscation
 
-slskdN treats Soulseek type-1 peer-message obfuscation as a first-class feature option. The option defaults on in `compatibility` mode, so the regular peer-message path remains available and obfuscated reachability is added when the runtime can honor it. The option is intentionally conservative: it is configurable, validated, visible in the Network tab, and documented as a runtime plan before the current Soulseek.NET dependency can activate the wire path.
+slskdN treats Soulseek type-1 peer-message obfuscation as a first-class feature option. The option defaults on in `compatibility` mode, so the regular peer-message path remains available and obfuscated reachability is added. The option is intentionally conservative: it is configurable, validated, visible in the Network tab, and keeps legacy-client fallback enabled.
 
 ## What We Know
 
@@ -10,28 +10,28 @@ The research shows enough to design and expose the feature:
 - Type-1 obfuscated peer-message streams can be accepted by an obfuscated listener.
 - Direct obfuscated peer-message connections can succeed across separate public endpoints.
 - Indirect peer-message connection flow can carry enough metadata for the target to choose the obfuscated port.
-- An obfuscated-only posture works between compatible implementations when the regular port is intentionally unreachable and the obfuscated port is correctly advertised.
+- Obfuscated-only reachability can work between compatible implementations, but slskdN does not enable that posture while broad legacy compatibility is the default.
 
-This is stronger than a local-only prototype. It is enough to justify product support for compatibility, prefer, and explicit only modes.
+This is stronger than a local-only prototype. It is enough to justify product support for compatibility and prefer modes while reserving only mode for a later explicit compatibility break.
 
 ## Current Runtime Status
 
-The current slskdN runtime uses Soulseek.NET. The packaged public API does not expose:
+slskdN’s vendored runtime exposes the wire path:
 
-- SetWaitPort fields for obfuscation type and obfuscated port advertisement.
-- A type-1 obfuscated peer-message listener.
-- A type-1 obfuscated outbound peer-message dialer.
-- Obfuscation fields on peer-address or indirect-connect responses.
+- SetListenPort obfuscation type and obfuscated-port advertisement.
+- Type-1 obfuscated peer-message listener support.
+- Type-1 obfuscated outbound peer-message dialing.
+- Obfuscation fields on peer-address and indirect-connect responses.
 
-Because of that limitation, slskdN currently reports type-1 obfuscation as `configured_pending_runtime` when enabled. The options are real, validated, and default-on in compatibility mode, but the wire path is not active until Soulseek.NET support or a slskdN transport adapter lands.
+When enabled with a valid obfuscated listener port, slskdN reports type-1 obfuscation as `active`.
 
 ## Modes
 
-`compatibility` mode is the broad-client default. When runtime support exists, it should advertise regular and obfuscated peer-message reachability together. This mode must not block or replace the normal peer-message path.
+`compatibility` mode is the broad-client default. It advertises regular and obfuscated peer-message reachability together. This mode must not block or replace the normal peer-message path.
 
-`prefer` mode is the enhanced posture. When runtime support exists, it should prefer type-1 obfuscated outbound peer-message dials when the peer advertises compatible metadata and keep regular fallback for other clients.
+`prefer` mode is the enhanced posture. It prefers type-1 obfuscated outbound peer-message dials when the peer advertises compatible metadata and keeps regular fallback for other clients.
 
-`only` mode is the strict posture. It requires an explicit obfuscated listen port and disables regular-port advertisement. This can break clients that ignore obfuscated metadata and should remain an explicit opt-in.
+`only` mode is reserved. The current runtime rejects obfuscated-only advertising because slskdN preserves the regular peer-message path for legacy clients.
 
 ## Configuration
 
@@ -50,15 +50,10 @@ CLI and environment equivalents are documented in `docs/config.md`.
 
 ## Network Health Rules
 
-Type-1 obfuscation must remain peer-message focused until file-transfer and distributed-network paths are independently proven. Implementations must preserve regular fallback in `compatibility` and `prefer` modes, rate-limit connection retries, and make `only` mode visibly explicit because it reduces interoperability.
+Type-1 obfuscation must remain peer-message focused until file-transfer and distributed-network paths are independently proven. Implementations must preserve regular fallback in `compatibility` and `prefer` modes and rate-limit connection retries.
 
 The feature is not encryption. It should not be described as anonymous, secure, or confidential transport. The correct description is obfuscated peer-message connectivity for compatible peers.
 
-## Runtime Work Required
+## Validation Work
 
-To activate this beyond configuration and status reporting, slskdN needs one of these runtime paths:
-
-1. Add the missing public hooks to Soulseek.NET and wire slskdN options into them.
-2. Add a slskdN-owned peer-message transport adapter for SetWaitPort metadata, obfuscated listener accept, and obfuscated outbound dial.
-
-The first runtime activation ticket should include public-server advertisement tests, direct compatible-peer tests, indirect compatible-peer tests, regular fallback tests, and negative tests proving plain traffic is rejected by the obfuscated listener.
+Runtime support is active. Ongoing validation should include public-server advertisement tests, direct compatible-peer tests, indirect compatible-peer tests, regular fallback tests, and negative tests proving plain traffic is rejected by the obfuscated listener.

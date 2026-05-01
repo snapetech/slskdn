@@ -160,6 +160,11 @@ namespace Soulseek.Network.Tcp
         public ConnectionOptions Options { get; protected set; }
 
         /// <summary>
+        ///     Gets or sets a value indicating whether this connection uses type-1 obfuscation.
+        /// </summary>
+        public bool Obfuscated { get; set; }
+
+        /// <summary>
         ///     Gets or sets the current connection state.
         /// </summary>
         public ConnectionState State { get; protected set; }

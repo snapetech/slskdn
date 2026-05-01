@@ -78,7 +78,7 @@ namespace slskd
         Prefer,
 
         /// <summary>
-        ///     Advertise obfuscated peer-message reachability only when runtime support is available.
+        ///     Reserved for obfuscated-only peer-message reachability; not currently supported by the runtime.
         /// </summary>
         Only,
     }
@@ -2476,18 +2476,11 @@ namespace slskd
                             [nameof(ListenPort)]));
                     }
 
-                    if (Enabled && mode == SoulseekObfuscationMode.Only && ListenPort == 0)
+                    if (Enabled && mode == SoulseekObfuscationMode.Only)
                     {
                         results.Add(new ValidationResult(
-                            "Soulseek obfuscation only mode requires an explicit obfuscated listen port.",
-                            [nameof(ListenPort)]));
-                    }
-
-                    if (Enabled && mode == SoulseekObfuscationMode.Only && AdvertiseRegularPort)
-                    {
-                        results.Add(new ValidationResult(
-                            "Soulseek obfuscation only mode requires advertise_regular_port to be false.",
-                            [nameof(AdvertiseRegularPort)]));
+                            "Soulseek obfuscation only mode is not currently supported because the runtime keeps regular peer-message fallback for legacy compatibility.",
+                            [nameof(Mode)]));
                     }
 
                     return results;

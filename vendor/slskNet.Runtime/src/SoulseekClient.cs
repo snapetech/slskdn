@@ -50,6 +50,7 @@ namespace Soulseek
     {
         private const string DefaultAddress = "server.slsknet.org";
         private const int DefaultPort = 2271;
+        private const int MaximumMessageUsersRecipients = 100;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SoulseekClient"/> class.
@@ -612,6 +613,7 @@ namespace Soulseek
         private SemaphoreSlim GlobalDownloadSemaphore { get; }
         private SemaphoreSlim GlobalUploadSemaphore { get; }
         private IIOAdapter IOAdapter { get; set; } = new IOAdapter();
+        private ConcurrentDictionary<string, IPEndPoint> ObfuscatedPeerEndPointDictionary { get; } = new ConcurrentDictionary<string, IPEndPoint>();
         private SemaphoreSlim StateSyncRoot { get; } = new SemaphoreSlim(1, 1);
         private ITokenFactory TokenFactory { get; }
         private System.Timers.Timer UploadSemaphoreCleanupTimer { get; }
@@ -621,6 +623,18 @@ namespace Soulseek
         private System.Timers.Timer UserEndPointSemaphoreCleanupTimer { get; }
         private ConcurrentDictionary<string, SemaphoreSlim> UserEndPointSemaphores { get; } = new ConcurrentDictionary<string, SemaphoreSlim>();
         private SemaphoreSlim UserEndPointSemaphoreSyncRoot { get; } = new SemaphoreSlim(1, 1);
+
+        internal virtual bool TryGetObfuscatedPeerEndPoint(string username, IPAddress regularAddress, out IPEndPoint obfuscatedEndPoint)
+        {
+            if (ObfuscatedPeerEndPointDictionary.TryGetValue(username, out obfuscatedEndPoint) &&
+                obfuscatedEndPoint.Address.Equals(regularAddress))
+            {
+                return true;
+            }
+
+            obfuscatedEndPoint = null;
+            return false;
+        }
 
         /// <summary>
         ///     Asynchronously sends a private message acknowledgement for the specified <paramref name="privateMessageId"/>.
@@ -1949,6 +1963,140 @@ namespace Soulseek
         }
 
         /// <summary>
+        ///     Asynchronously adds the specified <paramref name="item"/> to the current user's liked interests.
+        /// </summary>
+        /// <param name="item">The interest item to add.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        public Task AddInterestAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("add an interest");
+
+            return SendInterestCommandInternalAsync(MessageCode.Server.InterestAdd, item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously removes the specified <paramref name="item"/> from the current user's liked interests.
+        /// </summary>
+        /// <param name="item">The interest item to remove.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        public Task RemoveInterestAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("remove an interest");
+
+            return SendInterestCommandInternalAsync(MessageCode.Server.InterestRemove, item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously adds the specified <paramref name="item"/> to the current user's hated interests.
+        /// </summary>
+        /// <param name="item">The interest item to add.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        public Task AddHatedInterestAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("add a hated interest");
+
+            return SendInterestCommandInternalAsync(MessageCode.Server.HatedInterestAdd, item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously removes the specified <paramref name="item"/> from the current user's hated interests.
+        /// </summary>
+        /// <param name="item">The interest item to remove.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        public Task RemoveHatedInterestAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("remove a hated interest");
+
+            return SendInterestCommandInternalAsync(MessageCode.Server.HatedInterestRemove, item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches recommendations related to the current user's interests.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<RecommendationList> GetRecommendationsAsync(CancellationToken? cancellationToken = null)
+        {
+            EnsureConnectedAndLoggedIn("get recommendations");
+
+            return GetRecommendationsInternalAsync(global: false, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches global recommendations.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<RecommendationList> GetGlobalRecommendationsAsync(CancellationToken? cancellationToken = null)
+        {
+            EnsureConnectedAndLoggedIn("get global recommendations");
+
+            return GetRecommendationsInternalAsync(global: true, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches liked and hated interests for the specified <paramref name="username"/>.
+        /// </summary>
+        /// <param name="username">The username for which to fetch interests.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<UserInterests> GetUserInterestsAsync(string username, CancellationToken? cancellationToken = null)
+        {
+            ValidateUsername(username);
+            EnsureConnectedAndLoggedIn("get user interests");
+
+            return GetUserInterestsInternalAsync(username, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches users with interests similar to the current user's interests.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<IReadOnlyCollection<SimilarUser>> GetSimilarUsersAsync(CancellationToken? cancellationToken = null)
+        {
+            EnsureConnectedAndLoggedIn("get similar users");
+
+            return GetSimilarUsersInternalAsync(cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches recommendations related to the specified <paramref name="item"/>.
+        /// </summary>
+        /// <param name="item">The item for which to fetch recommendations.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<ItemRecommendations> GetItemRecommendationsAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("get item recommendations");
+
+            return GetItemRecommendationsInternalAsync(item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously fetches users with interests similar to the specified <paramref name="item"/>.
+        /// </summary>
+        /// <param name="item">The item for which to fetch similar users.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation, including the server response.</returns>
+        public Task<ItemSimilarUsers> GetItemSimilarUsersAsync(string item, CancellationToken? cancellationToken = null)
+        {
+            ValidateInterestItem(item);
+            EnsureConnectedAndLoggedIn("get item similar users");
+
+            return GetItemSimilarUsersInternalAsync(item, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
         ///     Asynchronously joins the chat room with the specified <paramref name="roomName"/>.
         /// </summary>
         /// <remarks>When successful, a corresponding <see cref="RoomJoined"/> event will be raised.</remarks>
@@ -2349,6 +2497,59 @@ namespace Soulseek
             }
 
             return SendPrivateMessageInternalAsync(username, message, cancellationToken ?? CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Asynchronously sends the specified private <paramref name="message"/> to the specified <paramref name="usernames"/>.
+        /// </summary>
+        /// <param name="usernames">The users to which the message is to be sent.</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>The Task representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        ///     Thrown when <paramref name="usernames"/> is null or empty, any username is null or empty, or <paramref name="message"/> is null or empty.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">Thrown when the client is not connected or logged in.</exception>
+        /// <exception cref="TimeoutException">Thrown when the operation has timed out.</exception>
+        /// <exception cref="OperationCanceledException">Thrown when the operation has been cancelled.</exception>
+        /// <exception cref="SoulseekClientException">Thrown when an exception is encountered during the operation.</exception>
+        public Task SendPrivateMessageAsync(IEnumerable<string> usernames, string message, CancellationToken? cancellationToken = null)
+        {
+            if (usernames == null)
+            {
+                throw new ArgumentException("The usernames must not be null", nameof(usernames));
+            }
+
+            var usernameList = usernames
+                .Distinct(StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
+
+            if (usernameList.Count == 0)
+            {
+                throw new ArgumentException("At least one username must be supplied", nameof(usernames));
+            }
+
+            if (usernameList.Any(string.IsNullOrWhiteSpace))
+            {
+                throw new ArgumentException("The usernames must not contain null or empty strings, or strings consisting only of whitespace", nameof(usernames));
+            }
+
+            if (usernameList.Count > MaximumMessageUsersRecipients)
+            {
+                throw new ArgumentException($"No more than {MaximumMessageUsersRecipients} usernames may be supplied", nameof(usernames));
+            }
+
+            if (string.IsNullOrEmpty(message))
+            {
+                throw new ArgumentException("The message must not be a null or empty string", nameof(message));
+            }
+
+            if (!State.HasFlag(SoulseekClientStates.Connected) || !State.HasFlag(SoulseekClientStates.LoggedIn))
+            {
+                throw new InvalidOperationException($"The server connection must be connected and logged in to send a private message (currently: {State})");
+            }
+
+            return SendPrivateMessageInternalAsync(usernameList.AsReadOnly(), message, cancellationToken ?? CancellationToken.None);
         }
 
         /// <summary>
@@ -3819,11 +4020,13 @@ namespace Soulseek
                         throw new UserOfflineException($"User {username} appears to be offline");
                     }
 
-                    if (Options.PeerObfuscationOptions.Enabled &&
-                        Options.PeerObfuscationOptions.PreferOutbound &&
-                        response.HasObfuscatedEndpoint)
+                    if (response.HasObfuscatedEndpoint)
                     {
-                        return response.ObfuscatedIPEndPoint;
+                        ObfuscatedPeerEndPointDictionary.AddOrUpdate(username, response.ObfuscatedIPEndPoint, (key, existing) => response.ObfuscatedIPEndPoint);
+                    }
+                    else
+                    {
+                        ObfuscatedPeerEndPointDictionary.TryRemove(username, out _);
                     }
 
                     return new IPEndPoint(response.IPAddress, response.Port);
@@ -3875,6 +4078,93 @@ namespace Soulseek
             }
         }
 
+        private async Task<RecommendationList> GetRecommendationsInternalAsync(bool global, CancellationToken cancellationToken)
+        {
+            var code = global ? MessageCode.Server.GetGlobalRecommendations : MessageCode.Server.GetRecommendations;
+
+            try
+            {
+                var waitKey = new WaitKey(code);
+                var wait = Waiter.Wait<RecommendationList>(waitKey, cancellationToken: cancellationToken);
+
+                await ServerConnection.WriteAsync(new RecommendationsRequest(global), cancellationToken).ConfigureAwait(false);
+
+                return await wait.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to retrieve {(global ? "global " : string.Empty)}recommendations: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<UserInterests> GetUserInterestsInternalAsync(string username, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var waitKey = new WaitKey(MessageCode.Server.GetUserInterests, WaitKeyNormalizer.Normalize(username));
+                var wait = Waiter.Wait<UserInterests>(waitKey, cancellationToken: cancellationToken);
+
+                await ServerConnection.WriteAsync(new UserInterestsRequest(username), cancellationToken).ConfigureAwait(false);
+
+                return await wait.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to retrieve interests for user {username}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<IReadOnlyCollection<SimilarUser>> GetSimilarUsersInternalAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var waitKey = new WaitKey(MessageCode.Server.GetSimilarUsers);
+                var wait = Waiter.Wait<IReadOnlyCollection<SimilarUser>>(waitKey, cancellationToken: cancellationToken);
+
+                await ServerConnection.WriteAsync(new SimilarUsersRequest(), cancellationToken).ConfigureAwait(false);
+
+                return await wait.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to retrieve similar users: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<ItemRecommendations> GetItemRecommendationsInternalAsync(string item, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var waitKey = new WaitKey(MessageCode.Server.GetItemRecommendations, WaitKeyNormalizer.Normalize(item));
+                var wait = Waiter.Wait<ItemRecommendations>(waitKey, cancellationToken: cancellationToken);
+
+                await ServerConnection.WriteAsync(new ItemRecommendationsRequest(MessageCode.Server.GetItemRecommendations, item), cancellationToken).ConfigureAwait(false);
+
+                return await wait.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to retrieve recommendations for item {item}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<ItemSimilarUsers> GetItemSimilarUsersInternalAsync(string item, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var waitKey = new WaitKey(MessageCode.Server.GetItemSimilarUsers, WaitKeyNormalizer.Normalize(item));
+                var wait = Waiter.Wait<ItemSimilarUsers>(waitKey, cancellationToken: cancellationToken);
+
+                await ServerConnection.WriteAsync(new ItemRecommendationsRequest(MessageCode.Server.GetItemSimilarUsers, item), cancellationToken).ConfigureAwait(false);
+
+                return await wait.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to retrieve similar users for item {item}: {ex.Message}", ex);
+            }
+        }
+
         private async Task<UserStatistics> GetUserStatisticsInternalAsync(string username, CancellationToken cancellationToken)
         {
             try
@@ -3914,6 +4204,18 @@ namespace Soulseek
             catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
             {
                 throw new SoulseekClientException($"Failed to grant {days} days of privileges to {username}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task SendInterestCommandInternalAsync(MessageCode.Server code, string item, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await ServerConnection.WriteAsync(new InterestCommand(code, item), cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to send interest command {code} for item {item}: {ex.Message}", ex);
             }
         }
 
@@ -4268,6 +4570,42 @@ namespace Soulseek
             }
         }
 
+        private async Task SendPrivateMessageInternalAsync(IReadOnlyCollection<string> usernames, string message, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await ServerConnection.WriteAsync(new MessageUsersCommand(usernames, message), cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException) && !(ex is TimeoutException))
+            {
+                throw new SoulseekClientException($"Failed to send private message to {usernames.Count} users: {ex.Message}", ex);
+            }
+        }
+
+        private void EnsureConnectedAndLoggedIn(string operation)
+        {
+            if (!State.HasFlag(SoulseekClientStates.Connected) || !State.HasFlag(SoulseekClientStates.LoggedIn))
+            {
+                throw new InvalidOperationException($"The server connection must be connected and logged in to {operation} (currently: {State})");
+            }
+        }
+
+        private void ValidateInterestItem(string item)
+        {
+            if (string.IsNullOrWhiteSpace(item))
+            {
+                throw new ArgumentException("The item must not be a null or empty string, or one consisting only of whitespace", nameof(item));
+            }
+        }
+
+        private void ValidateUsername(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new ArgumentException("The username must not be a null or empty string, or one consisting only of whitespace", nameof(username));
+            }
+        }
+
         private SetListenPortCommand CreateSetListenPortCommand()
         {
             if (!Options.PeerObfuscationOptions.Enabled)
@@ -4275,9 +4613,8 @@ namespace Soulseek
                 return new SetListenPortCommand(Options.ListenPort);
             }
 
-            var regularPort = Options.PeerObfuscationOptions.AdvertiseRegularPort ? Options.ListenPort : Options.PeerObfuscationOptions.ListenPort;
             return new SetListenPortCommand(
-                regularPort,
+                Options.ListenPort,
                 Options.PeerObfuscationOptions.Type,
                 Options.PeerObfuscationOptions.ListenPort);
         }

@@ -6,12 +6,14 @@ import api from './api';
 
 export const fetchTasteRecommendations = ({
   includeGraphEvidence = true,
+  includeSoulseekRecommendations = false,
   includeSourceActors = false,
   limit = 20,
   minimumTrustedSources = 2,
 } = {}) =>
   api.post('/taste-recommendations', {
     includeGraphEvidence,
+    includeSoulseekRecommendations,
     includeSourceActors,
     limit,
     minimumTrustedSources,

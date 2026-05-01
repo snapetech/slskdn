@@ -232,6 +232,33 @@ namespace Soulseek.Messaging.Handlers
                         SoulseekClient.Waiter.Complete(new WaitKey(code), IntegerResponse.FromByteArray<MessageCode.Server>(message));
                         break;
 
+                    case MessageCode.Server.GetRecommendations:
+                        SoulseekClient.Waiter.Complete(new WaitKey(code), RecommendationsResponse.FromByteArray(message));
+                        break;
+
+                    case MessageCode.Server.GetGlobalRecommendations:
+                        SoulseekClient.Waiter.Complete(new WaitKey(code), RecommendationsResponse.FromByteArray(message));
+                        break;
+
+                    case MessageCode.Server.GetUserInterests:
+                        var userInterests = UserInterestsResponse.FromByteArray(message);
+                        SoulseekClient.Waiter.Complete(new WaitKey(code, WaitKeyNormalizer.Normalize(userInterests.Username)), userInterests);
+                        break;
+
+                    case MessageCode.Server.GetSimilarUsers:
+                        SoulseekClient.Waiter.Complete(new WaitKey(code), SimilarUsersResponse.FromByteArray(message));
+                        break;
+
+                    case MessageCode.Server.GetItemRecommendations:
+                        var itemRecommendations = ItemRecommendationsResponse.FromByteArray(message);
+                        SoulseekClient.Waiter.Complete(new WaitKey(code, WaitKeyNormalizer.Normalize(itemRecommendations.Item)), itemRecommendations);
+                        break;
+
+                    case MessageCode.Server.GetItemSimilarUsers:
+                        var itemSimilarUsers = ItemSimilarUsersResponse.FromByteArray(message);
+                        SoulseekClient.Waiter.Complete(new WaitKey(code, WaitKeyNormalizer.Normalize(itemSimilarUsers.Item)), itemSimilarUsers);
+                        break;
+
                     case MessageCode.Server.PrivateRoomAdded:
                         PrivateRoomMembershipAdded?.Invoke(this, StringResponse.FromByteArray<MessageCode.Server>(message));
                         break;
@@ -363,6 +390,14 @@ namespace Soulseek.Messaging.Handlers
                         SoulseekClient.Waiter.Throw(
                             new WaitKey(MessageCode.Server.JoinRoom, cannotJoinRoom.RoomName),
                             new RoomJoinForbiddenException($"The server rejected the request to join room {cannotJoinRoom.RoomName}"));
+
+                        break;
+
+                    case MessageCode.Server.CannotCreateRoom:
+                        var cannotCreateRoom = StringResponse.FromByteArray<MessageCode.Server>(message);
+                        SoulseekClient.Waiter.Throw(
+                            new WaitKey(MessageCode.Server.JoinRoom, cannotCreateRoom),
+                            new RoomException($"The server rejected the request to create room {cannotCreateRoom}"));
 
                         break;
 

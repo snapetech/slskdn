@@ -85,6 +85,11 @@ namespace Soulseek.Network.Tcp
         ConnectionOptions Options { get; }
 
         /// <summary>
+        ///     Gets or sets a value indicating whether this connection uses type-1 obfuscation.
+        /// </summary>
+        bool Obfuscated { get; set; }
+
+        /// <summary>
         ///     Gets the current connection state.
         /// </summary>
         ConnectionState State { get; }

@@ -116,6 +116,7 @@ namespace slskd
     using slskd.Sharing;
     using slskd.Signals;
     using slskd.SongID;
+    using slskd.SoulseekDiscovery;
     using slskd.Streaming;
     using slskd.Telemetry;
     using slskd.Transfers;
@@ -1234,6 +1235,7 @@ namespace slskd
             services.AddSingleton<IRoomTracker, RoomTracker>(_ => new RoomTracker(messageLimit: 250));
 
             services.AddSingleton<IMessagingService, MessagingService>();
+            services.AddSingleton<ISoulseekDiscoveryService, SoulseekDiscoveryService>();
             services.AddSingleton<IConversationService>(sp =>
             {
                 Log.Debug("[DI] Constructing ConversationService...");

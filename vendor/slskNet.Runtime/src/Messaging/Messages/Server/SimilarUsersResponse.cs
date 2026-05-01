@@ -1,0 +1,59 @@
+﻿// <copyright file="SimilarUsersResponse.cs" company="JP Dillingham">
+//     Copyright (c) JP Dillingham.
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, version 3.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with this program.  If not, see https://www.gnu.org/licenses/.
+//
+//     This program is distributed with Additional Terms pursuant to Section 7
+//     of the GPLv3.  See the LICENSE file in the root directory of this
+//     project for the complete terms and conditions.
+//
+//     SPDX-FileCopyrightText: JP Dillingham
+//     SPDX-License-Identifier: GPL-3.0-only
+// </copyright>
+
+namespace Soulseek.Messaging.Messages
+{
+    using System.Collections.Generic;
+
+    /// <summary>
+    ///     A response containing similar users.
+    /// </summary>
+    internal sealed class SimilarUsersResponse : IIncomingMessage
+    {
+        /// <summary>
+        ///     Creates a new collection of <see cref="SimilarUser"/> from the specified <paramref name="bytes"/>.
+        /// </summary>
+        /// <param name="bytes">The byte array from which to parse.</param>
+        /// <returns>The created collection.</returns>
+        public static IReadOnlyCollection<SimilarUser> FromByteArray(byte[] bytes)
+        {
+            var reader = new MessageReader<MessageCode.Server>(bytes);
+            var code = reader.ReadCode();
+
+            if (code != MessageCode.Server.GetSimilarUsers)
+            {
+                throw new MessageException($"Message Code mismatch creating {nameof(SimilarUsersResponse)} (expected: {(int)MessageCode.Server.GetSimilarUsers}, received: {(int)code})");
+            }
+
+            var count = ProtocolCountReader.ReadCount(reader, "similar user", minimumBytesPerItem: 8);
+            var users = new List<SimilarUser>();
+
+            for (int i = 0; i < count; i++)
+            {
+                users.Add(new SimilarUser(reader.ReadString(), reader.ReadInteger()));
+            }
+
+            return users.AsReadOnly();
+        }
+    }
+}
