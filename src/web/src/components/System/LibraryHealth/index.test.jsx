@@ -2,7 +2,6 @@ import LibraryHealth from './index';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import { addDiscoveryInboxItem } from '../../../lib/discoveryInbox';
 import * as libraryHealth from '../../../lib/libraryHealth';
 import * as searches from '../../../lib/searches';
 
@@ -19,10 +18,6 @@ vi.mock('../../../lib/libraryHealth', () => ({
 
 vi.mock('../../../lib/searches', () => ({
   createBatch: vi.fn(),
-}));
-
-vi.mock('../../../lib/discoveryInbox', () => ({
-  addDiscoveryInboxItem: vi.fn(),
 }));
 
 vi.mock('semantic-ui-react', async () => {
@@ -139,7 +134,7 @@ describe('LibraryHealth', () => {
     expect(libraryHealth.createRemediationJob).not.toHaveBeenCalled();
   });
 
-  it('runs bounded replacement searches and sends quarantine review candidates', async () => {
+  it('runs bounded replacement searches and exposes quarantine review packet copies', async () => {
     vi.useFakeTimers();
     render(<LibraryHealth />);
 
@@ -162,17 +157,8 @@ describe('LibraryHealth', () => {
       'Started 1 bounded replacement search for selected Library Health issues.',
     );
 
-    fireEvent.click(screen.getByTestId('library-health-send-quarantine-review'));
-
-    expect(addDiscoveryInboxItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        evidenceKey: 'library-health:issue-1',
-        source: 'Library Health',
-      }),
-    );
-    expect(screen.getByTestId('library-health-report-message')).toHaveTextContent(
-      'Sent 1 Library Health quarantine review candidate to Discovery Inbox.',
-    );
+    expect(screen.queryByTestId('library-health-send-quarantine-review')).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-health-copy-quarantine-packet')).toBeInTheDocument();
   });
 
   it('queues remediation jobs only for selected auto-fixable issue ids', async () => {

@@ -34,6 +34,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   Discovery Inbox promotion paths.
 - Removed remaining Wishlist and Library Health inbox-promotion paths and
   aligned focused tests with direct request/review states.
+- Updated Library Health focused coverage to assert quarantine packet copying
+  instead of the removed inbox-promotion action.
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
   links, with focused UI coverage, constructor-compatible scanner tests, and
   browser capability checks.
