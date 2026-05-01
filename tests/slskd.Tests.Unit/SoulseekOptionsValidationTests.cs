@@ -153,7 +153,7 @@ public class SoulseekOptionsValidationTests
         Assert.Equal(1, plan.Type);
         Assert.Equal(50301, plan.EffectiveListenPort);
         Assert.False(plan.RuntimeSupported);
-        Assert.Equal("configured_unsupported", plan.RuntimeState);
+        Assert.Equal("configured_pending_runtime", plan.RuntimeState);
     }
 
     [Fact]

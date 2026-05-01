@@ -1,6 +1,6 @@
 # Soulseek Type-1 Obfuscation
 
-slskdN treats Soulseek type-1 peer-message obfuscation as a first-class feature option. The option is intentionally conservative: it is configurable, validated, visible in the Network tab, and documented as a runtime plan before the current Soulseek.NET dependency can activate the wire path.
+slskdN treats Soulseek type-1 peer-message obfuscation as a first-class feature option. The option defaults on in `compatibility` mode, so the regular peer-message path remains available and obfuscated reachability is added when the runtime can honor it. The option is intentionally conservative: it is configurable, validated, visible in the Network tab, and documented as a runtime plan before the current Soulseek.NET dependency can activate the wire path.
 
 ## What We Know
 
@@ -23,11 +23,11 @@ The current slskdN runtime uses Soulseek.NET. The packaged public API does not e
 - A type-1 obfuscated outbound peer-message dialer.
 - Obfuscation fields on peer-address or indirect-connect responses.
 
-Because of that limitation, slskdN currently reports type-1 obfuscation as `configured_unsupported` when enabled. The options are real and validated, but the wire path is not active until Soulseek.NET support or a slskdN transport adapter lands.
+Because of that limitation, slskdN currently reports type-1 obfuscation as `configured_pending_runtime` when enabled. The options are real, validated, and default-on in compatibility mode, but the wire path is not active until Soulseek.NET support or a slskdN transport adapter lands.
 
 ## Modes
 
-`compatibility` mode is the broad-client posture. When runtime support exists, it should advertise regular and obfuscated peer-message reachability together.
+`compatibility` mode is the broad-client default. When runtime support exists, it should advertise regular and obfuscated peer-message reachability together. This mode must not block or replace the normal peer-message path.
 
 `prefer` mode is the enhanced posture. When runtime support exists, it should prefer type-1 obfuscated outbound peer-message dials when the peer advertises compatible metadata and keep regular fallback for other clients.
 
@@ -39,7 +39,7 @@ Because of that limitation, slskdN currently reports type-1 obfuscation as `conf
 soulseek:
   listen_port: 50300
   obfuscation:
-    enabled: false
+    enabled: true
     mode: compatibility
     listen_port: 0
     advertise_regular_port: true

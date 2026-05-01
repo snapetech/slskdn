@@ -707,17 +707,17 @@ soulseek:
 
 ## Type-1 Peer-Message Obfuscation
 
-slskdN exposes Soulseek type-1 peer-message obfuscation as a first-class feature option. The research behind this option proved that the public server can carry obfuscation type and obfuscated-port metadata, and that type-1 peer-message streams can work for direct and indirect peer-message connectivity when both sides honor the metadata.
+slskdN exposes Soulseek type-1 peer-message obfuscation as a first-class feature option. It defaults to `enabled: true` in `compatibility` mode, which means the regular peer-message path stays available and obfuscated reachability is added when runtime support exists. The research behind this option proved that the public server can carry obfuscation type and obfuscated-port metadata, and that type-1 peer-message streams can work for direct and indirect peer-message connectivity when both sides honor the metadata.
 
 This is obfuscation, not transport security. It should be treated as a compatibility and traffic-shaping posture, not encryption. Current research covers peer-message (`P`) streams; file transfer (`F`) and distributed-network (`D`) paths remain regular-port based until separate wire support is implemented and validated.
 
-The current slskdN runtime uses Soulseek.NET, which does not yet expose public hooks for SetWaitPort obfuscation metadata or type-1 obfuscated peer-message listener/dialer activation. For that reason these options are visible, validated, and reported in the web UI as configured feature options, but they do not activate the type-1 wire path until runtime support lands.
+The current slskdN runtime uses Soulseek.NET, which does not yet expose public hooks for SetWaitPort obfuscation metadata or type-1 obfuscated peer-message listener/dialer activation. For that reason these options are visible, validated, default-on in compatibility mode, and reported in the web UI as configured feature options, but they do not activate the type-1 wire path until runtime support lands.
 
 Modes:
 
 | Mode | Intent |
 | ---- | ------ |
-| `compatibility` | Advertise both regular and obfuscated peer-message reachability when runtime support exists. This is the safest future default for broad client compatibility. |
+| `compatibility` | Keep regular peer-message reachability available and add obfuscated peer-message reachability when runtime support exists. This is the default and safest broad-client posture. |
 | `prefer` | Prefer type-1 obfuscated outbound peer-message dials when compatible peer metadata is available, while preserving regular fallback. |
 | `only` | Advertise obfuscated peer-message reachability without regular fallback. This requires an explicit obfuscated listen port and `advertise_regular_port: false` because clients that ignore obfuscated metadata will fail. |
 
@@ -734,7 +734,7 @@ Modes:
 soulseek:
   listen_port: 50300
   obfuscation:
-    enabled: false
+    enabled: true
     mode: compatibility
     listen_port: 0
     advertise_regular_port: true
