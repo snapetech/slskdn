@@ -52,6 +52,31 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z244. Dump Endpoint Tests Must Accept Intentional 501 Creation Failures
+
+**The Bug**: The PR-06 dump endpoint smoke test only accepted `200 OK` or `500 InternalServerError`, even though the hardened dumper intentionally returns `501 NotImplemented` when dump creation is unavailable in the test environment.
+
+**Files Affected**:
+- `tests/slskd.Tests/DumpTests.cs`
+- `src/slskd/Core/API/Controllers/ApplicationController.cs`
+
+**Wrong**:
+```csharp
+Assert.True(
+    response.StatusCode == HttpStatusCode.OK ||
+    response.StatusCode == HttpStatusCode.InternalServerError);
+```
+
+**Correct**:
+```csharp
+Assert.True(
+    response.StatusCode == HttpStatusCode.OK ||
+    response.StatusCode == HttpStatusCode.InternalServerError ||
+    response.StatusCode == HttpStatusCode.NotImplemented);
+```
+
+**Why This Keeps Happening**: The security plan changed dump creation from a permissive runtime-download/shell path to a hardened path that can explicitly report unsupported dump creation. Tests that exercise the endpoint as a smoke check must assert the access-control contract and allow environment-dependent dump creation failures, including `501`, instead of treating every non-`200/500` response as a regression.
+
 ### 0z243. Rich User Cards Do Not Belong In Dense Message Rows
 
 **The Bug**: Chat and room message rows rendered `UserCard` for every sender name, so reputation, speed, queue, and slot badges repeated beside every message and crowded the transcript.
