@@ -75,7 +75,9 @@ describe('Contacts', () => {
       },
     ]);
 
-    window.BarcodeDetector = vi.fn().mockImplementation(() => ({ detect }));
+    window.BarcodeDetector = vi.fn(function BarcodeDetector() {
+      return { detect };
+    });
     window.createImageBitmap = vi.fn().mockResolvedValue({ close });
 
     renderContacts();
