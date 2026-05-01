@@ -58,7 +58,7 @@ jobs:
           }
 
           $nupkgPath = $nupkg.FullName
-          $maxRetries = 3
+          $maxRetries = 5
           for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
             Write-Host "Pushing $nupkgPath to Chocolatey (attempt $attempt/$maxRetries)"
             $pushOutput = cmd /c "choco push `"$nupkgPath`" --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --execution-timeout 300 2>&1"
@@ -70,13 +70,18 @@ jobs:
               exit 0
             }
 
+            if ($pushText -match "already exists|Package already exists|409") {
+              Write-Host "Chocolatey already has slskdn $PackageVersion"
+              exit 0
+            }
+
             if ($pushText -notmatch "504|Gateway Timeout|timeout") {
               Write-Error "choco push failed with exit code $LASTEXITCODE"
               exit $LASTEXITCODE
             }
 
             if ($attempt -lt $maxRetries) {
-              Start-Sleep -Seconds 10
+              Start-Sleep -Seconds (30 * $attempt)
             }
           }
 

@@ -64,10 +64,11 @@ For dev or build tags, use the same logical version string embedded in the tag.
   runner cannot reach Launchpad's SFTP port.
 - Made the PPA upload step fall through to anonymous FTP when the selected
   SFTP `dput` upload fails after preflight.
-- Pinned Launchpad PPA FTP uploads to a resolved IPv4 endpoint and switched
-  the transfer step from fragile `dput` passive FTP retries to signed source
-  verification followed by bounded anonymous `curl` uploads with a longer
-  FTP greeting/preflight window for slow Launchpad responses.
+- Kept PPA fallback on Launchpad's documented `dput` FTP path after raw `curl`
+  uploads proved brittle on slow or delayed FTP greetings.
+- Hardened release publishing by copying vendored runtime projects into Docker
+  builds and adding slower Chocolatey timeout retries with duplicate-package
+  success handling.
 - Fixed the standalone PPA retry workflow so rebuilt frontend assets are copied
   into a created `publish-linux-x64/wwwroot` directory.
 - Simplified the ingress-port migration notice to show only the five old
