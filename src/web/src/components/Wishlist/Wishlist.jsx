@@ -1,17 +1,12 @@
 import './Wishlist.css';
 import { urlBase } from '../../config';
 import {
-  addWishlistItemToDiscoveryInbox,
   buildWishlistRequestReviewPacket,
   buildWishlistRequestSummary,
   formatWishlistRequestReviewPacket,
   getWishlistRequestState,
   getRunnableWishlistRequests,
 } from '../../lib/acquisitionRequests';
-import {
-  addDiscoveryInboxItem,
-  getDiscoveryInboxItems,
-} from '../../lib/discoveryInbox';
 import * as wishlistAPI from '../../lib/wishlist';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';

@@ -5,11 +5,9 @@ import {
   buildLibraryHealthReport,
   buildLibraryHealthSafeFixManifest,
   buildLibraryHealthSearchSeeds,
-  getLibraryHealthQuarantineReviewItems,
   getLibraryHealthReplacementSearchQueries,
   getLibraryHealthSafeFixIssueIds,
 } from '../../../lib/libraryHealthReport';
-import { addDiscoveryInboxItem } from '../../../lib/discoveryInbox';
 import { LoaderSegment } from '../../Shared';
 import * as searches from '../../../lib/searches';
 import React, { useEffect, useState } from 'react';
@@ -331,20 +329,6 @@ const LibraryHealth = () => {
     }
   };
 
-  const handleSendQuarantineReview = () => {
-    const selectedIssueList = issues.filter((issue) =>
-      selectedIssues.has(issue.issueId));
-    const reviewItems = getLibraryHealthQuarantineReviewItems(selectedIssueList);
-
-    if (reviewItems.length === 0) {
-      setError('Selected issues do not have quarantine review candidates.');
-      return;
-    }
-
-    reviewItems.forEach((item) => addDiscoveryInboxItem(item));
-    setReportMessage(`Sent ${reviewItems.length} Library Health quarantine review candidate${reviewItems.length === 1 ? '' : 's'} to Discovery Inbox.`);
-  };
-
   const OverviewPane = () => (
     <Tab.Pane>
       <Grid>
@@ -586,21 +570,6 @@ const LibraryHealth = () => {
                     >
                       <Icon name="search" />
                       Start Replacement Searches
-                    </Button>
-                  }
-                />
-                <Popup
-                  content="Send risky selected issues to Discovery Inbox for explicit quarantine review. This stores review candidates only and does not move or quarantine files."
-                  trigger={
-                    <Button
-                      basic
-                      data-testid="library-health-send-quarantine-review"
-                      disabled={fixing}
-                      onClick={handleSendQuarantineReview}
-                      type="button"
-                    >
-                      <Icon name="inbox" />
-                      Send Quarantine Review
                     </Button>
                   }
                 />

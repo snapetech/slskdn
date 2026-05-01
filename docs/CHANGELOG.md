@@ -32,6 +32,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   Discovery Inbox actions after the active review surface cleanup.
 - Removed stale player and federated taste recommendation test references to
   Discovery Inbox promotion paths.
+- Removed remaining Wishlist and Library Health inbox-promotion paths and
+  aligned focused tests with direct request/review states.
 - Added Contacts invite QR generation and QR image scanning for slskdN invite
   links, with focused UI coverage, constructor-compatible scanner tests, and
   browser capability checks.

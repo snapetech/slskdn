@@ -1,5 +1,4 @@
 import Wishlist from './Wishlist';
-import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
 import * as spotifyIntegrationAPI from '../../lib/spotifyIntegration';
 import * as wishlistAPI from '../../lib/wishlist';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -74,25 +73,12 @@ describe('Wishlist', () => {
     expect(screen.getByText('23 left')).toBeInTheDocument();
   });
 
-  it('promotes a wishlist row to Discovery Inbox review', async () => {
+  it('keeps wishlist rows on direct request states without inbox promotion', async () => {
     renderWishlist();
 
     expect(await screen.findByText('rare album')).toBeInTheDocument();
-    fireEvent.click(screen.getAllByTitle('Send to Discovery Inbox review')[0]);
-
-    const persisted = JSON.parse(localStorage.getItem(discoveryInboxStorageKey));
-    expect(persisted).toHaveLength(1);
-    expect(persisted[0]).toEqual(
-      expect.objectContaining({
-        evidenceKey: 'wishlist:wish-1:rare album:flac',
-        searchText: 'rare album',
-        source: 'Wishlist',
-        sourceId: 'wish-1',
-        state: 'Suggested',
-      }),
-    );
-
-    await waitFor(() => expect(screen.getByText('Review')).toBeInTheDocument());
+    expect(screen.queryByTitle('Send to Discovery Inbox review')).not.toBeInTheDocument();
+    expect(screen.getByText('Wanted')).toBeInTheDocument();
   });
 
   it('copies a wishlist request review packet', async () => {

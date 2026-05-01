@@ -1,5 +1,4 @@
 import PlayerBar from './PlayerBar';
-import { discoveryInboxStorageKey } from '../../lib/discoveryInbox';
 import React from 'react';
 import { PlayerProvider, usePlayer } from './PlayerContext';
 import { MemoryRouter } from 'react-router-dom';
@@ -472,16 +471,6 @@ describe('PlayerBar', () => {
     );
     fireEvent.click(screen.getByTestId('player-shelf-copy-policy-report'));
     expect(screen.getByText('Policy report prepared for 1 shelf items.')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('player-shelf-send-content:sha256:test'));
-    expect(screen.getByText('Sent Local stream to Discovery Inbox for approval.')).toBeInTheDocument();
-    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: 'Discovery Shelf',
-          title: 'slskdN - Fixture Album - Local stream',
-        }),
-      ]),
-    );
     fireEvent.click(screen.getByTestId('player-shelf-preview-content:sha256:test'));
     expect(screen.getByText('Promote preview prepared for Local stream. No files were moved or deleted.')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('player-close-discovery-shelf'));
@@ -563,16 +552,7 @@ describe('PlayerBar', () => {
     });
     expect(screen.getByText('Added 4 smart-radio seeds to Wishlist.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('player-radio-send-inbox'));
-    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: 'Smart Radio',
-          searchText: 'slskdN Local stream',
-        }),
-      ]),
-    );
-    expect(screen.getByText('Sent 4 smart-radio seeds to Discovery Inbox.')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-radio-send-inbox')).not.toBeInTheDocument();
   });
 
   it('manages the playback queue without removing the current track', async () => {
@@ -665,16 +645,9 @@ describe('PlayerBar', () => {
     expect(screen.getAllByText('Local stream').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByTestId('player-stats-search-seed-Fixture Genre')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('player-stats-send-seeds-to-discovery-inbox'));
-    expect(screen.getByText(/Sent .* listening seeds to Discovery Inbox/)).toBeInTheDocument();
-    expect(JSON.parse(window.localStorage.getItem(discoveryInboxStorageKey))).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          acquisitionProfile: 'mesh-preferred',
-          source: 'Listening Stats',
-        }),
-      ]),
-    );
+    expect(
+      screen.queryByTestId('player-stats-send-seeds-to-discovery-inbox'),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('player-stats-start-seed-searches'));
     await waitFor(() => {
