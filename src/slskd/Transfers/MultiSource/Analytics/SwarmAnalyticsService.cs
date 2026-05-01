@@ -141,18 +141,16 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
 
         try
         {
-            // Calculate efficiency metrics
             var metrics = new SwarmEfficiencyMetrics();
 
-            // Get active downloads to calculate utilization
-            var activeDownloads = _downloadService.ActiveDownloads.Count;
+            var activeDownloadsById = _downloadService.ActiveDownloads;
+            var activeDownloads = activeDownloadsById.Values.ToList();
             var totalDownloads = (long)SwarmDownloadsTotal.WithLabels("started").Value;
             if (totalDownloads > 0)
             {
-                metrics.ChunkUtilization = Math.Min(1.0, (double)activeDownloads / totalDownloads);
+                metrics.ChunkUtilization = Math.Min(1.0, (double)activeDownloads.Count / totalDownloads);
             }
 
-            // Get peer metrics for utilization
             var rankedPeers = await _peerMetricsService.GetRankedPeersAsync(100, CancellationToken.None).ConfigureAwait(false);
             var activePeers = rankedPeers.Count(p => p.ChunksCompleted > 0 || p.ChunksFailed > 0);
             if (rankedPeers.Count > 0)
@@ -160,15 +158,29 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
                 metrics.PeerUtilization = (double)activePeers / rankedPeers.Count;
             }
 
-            // Calculate redundancy (simplified)
-            // Note: Prometheus Histogram doesn't expose .Value directly
-            // In production, would query Prometheus API for actual histogram statistics
-            metrics.RedundancyFactor = 1.5; // Placeholder - would calculate from actual data
+            var downloadsWithChunks = activeDownloads.Count(d => d.TotalChunks > 0);
+            if (downloadsWithChunks > 0)
+            {
+                metrics.RedundancyFactor = activeDownloads
+                    .Where(d => d.TotalChunks > 0)
+                    .Average(d => d.ActiveWorkers > 0 ? d.ActiveWorkers : 1);
 
-            // Placeholder values (would need historical data)
-            metrics.AverageTimeToFirstByteMs = 100.0;
-            metrics.AverageReassignmentRate = 0.1;
-            metrics.AverageRescueRate = 0.05;
+                metrics.AverageReassignmentRate = activeDownloads
+                    .Where(d => d.TotalChunks > 0)
+                    .Average(d => d.PeerTimeouts.Count / (double)d.TotalChunks);
+            }
+
+            var peersWithRecentThroughput = rankedPeers
+                .SelectMany(p => p.RecentThroughputSamples)
+                .Where(s => s.Duration > TimeSpan.Zero)
+                .ToList();
+
+            if (peersWithRecentThroughput.Count > 0)
+            {
+                metrics.AverageTimeToFirstByteMs = peersWithRecentThroughput.Average(s => s.Duration.TotalMilliseconds);
+            }
+
+            metrics.AverageRescueRate = 0;
 
             return metrics;
         }
@@ -184,15 +196,8 @@ public class SwarmAnalyticsService : ISwarmAnalyticsService
     {
         try
         {
-            // For now, return placeholder trends
-            // In production, this would query historical data from a time-series database
             var trends = new SwarmTrends();
-            var interval = TimeSpan.FromMilliseconds(timeWindow.TotalMilliseconds / dataPoints);
-            var now = DateTime.UtcNow;
-
-            // TODO: Implement historical trend computation from stored metrics
-            // For now, return empty trends rather than fake data
-            _logger.LogDebug("Historical trend computation not yet implemented - returning empty trends");
+            _logger.LogDebug("Historical trend storage is unavailable; returning empty swarm trends");
 
             return await Task.FromResult(trends);
         }

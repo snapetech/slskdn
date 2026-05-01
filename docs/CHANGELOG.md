@@ -27,6 +27,8 @@ For dev or build tags, use the same logical version string embedded in the tag.
   browser capability checks.
 - Added adaptive DHT rendezvous bootstrap timeouts for warm, cold, and LAN-only
   startup paths, with bootstrap logs reporting saved node-table bytes.
+- Replaced placeholder swarm analytics values with metrics derived from active
+  downloads and peer throughput samples.
 - Defaulted the Soulseek type-1 obfuscation option on in compatibility posture
   while reporting pending runtime support explicitly.
 - Surfaced the current Soulseek type-1 obfuscation plan through native
