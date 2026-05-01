@@ -108,6 +108,32 @@ timeout --preserve-status 1800 dput --config ~/.dput.cf slskdn-ppa-ftp "$CHANGES
 
 **Why This Keeps Happening**: FTP fallback looks simple because `.changes` lists the files, but Launchpad PPA uploads are a `dput` protocol workflow with signature checks, host profile handling, and source package semantics. If SFTP flakes, retry via the official `dput` FTP profile rather than reimplementing uploads file-by-file.
 
+### 0z273. Chocolatey Push 504s Need Slow Retries And Duplicate Success Handling
+
+**The Bug**: The Chocolatey release job retried 504 Gateway Timeout responses quickly and failed after three short attempts. Chocolatey can keep processing or eventually accept a package after returning a transient 504, and a follow-up retry may report the package already exists.
+
+**Files Affected**:
+- `.github/workflows/build-on-tag.yml`
+- `.github/workflows/publish-chocolatey.yml`
+
+**Wrong**:
+```powershell
+$maxRetries = 3
+Start-Sleep -Seconds 10
+if ($LASTEXITCODE -ne 0) { exit 1 }
+```
+
+**Correct**:
+```powershell
+$maxRetries = 5
+Start-Sleep -Seconds (30 * $attempt)
+if ($pushText -match "already exists|Package already exists|409") {
+  $success = $true
+}
+```
+
+**Why This Keeps Happening**: Chocolatey package publishing is an external moderation/upload service, not a local pack step. A gateway timeout is not a deterministic package failure, so release scripts need slower backoff and must treat duplicate-package responses as a successful prior upload.
+
 ### 0z268. Restart Arguments Must Not Reuse `Environment.CommandLine`
 
 **The Bug**: The admin restart endpoint passed `Environment.CommandLine` as the child process argument string. `Environment.CommandLine` includes argv[0], so the restarted process receives the executable path twice.
