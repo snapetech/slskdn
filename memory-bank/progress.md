@@ -9330,6 +9330,7 @@ Code quality improvements were completed as part of Option A:
 - Documented the SFTP-preferred PPA upload gotcha immediately in ADR-0001 and committed it separately.
 - The first SFTP workflow retry showed the preflight still selected Launchpad IPv6 on GitHub and failed with `[Errno 101] Network is unreachable`; documented that gotcha separately and pinned the SFTP preflight to IPv4 too.
 - The next retry passed IPv4 SFTP preflight but `dput` spawned `ssh` and sat silently, so the workflow now disables interactive SSH auth, runs a bounded `sftp` auth probe before upload, and wraps `dput` in an explicit timeout.
+- The bounded retry now reaches Launchpad SFTP over IPv4 and fails fast with `Permission denied (publickey)`, confirming the remaining work is to register the generated public key on the `~keefshape` Launchpad account. Obvious existing local private keys did not complete a noninteractive Launchpad SFTP login.
 
 ## 2026-05-01 17:35:00Z
 

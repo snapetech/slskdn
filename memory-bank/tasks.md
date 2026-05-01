@@ -19,7 +19,7 @@
 - [x] **release**: Configure Launchpad SFTP PPA upload path.
  - Status: completed (2026-05-01)
  - Priority: P1
- - Notes: Generated a dedicated local Launchpad PPA SSH key, stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in GitHub repository secrets, and updated both PPA workflows to prefer `dput` SFTP when the key is configured while retaining signed anonymous FTP uploads as fallback.
+ - Notes: Generated a dedicated local Launchpad PPA SSH key, stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in GitHub repository secrets, and updated both PPA workflows to prefer IPv4-pinned `dput` SFTP when the key is configured while retaining signed anonymous FTP uploads as fallback. GitHub now reaches Launchpad SFTP and fails fast with `Permission denied (publickey)` until `~/.ssh/slskdn_launchpad_ppa_ed25519.pub` is registered on the `~keefshape` Launchpad account.
 
 - [x] **feature**: Surface remaining admin and experience policies in Web UI.
  - Status: completed (2026-05-01)

@@ -1,3 +1,18 @@
+## Update 2026-05-01 18:08:00Z
+
+- Current task: Launchpad SFTP PPA upload setup is complete on GitHub and blocked on Launchpad account key registration.
+- Last activity:
+  - generated `~/.ssh/slskdn_launchpad_ppa_ed25519`
+  - stored `LAUNCHPAD_SFTP_KEY` and `LAUNCHPAD_SFTP_USER` in `snapetech/slskdn` GitHub repository secrets
+  - updated both PPA workflows to prefer IPv4-pinned SFTP when the key is configured and retain anonymous FTP as fallback
+  - documented the SFTP-preferred PPA upload, SFTP IPv4-pinning, and SFTP auth-hang gotchas as separate commits
+  - added non-interactive SSH options, a bounded SFTP auth probe, and a bounded `dput` upload timeout after the first IPv4 SFTP upload retry hung inside `ssh`
+  - reran the standalone PPA workflow for `2026050100-slskdn.215`; GitHub reached Launchpad SFTP over IPv4 and failed fast with `Permission denied (publickey)`
+  - tested obvious local private keys against Launchpad SFTP; none completed a noninteractive login
+- Next steps:
+  1. Register `~/.ssh/slskdn_launchpad_ppa_ed25519.pub` on the `~keefshape` Launchpad account.
+  2. Rerun the standalone PPA workflow for `2026050100-slskdn.215` after Launchpad accepts the key.
+
 ## Update 2026-05-01 17:35:00Z
 
 - Current task: slskdN runtime vendoring, static ingress notice cleanup, Docker Hub release-channel work, and `kspls0` deployment are complete.
