@@ -52,6 +52,33 @@ This is not optional. This is the highest priority action after fixing a bug.
 
 ## 🚨 CRITICAL: Bugs That Keep Coming Back
 
+### 0z237. Pod Channel Tabs Must Drive Active Channel State And Message Fetches
+
+**The Bug**: The Pods page could show a channel tab label such as `dm` without an obvious chat history/composer surface. Channel tab changes updated only the Semantic UI tab index, leaving `activeChannelId`, route state, and message fetching disconnected from the selected tab.
+
+**Files Affected**:
+- `src/web/src/components/Pods/Pods.jsx`
+- `src/web/src/components/Pods/Pods.css`
+
+**Wrong**:
+```javascript
+onTabChange={(_event, { activeIndex }) =>
+  this.setState({ activeDetailTab: activeIndex })
+}
+```
+
+**Correct**:
+```javascript
+onTabChange={this.handleDetailTabChange}
+
+handleDetailTabChange = (_event, { activeIndex }) => {
+  const channel = this.state.podDetail?.channels?.[activeIndex];
+  this.setState({ activeDetailTab: activeIndex, activeChannelId: channel.channelId }, this.fetchMessages);
+};
+```
+
+**Why This Keeps Happening**: Semantic UI tabs track visual selection, but Pods messaging is keyed by `podId:channelId`. Any channel navigation must update both the visible tab index and the active channel identity, then fetch messages for that channel. Otherwise the UI can look like a selected channel while the message panel is stale, empty, or not visually discoverable.
+
 ### 0z236. Port Migration Notices Must Explain Service Routing, Not Dump Raw Endpoints
 
 **The Bug**: The network-port migration banner showed raw forwarded-port fields such as `Soulseek TCP public:port (local 50300)` and generic `TCP public:port (local 50305, selected 50305)`. That did not tell operators which protocol and public port belonged to which slskdN service or which local/config port should be updated.
