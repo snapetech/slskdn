@@ -22,6 +22,10 @@ For dev or build tags, use the same logical version string embedded in the tag.
 
 ## [Unreleased]
 
+- Fixed browser audio fingerprint hashing so CI, Node/jsdom tests, and browsers
+  normalize file data before passing it to WebCrypto.
+- Removed the obsolete `slskdn-dev` package channel from active release
+  automation, packaging validation, install docs, and dev-only manifests.
 - Removed the standalone Discovery Inbox and Import Staging surfaces from the
   active Web UI path, folded the intake/review wording into current docs and
   settings, and kept the player visualizer deployment notes current after live
